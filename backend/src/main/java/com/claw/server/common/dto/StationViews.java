@@ -26,4 +26,11 @@ public final class StationViews {
     public static record SkuHitView(
             StationView station, String skuCode, int availableQty) {
     }
+
+    /** 地图适配层视图：附近换电站 + 电池供给（满电可换/充电中）。 */
+    public record MapView(
+            StationView station,
+            long readyBatteries,     // 满电电池数（可立即换电）
+            long chargingBatteries) {  // 充电中电池数
+    }
 }

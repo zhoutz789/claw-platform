@@ -31,6 +31,7 @@ public class StationService {
 
     private final StationRepository stationRepository;
     private final StationStockRepository stockRepository;
+    private final StationBatteryRepository batteryRepository;
 
     /** 附近站点（按距离由近到远，最多 limit 个），含现货摘要。 */
     @Transactional(readOnly = true)
@@ -90,6 +91,25 @@ public class StationService {
         StationStock saved = stockRepository.save(stock);
         return new StationViews.StockView(saved.getId(), saved.getStationId(),
                 saved.getSkuCode(), saved.getStockQty(), saved.getUpdatedAt());
+    }
+
+    /** 地图适配层：附近换电站 + 电池供给（满电/充电中），S3 换电入口数据源。 */
+    @Transactional(readOnly = true)
+    public List<StationViews.MapView> mapView(String countryCode, BigDecimal lat, BigDecimal lng, Integer limit) {
+        String cc = countryCode != null ? countryCode : CountryContext.countryCode();
+        List<Station> stations = stationRepository
+                .findByCountryCodeAndStatusAndDeletedFalse(cc, "ACTIVE");
+        int n = limit != null ? Math.min(limit, stations.size()) : stations.size();
+
+        return stations.stream()
+                .map(s -> new StationViews.MapView(
+                        toView(s, lat, lng),
+                        batteryRepository.countByStationIdAndStatus(s.getId(), "READY"),
+                        batteryRepository.countByStationIdAndStatus(s.getId(), "CHARGING")))
+                .sorted(Comparator.comparing(v -> v.station().distKm() == null
+                        ? Double.MAX_VALUE : v.station().distKm().doubleValue()))
+                .limit(n)
+                .toList();
     }
 
     private StationViews.StationView toView(Station s, BigDecimal lat, BigDecimal lng) {

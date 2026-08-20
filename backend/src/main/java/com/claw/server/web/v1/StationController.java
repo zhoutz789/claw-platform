@@ -14,6 +14,7 @@ import java.util.List;
  * 站点接口（客户选购入口 + 投资者投放入口）。
  *
  * <p>GET  /stations/nearby                 附近站点（?countryCode=&lat=&lng=&limit=3）
+ * GET  /stations/map                      地图适配层（附近换电站 + 满电/充电中电池数）
  * GET  /stations/search?sku=&lat=&lng=    搜车型 → 附近有现货的站点
  * GET  /stations/{id}/stock               站内现货
  * POST /stations/{id}/stock               投放现货（认购入站）
@@ -32,6 +33,16 @@ public class StationController {
             @RequestParam(required = false) java.math.BigDecimal lng,
             @RequestParam(required = false) Integer limit) {
         return ApiResult.ok(stationService.nearby(countryCode, lat, lng, limit));
+    }
+
+    /** 地图适配层：附近换电站（距离/满电数/充电中），S3 换电入口。 */
+    @GetMapping("/map")
+    public ApiResult<List<StationViews.MapView>> map(
+            @RequestParam(required = false) String countryCode,
+            @RequestParam(required = false) java.math.BigDecimal lat,
+            @RequestParam(required = false) java.math.BigDecimal lng,
+            @RequestParam(required = false) Integer limit) {
+        return ApiResult.ok(stationService.mapView(countryCode, lat, lng, limit));
     }
 
     @GetMapping("/search")
