@@ -20,6 +20,8 @@ public class BizException extends RuntimeException {
     public static final int DTI_EXCEEDED = 20003;
     /** 资产状态机非法迁移 */
     public static final int ILLEGAL_ASSET_STATUS = 30001;
+    /** 资源不存在（角色/资产/用户等通用） */
+    public static final int NOT_FOUND = 40400;
 
     private final int code;
     private final String messageCode;
@@ -38,6 +40,14 @@ public class BizException extends RuntimeException {
 
     public static BizException dtiExceeded() {
         return new BizException(DTI_EXCEEDED, "error.responsible.lending.dti");
+    }
+
+    public static BizException of(int code, String messageCode, Object... args) {
+        return new BizException(code, messageCode, args);
+    }
+
+    public static BizException notFound(String messageCode, Object... args) {
+        return new BizException(NOT_FOUND, messageCode, args);
     }
 
     public int getCode() {
