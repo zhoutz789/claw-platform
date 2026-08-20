@@ -11,4 +11,6 @@ public interface StationBatteryRepository extends JpaRepository<StationBattery, 
     Optional<StationBattery> findByBatteryId(Long batteryId);
 
     long countByStationIdAndStatus(Long stationId, String status);
+
+    long countByStatus(String status);
 }
