@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Claw · 「鲜活能源」界面设计方案</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+<style>
+  /* ============ 设计令牌 Design Tokens ============ */
+  :root{
+    --paper:#f7f4ec;      /* 暖纸白（非纯白） */
+    --paper-2:#efebe0;    /* 次级纸色 */
+    --surface:#fffdf7;    /* 浮层/卡片面 */
+    --ink:#15281f;        /* 深墨绿主文字（非纯黑） */
+    --ink-2:#46594f;      /* 次级文字 */
+    --muted:#819388;      /* 弱文字 */
+    --line:#e4dfd1;       /* 描边 */
+    --brand:#176a48;      /* 松绿主色 */
+    --brand-deep:#0d4630; /* 深松绿 */
+    --brand-soft:#e2f0e7; /* 松绿浅底 */
+    --energy:#2fc97c;     /* 满电绿 */
+    --lime:#b9f062;       /* 青柠能量 */
+    --amber:#efa13b;      /* 金额/警示 */
+    --amber-soft:#fbeeda;
+    --coral:#e2573f;      /* 风险/错误 */
+    --coral-soft:#fbe5de;
+    --blue:#4a88cf;       /* 信息 */
+    --r-sm:10px; --r-md:16px; --r-lg:22px; --r-full:999px;
+    --sh-sm:0 1px 2px rgba(21,40,31,.05),0 1px 4px rgba(21,40,31,.06);
+    --sh-md:0 8px 24px rgba(21,40,31,.08),0 2px 6px rgba(21,40,31,.05);
+    --sh-lg:0 24px 60px rgba(21,40,31,.14);
+    --font-disp:"Space Grotesk","Noto Sans SC",system-ui,sans-serif;
+    --font-body:"Noto Sans SC",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font-body);background:var(--paper);color:var(--ink);line-height:1.6;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .num{font-family:var(--font-disp);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+
+  /* ============ 顶部导航 ============ */
+  header{position:sticky;top:0;z-index:50;background:rgba(247,244,236,.82);backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line)}
+  .nav{max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:22px;padding:14px 28px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:17px;letter-spacing:-.01em}
+  .brand .logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brand),var(--energy));
+    display:grid;place-items:center;color:#fff;font-size:16px;box-shadow:0 4px 12px rgba(47,201,124,.35)}
+  .brand small{display:block;font-size:10.5px;color:var(--muted);font-weight:500;letter-spacing:.02em}
+  .nav-links{display:flex;gap:4px;margin-left:auto}
+  .nav-links a{text-decoration:none;color:var(--ink-2);font-size:13.5px;font-weight:500;padding:7px 13px;border-radius:var(--r-full)}
+  .nav-links a:hover{background:var(--paper-2);color:var(--ink)}
+
+  /* ============ 布局 ============ */
+  .wrap{max-width:1200px;margin:0 auto;padding:0 28px}
+  section{padding:76px 0}
+  .kicker{font-family:var(--font-disp);font-size:12px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--brand)}
+  h2.sec{font-size:clamp(26px,4vw,40px);font-weight:900;letter-spacing:-.02em;margin:10px 0 8px;line-height:1.15}
+  .lead{color:var(--ink-2);font-size:16px;max-width:640px}
+
+  /* ============ Hero ============ */
+  .hero{padding:88px 0 60px;position:relative;overflow:hidden}
+  .hero::before{content:"";position:absolute;inset:0;background:
+    radial-gradient(900px 500px at 82% -10%,rgba(185,240,98,.35),transparent 60%),
+    radial-gradient(700px 500px at -5% 20%,rgba(47,201,124,.16),transparent 55%)}
+  .hero .wrap{position:relative}
+  .hero h1{font-size:clamp(38px,6vw,64px);font-weight:900;letter-spacing:-.03em;line-height:1.04;max-width:820px}
+  .hero h1 .hl{color:var(--brand);position:relative}
+  .hero h1 .hl::after{content:"";position:absolute;left:0;right:0;bottom:6px;height:12px;background:var(--lime);opacity:.55;z-index:-1;border-radius:4px}
+  .hero .sub{margin-top:22px;font-size:18px;color:var(--ink-2);max-width:640px}
+  .hero-tags{margin-top:26px;display:flex;flex-wrap:wrap;gap:10px}
+  .pill{display:inline-flex;align-items:center;gap:7px;padding:8px 15px;border-radius:var(--r-full);
+    background:var(--surface);border:1px solid var(--line);font-size:13px;font-weight:500;color:var(--ink-2)}
+  .pill b{color:var(--brand);font-weight:700}
+  .hero-grid{margin-top:52px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+
+  .dir-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+    padding:24px;position:relative;overflow:hidden;transition:transform .35s cubic-bezier(.22,1,.36,1),box-shadow .35s}
+  .dir-card:hover{transform:translateY(-4px);box-shadow:var(--sh-md)}
+  .dir-card .swatch{width:44px;height:44px;border-radius:12px;margin-bottom:16px}
+  .dir-card h3{font-size:17px;font-weight:700;margin-bottom:6px}
+  .dir-card p{font-size:13.5px;color:var(--ink-2)}
+  .dir-card .code{font-family:var(--font-disp);font-size:12px;color:var(--muted);margin-top:12px}
+
+  /* ============ 色彩 ============ */
+  .swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:28px}
+  .sw{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+  .sw .chip{height:74px}
+  .sw .meta{padding:12px 14px}
+  .sw .meta b{font-size:13px;display:block}
+  .sw .meta span{font-family:var(--font-disp);font-size:11.5px;color:var(--muted)}
+
+  /* ============ 字体 ============ */
+  .type-row{margin-top:28px;border-top:1px solid var(--line);padding-top:28px}
+  .type-spec{display:flex;align-items:baseline;gap:22px;padding:16px 0;border-bottom:1px dashed var(--line)}
+  .type-spec .t{font-weight:700;white-space:nowrap}
+  .type-spec .meta{font-family:var(--font-disp);font-size:12px;color:var(--muted);margin-left:auto;white-space:nowrap}
+
+  /* ============ 组件 ============ */
+  .comp-grid{margin-top:28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+  .comp{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:24px}
+  .comp .label{font-family:var(--font-disp);font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:20px}
+  .comp .stage{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;cursor:pointer;
+    font-family:var(--font-body);font-weight:700;font-size:14.5px;border-radius:var(--r-md);
+    padding:12px 20px;transition:transform .2s cubic-bezier(.22,1,.36,1),box-shadow .2s,background .2s}
+  .btn:active{transform:translateY(1px) scale(.99)}
+  .btn-primary{background:linear-gradient(135deg,var(--brand),var(--brand-deep));color:#fff;box-shadow:0 6px 16px rgba(23,106,72,.28)}
+  .btn-primary:hover{box-shadow:0 10px 22px rgba(23,106,72,.34)}
+  .btn-energy{background:linear-gradient(135deg,var(--energy),var(--brand));color:#fff;box-shadow:0 6px 16px rgba(47,201,124,.32)}
+  .btn-ghost{background:transparent;color:var(--brand);box-shadow:inset 0 0 0 1.5px var(--brand)}
+  .btn-soft{background:var(--brand-soft);color:var(--brand-deep)}
+  .btn-danger{background:var(--coral-soft);color:var(--coral)}
+  .btn-lg{padding:15px 26px;font-size:16px;border-radius:var(--r-lg)}
+
+  .input{width:100%;font-family:var(--font-body);font-size:14.5px;padding:12px 14px;border-radius:var(--r-md);
+    border:1.5px solid var(--line);background:var(--surface);color:var(--ink);transition:border .2s,box-shadow .2s}
+  .input:focus{outline:none;border-color:var(--energy);box-shadow:0 0 0 3px rgba(47,201,124,.18)}
+  .field{flex:1;min-width:160px}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);margin-bottom:6px}
+
+  .seg{display:inline-flex;background:var(--paper-2);border-radius:var(--r-md);padding:4px}
+  .seg button{border:none;background:transparent;font-family:var(--font-body);font-size:13.5px;font-weight:600;
+    padding:8px 16px;border-radius:10px;color:var(--ink-2);cursor:pointer}
+  .seg button.on{background:var(--surface);color:var(--brand-deep);box-shadow:var(--sh-sm)}
+
+  .chip-tag{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:var(--r-full);font-size:12.5px;font-weight:600}
+  .tag-green{background:var(--brand-soft);color:var(--brand-deep)}
+  .tag-lime{background:#eaf7cf;color:#3c5a0d}
+  .tag-amber{background:var(--amber-soft);color:#8a5a10}
+  .tag-coral{background:var(--coral-soft);color:#9c3423}
+  .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+
+  /* 能量环 */
+  .ring{position:relative;width:96px;height:96px;border-radius:50%;flex-shrink:0;
+    background:conic-gradient(var(--energy) 0 88%,var(--paper-2) 88%);display:grid;place-items:center}
+  .ring::before{content:"";position:absolute;inset:9px;border-radius:50%;background:var(--surface)}
+  .ring .val{position:relative;text-align:center}
+  .ring .val b{font-family:var(--font-disp);font-size:22px;font-weight:700;display:block;line-height:1}
+  .ring .val span{font-size:10px;color:var(--muted)}
+
+  .mini-card{flex:1;min-width:150px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:14px}
+  .mini-card .k{font-size:12px;color:var(--muted)}
+  .mini-card .v{font-family:var(--font-disp);font-size:22px;font-weight:700;margin-top:2px}
+  .mini-card .v em{font-style:normal;font-size:13px;font-weight:500;color:var(--muted)}
+
+  /* ============ 高保真屏 ============ */
+  .screens{margin-top:36px;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:22px}
+  .screen-wrap{position:relative}
+  .screen-wrap .cap{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:13px;font-weight:600;color:var(--ink-2)}
+  .screen-wrap .cap .num{display:grid;place-items:center;width:22px;height:22px;border-radius:7px;background:var(--brand);color:#fff;font-size:11px;font-weight:700}
+  .phone{background:var(--ink);border-radius:34px;padding:10px;box-shadow:var(--sh-lg);position:relative;overflow:hidden}
+  .phone .scr{background:var(--paper);border-radius:26px;overflow:hidden;height:560px;position:relative;display:flex;flex-direction:column}
+  .phone .scr::-webkit-scrollbar{display:none}
+
+  /* 手机内通用 */
+  .p-top{padding:16px 16px 8px;display:flex;align-items:center;gap:10px}
+  .p-logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brand),var(--energy));display:grid;place-items:center;color:#fff;font-size:14px;flex-shrink:0}
+  .p-top .t{font-size:15px;font-weight:900;letter-spacing:-.01em}
+  .p-top .t small{display:block;font-size:10px;color:var(--muted);font-weight:500}
+  .p-loc{margin:6px 16px 10px;display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:7px 11px}
+  .p-loc b{font-weight:700;color:var(--ink)}
+  .p-body{padding:4px 14px 90px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;flex:1}
+  .p-body::-webkit-scrollbar{display:none}
+  .p-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:15px}
+  .p-tab{position:absolute;bottom:0;left:0;right:0;background:rgba(255,253,247,.92);backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;padding:8px 8px 14px}
+  .p-tab div{flex:1;text-align:center;font-size:10px;color:var(--muted);font-weight:500}
+  .p-tab div i{display:block;font-style:normal;font-size:17px;margin-bottom:2px}
+  .p-tab div.on{color:var(--brand);font-weight:700}
+
+  .hero-ring{display:flex;align-items:center;gap:16px;background:linear-gradient(135deg,var(--brand),var(--brand-deep));border-radius:var(--r-lg);padding:18px;color:#fff;border:none}
+  .hero-ring .ring{background:conic-gradient(var(--lime) 0 78%,rgba(255,255,255,.18) 78%)}
+  .hero-ring .ring::before{background:var(--brand-deep)}
+  .hero-ring .ring .val span{color:rgba(255,255,255,.6)}
+  .hero-ring .title{font-size:16px;font-weight:800}
+  .hero-ring .sub{font-size:11.5px;color:rgba(255,255,255,.72);margin-top:3px}
+  .hero-ring .cta{margin-top:12px;background:var(--lime);color:var(--brand-deep);border:none;border-radius:11px;padding:9px 14px;font-weight:800;font-size:13px;font-family:var(--font-body);cursor:pointer}
+
+  .kv{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:8px 0;border-bottom:1px dashed var(--line)}
+  .kv:last-child{border-bottom:none}
+  .kv .k{color:var(--ink-2)} .kv .v{font-weight:700;font-family:var(--font-disp)}
+  .kv .v.g{color:var(--brand)} .kv .v.a{color:#a3640e}
+
+  .slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .slot{aspect-ratio:1;border-radius:12px;display:grid;place-items:center;font-size:11px;font-weight:700;position:relative}
+  .slot.r{background:var(--brand-soft);color:var(--brand-deep)}
+  .slot.c{background:var(--amber-soft);color:#8a5a10}
+  .slot.o{background:var(--paper-2);color:var(--muted)}
+  .slot .pct{font-family:var(--font-disp);font-size:15px;display:block;font-weight:700}
+
+  .bar{height:8px;border-radius:var(--r-full);background:var(--paper-2);overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:var(--r-full);background:linear-gradient(90deg,var(--energy),var(--lime))}
+
+  .bill-table{width:100%;font-size:12px;border-collapse:collapse}
+  .bill-table td{padding:8px 4px;border-bottom:1px dashed var(--line)}
+  .bill-table td:last-child{text-align:right;font-family:var(--font-disp);font-weight:600}
+  .bill-table tr:last-child td{border-bottom:none;font-size:14px;font-weight:800}
+  .bill-table tr:last-child td:last-child{color:var(--brand)}
+
+  .scan-view{height:150px;border-radius:14px;background:repeating-linear-gradient(45deg,#f1ede2,#f1ede2 10px,#f7f4ec 10px,#f7f4ec 20px);display:grid;place-items:center;position:relative;overflow:hidden;border:1px solid var(--line)}
+  .scan-view .frame{position:absolute;width:96px;height:96px;border:2.5px solid var(--energy);border-radius:14px}
+  .scan-view .frame::before,.scan-view .frame::after{content:"";position:absolute;width:16px;height:16px;border:3px solid var(--brand)}
+  .scan-view .frame::before{top:-3px;left:-3px;border-right:none;border-bottom:none;border-radius:8px 0 0 0}
+  .scan-view .frame::after{bottom:-3px;right:-3px;border-left:none;border-top:none;border-radius:0 0 8px 0}
+  .scan-view .laser{position:absolute;left:18%;right:18%;height:2px;background:var(--energy);box-shadow:0 0 10px var(--energy);animation:lz 2.4s infinite}
+  @keyframes lz{0%,100%{top:20%}50%{top:78%}}
+  .scan-view .hint{font-size:11px;color:var(--muted);z-index:2;text-align:center;margin-top:70px}
+
+  .dashboard{background:#f0ede3;border-radius:26px;padding:0;height:560px;overflow:auto;position:relative}
+  .dash-top{padding:20px 22px 14px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  .dash-top h3{font-size:18px;font-weight:900}
+  .dash-top .sub{font-size:12px;color:var(--muted)}
+  .dash-body{padding:18px 22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+  .dash-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px}
+  .dash-card .k{font-size:12px;color:var(--muted)}
+  .dash-card .v{font-family:var(--font-disp);font-size:30px;font-weight:700;margin:6px 0}
+  .dash-card .v em{font-style:normal;font-size:13px;color:var(--muted);font-weight:500}
+  .dash-card .trend{font-size:12px;font-weight:700}
+  .dash-card .trend.up{color:var(--brand)} .dash-card .trend.down{color:var(--coral)}
+  .dash-wide{grid-column:1/-1}
+
+  /* 用户习惯区 */
+  .habits{margin-top:36px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+  .habit{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:22px}
+  .habit .ic{width:40px;height:40px;border-radius:11px;background:var(--brand-soft);display:grid;place-items:center;font-size:19px;margin-bottom:14px}
+  .habit h4{font-size:15.5px;font-weight:800;margin-bottom:6px}
+  .habit p{font-size:13px;color:var(--ink-2)}
+
+  footer{padding:50px 0;border-top:1px solid var(--line);text-align:center;color:var(--muted);font-size:13px}
+  footer b{color:var(--ink-2)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav">
+    <div class="brand"><span class="logo">⚡</span><div>Claw 能源平台<small>「鲜活能源」Fresh Energy · UI 设计方案 v1</small></div></div>
+    <nav class="nav-links">
+      <a href="#concept">设计理念</a>
+      <a href="#tokens">设计令牌</a>
+      <a href="#components">组件库</a>
+      <a href="#screens">高保真界面</a>
+      <a href="#habits">用户习惯</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ============ Hero ============ -->
+<div class="hero" id="concept">
+  <div class="wrap">
+    <span class="kicker">Fresh Energy Design Language</span>
+    <h1>让换电像<span class="hl">喝水一样自然</span>的<br/>全新界面语言</h1>
+    <p class="sub">为 Claw 新能源平台设计的一套明亮、可信、亲民的界面方案。告别旧版暗色，用「暖纸白 + 松绿 + 电光青柠」构建能量感，让东南亚的摩的与嘟嘟车司机、服务站站长、投资者，一眼看懂、一步完成。</p>
+    <div class="hero-tags">
+      <span class="pill">🎯 受众 <b>司机 · 站长 · 投资者 · 运营</b></span>
+      <span class="pill">🖐️ 触控目标 <b>≥48px</b></span>
+      <span class="pill">🌗 对比度 <b>WCAG AA</b></span>
+      <span class="pill">🌏 三语 <b>中/英/高棉</b></span>
+      <span class="pill">⚡ 记忆点 <b>能量环 + 闪电脉冲</b></span>
+    </div>
+
+    <div class="hero-grid">
+      <div class="dir-card">
+        <div class="swatch" style="background:linear-gradient(135deg,#f7f4ec,#efebe0);border:1px solid var(--line)"></div>
+        <h3>明亮可信</h3>
+        <p>暖纸白基底在柬埔寨强光下依旧清晰，松绿传达「可靠的新能源」，彻底告别压抑的暗色界面。</p>
+        <div class="code">#F7F4EC → #176A48</div>
+      </div>
+      <div class="dir-card">
+        <div class="swatch" style="background:linear-gradient(135deg,#2fc97c,#b9f062)"></div>
+        <h3>能量可视</h3>
+        <p>「能量环」让电池健康度、剩余电量、可用供给一眼可见；青柠绿是唯一的行动色，引导手指点下去。</p>
+        <div class="code">#2FC97C · #B9F062</div>
+      </div>
+      <div class="dir-card">
+        <div class="swatch" style="background:linear-gradient(135deg,#efa13b,#e2573f)"></div>
+        <h3>金额醒目</h3>
+        <p>电价、押金、日账单用琥珀色强调，风险与错误用珊瑚红——语义色与文字语义一致，减少误操作。</p>
+        <div class="code">#EFA13B · #E2573F</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 设计令牌 ============ -->
+<section id="tokens">
+  <div class="wrap">
+    <span class="kicker">01 · Design Tokens</span>
+    <h2 class="sec">设计令牌</h2>
+    <p class="lead">单一事实源。所有界面从以下令牌派生，保证跨端（C端 / 服务站 / 运营后台）视觉一致。</p>
+
+    <h3 style="margin-top:28px;font-size:18px;font-weight:800">色彩 · Color</h3>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:var(--brand)"></div><div class="meta"><b>松绿 Primary</b><span>#176A48</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--brand-deep)"></div><div class="meta"><b>深松绿 Deep</b><span>#0D4630</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--energy)"></div><div class="meta"><b>满电绿 Energy</b><span>#2FC97C</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--lime)"></div><div class="meta"><b>青柠 Lime</b><span>#B9F062</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--amber)"></div><div class="meta"><b>琥珀 Amber</b><span>#EFA13B</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--coral)"></div><div class="meta"><b>珊瑚 Coral</b><span>#E2573F</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--blue)"></div><div class="meta"><b>信息 Blue</b><span>#4A88CF</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--paper);border-bottom:1px solid var(--line)"></div><div class="meta"><b>暖纸白 Paper</b><span>#F7F4EC</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--ink)"></div><div class="meta"><b>墨绿 Ink</b><span>#15281F</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--muted)"></div><div class="meta"><b>弱文字 Muted</b><span>#819388</span></div></div>
+    </div>
+
+    <div class="type-row">
+      <h3 style="font-size:18px;font-weight:800">字体 · Typography</h3>
+      <div class="type-spec"><span class="t" style="font-family:var(--font-disp);font-size:38px;font-weight:700">Display 展示</span><span class="meta">Space Grotesk · 数字/标题/金额 · tabular-nums</span></div>
+      <div class="type-spec"><span class="t" style="font-size:20px;font-weight:900">标题 Heading</span><span class="meta">Noto Sans SC · 900 · 20–40px</span></div>
+      <div class="type-spec"><span class="t" style="font-size:15px;font-weight:500">正文 Body</span><span class="meta">Noto Sans SC · 400/500 · 14–16px</span></div>
+      <div class="type-spec"><span class="t num" style="font-size:15px;font-weight:600">金额 $0.88</span><span class="meta">Space Grotesk · tabular-nums · 对齐易读</span></div>
+    </div>
+
+    <div class="type-row">
+      <h3 style="font-size:18px;font-weight:800">间距 · 圆角 · 阴影</h3>
+      <p class="lead" style="font-size:14px;margin-top:10px">4px 基准网格；圆角三级（10 / 16 / 22px）；阴影柔和、绿灰调，避免纯黑投影。留白用「变化间距」制造节奏，而非把一切装进卡片。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 组件库 ============ -->
+<section id="components" style="background:var(--paper-2)">
+  <div class="wrap">
+    <span class="kicker">02 · Components</span>
+    <h2 class="sec">组件库</h2>
+    <p class="lead">可复用的基础组件，全部满足 48px 触控目标与 WCAG AA 对比度。</p>
+
+    <div class="comp-grid">
+      <div class="comp">
+        <div class="label">按钮 Buttons</div>
+        <div class="stage">
+          <button class="btn btn-primary">主要操作</button>
+          <button class="btn btn-energy">⚡ 一键换电</button>
+          <button class="btn btn-ghost">次要</button>
+          <button class="btn btn-soft">软操作</button>
+          <button class="btn btn-danger">危险</button>
+        </div>
+      </div>
+
+      <div class="comp">
+        <div class="label">表单 Input</div>
+        <div class="stage">
+          <div class="field"><label>手机号</label><input class="input" placeholder="+855 12 345 678" /></div>
+        </div>
+      </div>
+
+      <div class="comp">
+        <div class="label">分段选择 Segmented</div>
+        <div class="stage">
+          <div class="seg"><button class="on">月付</button><button>周付</button><button>日结</button></div>
+        </div>
+      </div>
+
+      <div class="comp">
+        <div class="label">状态标签 Tags</div>
+        <div class="stage">
+          <span class="chip-tag tag-green"><i class="dot"></i>满电可换</span>
+          <span class="chip-tag tag-lime"><i class="dot"></i>现货 3 台</span>
+          <span class="chip-tag tag-amber"><i class="dot"></i>充电中</span>
+          <span class="chip-tag tag-coral"><i class="dot"></i>DTI 预警</span>
+        </div>
+      </div>
+
+      <div class="comp">
+        <div class="label">能量环 Energy Ring</div>
+        <div class="stage">
+          <div class="ring"><div class="val"><b>88%</b><span>健康度</span></div></div>
+          <div class="mini-card"><div class="k">可用电池</div><div class="v">12 <em>块</em></div></div>
+          <div class="mini-card"><div class="k">今日营收</div><div class="v" style="color:var(--brand)">$24.6 <em>USD</em></div></div>
+        </div>
+      </div>
+
+      <div class="comp">
+        <div class="label">进度 Progress</div>
+        <div class="stage" style="flex-direction:column;align-items:stretch">
+          <div class="bar" style="width:100%"><i style="width:88%"></i></div>
+          <div class="bar" style="width:100%"><i style="width:45%;background:linear-gradient(90deg,var(--amber),#f6c56a)"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 高保真界面 ============ -->
+<section id="screens">
+  <div class="wrap">
+    <span class="kicker">03 · High-Fidelity Screens</span>
+    <h2 class="sec">高保真界面</h2>
+    <p class="lead">四个核心场景的可交互原型，覆盖 C 端用户与服务站站长两类角色。</p>
+
+    <div class="screens">
+      <!-- 屏1：C端首页 -->
+      <div class="screen-wrap">
+        <div class="cap"><span class="num">1</span>C 端首页 · 司机视角</div>
+        <div class="phone"><div class="scr">
+          <div class="p-top"><span class="p-logo">⚡</span><div class="t">Claw 换电<small>你好，阿肯 · 金边</small></div></div>
+          <div class="p-loc">📍 <b>俄罗斯市场站</b><span style="margin-left:auto">1.2 km</span></div>
+          <div class="p-body">
+            <div class="hero-ring">
+              <div class="ring"><div class="val"><b>78%</b><span>电量</span></div></div>
+              <div style="flex:1">
+                <div class="title">电池电量充足</div>
+                <div class="sub">预计还可行驶 21 km · 健康度 95%</div>
+                <button class="cta">⚡ 一键找站换电</button>
+              </div>
+            </div>
+            <div class="p-card">
+              <div style="font-size:13px;font-weight:800;margin-bottom:10px">附近换电站</div>
+              <div class="kv"><span class="k">俄罗斯市场站</span><span class="v g">满电 4</span></div>
+              <div class="kv"><span class="k">中央市场站</span><span class="v g">满电 2</span></div>
+              <div class="kv"><span class="k">机场站</span><span class="v" style="color:var(--muted)">充电中</span></div>
+            </div>
+            <div style="display:flex;gap:10px">
+              <div class="p-card" style="flex:1"><div style="font-size:12px;color:var(--muted)">今日收益</div><div class="num" style="font-size:20px;font-weight:800;color:var(--brand)">$8.40</div></div>
+              <div class="p-card" style="flex:1"><div style="font-size:12px;color:var(--muted)">车辆分期</div><div class="num" style="font-size:20px;font-weight:800">$26<em style="font-size:12px;font-weight:500;color:var(--muted)">/周</em></div></div>
+            </div>
+          </div>
+          <div class="p-tab"><div class="on"><i>🏠</i>首页</div><div><i>⚡</i>换电</div><div><i>🚗</i>车辆</div><div><i>💰</i>资产</div><div><i>👤</i>我的</div></div>
+        </div></div>
+      </div>
+
+      <!-- 屏2：换电扫码 -->
+      <div class="screen-wrap">
+        <div class="cap"><span class="num">2</span>换电扫码 · 一键结算</div>
+        <div class="phone"><div class="scr">
+          <div class="p-top"><span class="p-logo">⚡</span><div class="t">换电扫码<small>扫码即换 · 自动计费</small></div></div>
+          <div class="p-body">
+            <div class="scan-view">
+              <div class="laser"></div><div class="frame"></div>
+              <div class="hint">对准电池柜二维码<br/>或点击下方模拟扫码</div>
+            </div>
+            <div class="p-card">
+              <div class="kv"><span class="k">电池</span><span class="v">#BT-0488 · 满电</span></div>
+              <div class="kv"><span class="k">本次电费</span><span class="v">$0.24</span></div>
+              <div class="kv"><span class="k">服务费</span><span class="v">$0.64</span></div>
+              <div class="kv"><span class="k">押金（冻结）</span><span class="v a">$40.00</span></div>
+              <div class="kv"><span class="k">合计</span><span class="v g num" style="font-size:17px">$0.88</span></div>
+              <div class="kv" style="border:none"><span class="k">支付</span><span class="v">KHQR · Bakong 清算</span></div>
+              <button class="btn btn-energy" style="width:100%;margin-top:10px">⚡ 确认换电并支付</button>
+            </div>
+          </div>
+          <div class="p-tab"><div><i>🏠</i>首页</div><div class="on"><i>⚡</i>换电</div><div><i>🚗</i>车辆</div><div><i>💰</i>资产</div><div><i>👤</i>我的</div></div>
+        </div></div>
+      </div>
+
+      <!-- 屏3：服务站 APP -->
+      <div class="screen-wrap">
+        <div class="cap"><span class="num">3</span>服务站 · 电池位与日账单</div>
+        <div class="phone"><div class="scr">
+          <div class="p-top"><span class="p-logo">🏪</span><div class="t">服务站工作台<small>俄罗斯市场站 · 站长</small></div></div>
+          <div class="p-body">
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-energy" style="flex:1;font-size:13px">📤 发放电池</button>
+              <button class="btn btn-ghost" style="flex:1;font-size:13px">📥 回收电池</button>
+            </div>
+            <div class="p-card">
+              <div style="font-size:13px;font-weight:800;margin-bottom:10px">电池位 · 3 槽</div>
+              <div class="slots">
+                <div class="slot r"><span class="pct">100</span>满电</div>
+                <div class="slot c"><span class="pct">42</span>充电中</div>
+                <div class="slot o"><span class="pct">出</span>已发放</div>
+              </div>
+            </div>
+            <div class="p-card">
+              <div style="font-size:13px;font-weight:800;margin-bottom:8px">今日日账单</div>
+              <table class="bill-table">
+                <tr><td>换电 12 单 · 24.2 度</td><td>$0.88</td></tr>
+                <tr><td>电费（转付 EDC）</td><td>$2.90</td></tr>
+                <tr><td>服务费（基金0.10/站0.19/平台0.03）</td><td>$7.74</td></tr>
+                <tr><td>站方分成</td><td class="num" style="color:var(--brand)">$4.60</td></tr>
+              </table>
+            </div>
+            <div class="p-card" style="border:1px solid var(--brand-soft);background:var(--brand-soft)">
+              <div style="font-size:12.5px;color:var(--brand-deep);font-weight:600">💳 ABA 托管 · 三专户对账</div>
+              <div class="kv"><span class="k">残值准备金</span><span class="v num">$1,204.00</span></div>
+              <div class="kv"><span class="k">电池基金</span><span class="v num">$863.50</span></div>
+              <div class="kv"><span class="k">车辆风险金</span><span class="v num">$412.00</span></div>
+              <div class="kv" style="border:none"><span class="k">日终对账</span><span class="v g">✅ 零差异</span></div>
+            </div>
+          </div>
+          <div class="p-tab"><div><i>🏪</i>工作台</div><div class="on"><i>🔋</i>电池位</div><div><i>💳</i>资金</div><div><i>📊</i>账单</div></div>
+        </div></div>
+      </div>
+
+      <!-- 屏4：运营后台 -->
+      <div class="screen-wrap">
+        <div class="cap"><span class="num">4</span>运营后台 · 数据看板</div>
+        <div class="phone" style="border-radius:30px;padding:10px"><div class="dashboard">
+          <div class="dash-top"><h3>运营看板</h3><div class="sub">柬埔寨 · 金边 · 2026-08-20</div></div>
+          <div class="dash-body">
+            <div class="dash-card"><div class="k">总换电单</div><div class="v num">1,284<em> 单</em></div><div class="trend up">↑ 12.4% 本周</div></div>
+            <div class="dash-card"><div class="k">今日营收</div><div class="v num" style="color:var(--brand)">$24.6<em> USD</em></div><div class="trend up">↑ 8.1%</div></div>
+            <div class="dash-card"><div class="k">在网电池</div><div class="v num">36<em> 块</em></div><div class="trend">满电 12 · 充电 9</div></div>
+            <div class="dash-card"><div class="k">DTI 预警</div><div class="v num" style="color:var(--coral)">2<em> 人</em></div><div class="trend down">需人工复核</div></div>
+            <div class="dash-card dash-wide">
+              <div class="k">三专户托管余额（ABA · Bakong 清算）</div>
+              <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:8px">
+                <span class="chip-tag tag-green">残值准备金 $1,204</span>
+                <span class="chip-tag tag-lime">电池基金 $863</span>
+                <span class="chip-tag tag-amber">车辆风险金 $412</span>
+              </div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 用户习惯 ============ -->
+<section id="habits" style="background:var(--paper-2)">
+  <div class="wrap">
+    <span class="kicker">04 · User Habits</span>
+    <h2 class="sec">符合用户习惯的设计要点</h2>
+    <p class="lead">围绕东南亚移动出行用户的真实使用习惯，落实为一套可执行的交互规范。</p>
+
+    <div class="habits">
+      <div class="habit"><div class="ic">🖐️</div><h4>单手可操作</h4><p>核心动作（换电/支付/扫码）全部落在拇指热区，触控目标 ≥48px，开车间隙也能完成。</p></div>
+      <div class="habit"><div class="ic">⚡</div><h4>一键换电</h4><p>「一键找站换电」聚合定位、找站、下单，减少 3 步到 1 步；金额与押金在同一屏透明呈现。</p></div>
+      <div class="habit"><div class="ic">💰</div><h4>金额一眼懂</h4><p>电费/服务费/押金用统一金额字体（tabular-nums）对齐，琥珀色突出「要付的钱」，杜绝误解。</p></div>
+      <div class="habit"><div class="ic">🌏</div><h4>三语无障碍</h4><p>中文 / 英文 / 高棉文无缝切换，图标 + 文字双重语义，低识字率用户也能看懂。</p></div>
+      <div class="habit"><div class="ic">📶</div><h4>弱网可用</h4><p>离线缓存最近站点与订单，弱网环境下关键流程不中断，恢复后自动补传。</p></div>
+      <div class="habit"><div class="ic">🔒</div><h4>可信与安全</h4><p>资金托管（ABA 三专户）状态、日终对账「零差异」结果实时可见，建立平台信任。</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <b>Claw 新能源平台 · 「鲜活能源」界面设计方案 v1</b><br/>
+    设计令牌 → 组件库 → 高保真界面 → 用户习惯 · 由 UI 设计师交付 · 待评审
+  </div>
+</footer>
+
+</body>
+</html>
