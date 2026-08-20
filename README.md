@@ -1,7 +1,7 @@
 # Claw 新能源资产全生命周期运营管理平台
 
 > 依据《PRD v1.1（定稿）》《技术开发文档 v0.4》搭建。**全球化运营框架已内置**：以柬埔寨为首个试点(PILOT)，全球一家、互通有无——所有国家都是开放互通节点，无排除国。中国为全球商品供给方与商家网络枢纽(HUB)；牵扯两国贸易的物资转移按「各算各的」跨境结算模型处理（进口国关税/增值税、出口国退税，中间手续线上补充、法律合规分法域落实）。
-> S0 状态：**工程脚手架已就绪（2026-08-20）**；S1 状态：**用户/权限/KYC + 角色包引擎 + 资产域已落地（2026-08-20）**；全球化框架：**法域主表 + 适配器注册表 + 国家清单接口已落地（2026-08-20）**
+> S0 状态：**工程脚手架已就绪（2026-08-20）**；S1 状态：**用户/权限/KYC + 角色包引擎 + 资产域已落地（2026-08-20）**；全球化框架：**法域主表 + 适配器注册表 + 国家清单接口已落地（2026-08-20）**；S2 状态：**复式记账引擎 + 三专户 + 押金流转 + 站点现货 + DTI 合规已落地（2026-08-20）**
 
 ## 仓库结构
 
@@ -22,7 +22,10 @@ claw-platform/
 │       │   │   ├── role/          #   人人经济角色包 + 三层权限（S1）
 │       │   │   ├── asset/         #   资产域：车/电池/桩/电站 + 状态机（S1）
 │       │   │   ├── jurisdiction/  #   全球化运营：国家主表 + 身份/支付/牌照适配器注册表 + 分润（共营框架）
-│       │   │   ├── ledger/        #   账户域：复式记账/三专户（S2，封闭域）
+│       │   │   ├── ledger/        #   账户域：复式记账/三专户（S2）
+│       │   │   ├── station/       #   站点域：附近站点现货/投放（S2）
+│       │   │   ├── deposit/       #   押金域：冻结/归还/扣收（S2）
+│       │   │   ├── compliance/    #   合规域：DTI≤50% 强制（S2）
 │       │   │   ├── order/         #   订单域：换电/充电（S3）
 │       │   │   ├── payment/       #   支付域：KHQR/ABA/Bakong（S4）
 │       │   │   ├── iot/           #   IoT：遥测/轨迹/锁车（S5）
@@ -59,7 +62,7 @@ cd ../app && flutter run
 cd ../web && npm i && npm run dev
 ```
 
-## S1 已交付接口（/api/v1）
+## 已交付接口（/api/v1）
 
 | 模块 | 接口 | 说明 |
 |---|---|---|
@@ -81,6 +84,20 @@ cd ../web && npm i && npm run dev
 | 法域 | GET /countries/{code} | 某国详情（含身份/支付/牌照适配器摘要） |
 | 法域 | GET /jurisdictions/me | 当前法域完整摘要（X-Country-Code 决定，缺省 KHM） |
 | 结算 | POST /settlements/cross-border | 跨境物资转移结算报价（各算各的：出口国退税 + 进口国关税/增值税） |
+| 账户 | GET /ledger/accounts | 账户列表（?userId=&accountType=） |
+| 账户 | GET /ledger/accounts/{id} | 账户详情（余额/冻结） |
+| 账户 | POST /ledger/transactions | 复式记账（借贷平衡 + bizType/bizRef 幂等） |
+| 账户 | GET /ledger/transactions/{txnId} | 某笔交易完整分录 |
+| 账户 | GET /ledger/accounts/{id}/entries | 账户流水 |
+| 站点 | GET /stations/nearby | 附近站点现货（?countryCode=&lat=&lng=&limit=3，Haversine 距离） |
+| 站点 | GET /stations/search?sku= | 搜车型 → 附近有现货的站点 |
+| 站点 | GET /stations/{id}/stock | 站内现货 |
+| 站点 | POST /stations/{id}/stock | 投放现货（投资者认购入站） |
+| 押金 | POST /deposits | 支付押金冻结（复式入账） |
+| 押金 | POST /deposits/{no}/release | 归还押金 |
+| 押金 | POST /deposits/{no}/forfeit | 违约扣收（转残值准备金专户） |
+| 押金 | GET /deposits?userId= | 押金单列表 |
+| 合规 | POST /compliance/dti-check | DTI≤50% 强制校验（PASS/REJECT 留痕） |
 
 ## 全球化运营框架（共营架构）
 
@@ -114,7 +131,7 @@ cd ../web && npm i && npm run dev
 - [x] **S0** 工程脚手架、CI/CD、DB 基础表、i18n 框架
 - [x] **S1** 用户/权限/KYC（含 CamDigiKey eKYC 接入点）、人人经济角色包引擎（授予规则 + 三层权限）、资产域 CRUD + 状态机 + ACL
 - [x] **全球化框架** 法域主表 + 身份/支付/牌照适配器注册表 + 运营主体 + 分润雏形 + 国家清单接口（柬埔寨 PILOT，V3 迁移）
-- [ ] S2 复式记账引擎、三专户、押金流转；合规域初版（DTI 强制）
+- [x] **S2 账户域** 复式记账引擎、三专户、押金流转、站点现货（客户附近三站选购）、DTI 合规强制（V5 迁移）
 - [ ] S3 换电域：下单、押金双向流转、预扣结算；地图适配层
 - [ ] S4 服务站 APP、ABA 托管对接（KHQR 收单 + Bakong 清算）
 - [ ] S5 Web 后台、IoT 遥测/轨迹、Claw Score
