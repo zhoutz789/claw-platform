@@ -46,15 +46,17 @@ public class KycService {
         return toView(record);
     }
 
-    /** CamDigiKey eKYC 授权回执落库（OAuth2.0 接入点，详见类注释）。 */
+    /** 国家数字身份 eKYC 授权回执落库（OAuth2.0 接入点，IdP 由当前法域注册表解析）。 */
     @Transactional
     public ApiViews.KycView submitCamdigikey(Long userId, KycRequests.Camdigikey req) {
         User user = load(userId);
+        String providerCode = (req.providerCode() == null || req.providerCode().isBlank())
+                ? "CAMDIGIKEY" : req.providerCode();
         KycRecord record = KycRecord.builder()
                 .userId(userId)
                 .method(KycMethod.CAMDIGIKEY)
                 .status(KycStatus.VERIFIED)
-                .idType("CAMDIGIKEY")
+                .idType(providerCode)
                 .camdigikeyTokenRef(req.camdigikeyTokenRef())
                 .fieldsGranted(req.fieldsGranted())
                 .consentVersion(req.consentVersion() == null ? "v1.0" : req.consentVersion())

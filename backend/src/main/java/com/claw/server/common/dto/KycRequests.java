@@ -12,9 +12,11 @@ public final class KycRequests {
     public static record Manual(@NotBlank String idType) {
     }
 
-    /** CamDigiKey 国家数字身份授权回执（OAuth2.0 code 换 token 后回填）。 */
+    /** 国家数字身份 eKYC 授权回执（OAuth2.0 code 换 token 后回填）。
+     *  providerCode 缺省回退 CAMDIGIKEY（由当前法域注册表解析实际 IdP）。 */
     public static record Camdigikey(@NotBlank String camdigikeyTokenRef,
                                     String fieldsGranted,
-                                    String consentVersion) {
+                                    String consentVersion,
+                                    String providerCode) {
     }
 }
