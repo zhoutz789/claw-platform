@@ -1,0 +1,36 @@
+# Claw 平台 CI/CD（S0 骨架）
+# 流水线：test → build 镜像 → 自动部署 dev/test；staging/prod 手动审批
+
+stages:
+  - test
+  - build
+  - deploy
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+
+backend-test:
+  stage: test
+  image: maven:3.9-eclipse-temurin-21
+  script:
+    - cd backend && mvn -B verify
+  cache:
+    paths:
+      - .m2/repository
+
+backend-image:
+  stage: build
+  image: docker:27
+  services: ["docker:27-dind"]
+  script:
+    - cd backend && docker build -t $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHORT_SHA .
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
+deploy-dev:
+  stage: deploy
+  script:
+    - echo "TODO S0：部署到 dev 集群（K8s manifest 就绪后接入）"
+  environment: dev
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"

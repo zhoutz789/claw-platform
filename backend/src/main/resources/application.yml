@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: claw-server
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:claw}
+    username: ${DB_USER:claw}
+    password: ${DB_PASSWORD:claw_dev_password}
+    hikari:
+      maximum-pool-size: 20
+      connection-timeout: 5000
+  jpa:
+    hibernate:
+      # 表结构一律由 Flyway 管理，禁止 Hibernate 自动建表
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        default_schema: claw
+  flyway:
+    enabled: true
+    schemas: claw
+    default-schema: claw
+    locations: classpath:db/migration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  rabbitmq:
+    host: ${MQ_HOST:localhost}
+    port: ${MQ_PORT:5672}
+    username: ${MQ_USER:claw}
+    password: ${MQ_PASSWORD:claw_dev_password}
+
+server:
+  port: 8080
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+
+logging:
+  level:
+    com.claw: INFO
+    org.flywaydb: INFO

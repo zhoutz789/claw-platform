@@ -1,0 +1,31 @@
+name: claw_app
+description: Claw 新能源资产平台 - C端 + 服务站作业 APP（共用代码库，三语 en/km/zh）
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.19.0
+  # 网络与序列化
+  dio: ^5.5.0
+  # 地图（Google + 高德适配层）
+  google_maps_flutter: ^2.7.0
+  amap_flutter_map: ^3.0.0
+  # 状态管理
+  riverpod: ^2.5.1
+  flutter_riverpod: ^2.5.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true

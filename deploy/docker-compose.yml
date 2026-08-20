@@ -1,0 +1,61 @@
+# Claw 平台本地开发环境（S0）
+# 一键启动：docker compose up -d
+# 包含：TimescaleDB(PG16) / Redis / RabbitMQ / EMQX
+
+services:
+  # 业务主库：PostgreSQL 16 + TimescaleDB 扩展（轨迹时序）
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: claw-postgres
+    environment:
+      POSTGRES_DB: claw
+      POSTGRES_USER: claw
+      POSTGRES_PASSWORD: claw_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U claw -d claw"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # 缓存 / 分布式锁
+  redis:
+    image: redis:7-alpine
+    container_name: claw-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # 消息队列：订单事件 / IoT 上报削峰
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: claw-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: claw
+      RABBITMQ_DEFAULT_PASS: claw_dev_password
+    ports:
+      - "5672:5672"
+      - "15672:15672"   # 管理台 http://localhost:15672
+    volumes:
+      - mq_data:/var/lib/rabbitmq
+
+  # IoT MQTT Broker（车机/电池 BMS/换电柜接入，S5 联调）
+  emqx:
+    image: emqx/emqx:5.8
+    container_name: claw-emqx
+    ports:
+      - "1883:1883"
+      - "8083:8083"
+      - "18083:18083"   # 管理台 http://localhost:18083 (admin/public)
+    volumes:
+      - emqx_data:/opt/emqx/data
+
+volumes:
+  pg_data:
+  redis_data:
+  mq_data:
+  emqx_data:
