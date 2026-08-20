@@ -3,16 +3,19 @@ package com.claw.server.domain.swap;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 
 /**
  * 电池扩展表只读映射（对应 claw.batteries）。
  * 换电域读取押金（动态残值）与协议版本，不写。
+ * 注意：@Setter 仅用于测试构造；服务层一律只读。
  */
 @Entity
 @Table(name = "batteries", schema = "claw")
 @Getter
+@Setter
 @NoArgsConstructor
 public class BatteryDetail {
 

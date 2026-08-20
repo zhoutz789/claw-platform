@@ -5,6 +5,8 @@ import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import org.junit.jupiter.api.Test;
 
+import static com.tngtech.archunit.lang.conditions.ArchConditions.haveSimpleNameEndingWith;
+import static com.tngtech.archunit.lang.conditions.ArchConditions.resideInAPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 /**
@@ -17,13 +19,15 @@ class ArchitectureBoundaryTest {
             .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
             .importPackages("com.claw.server");
 
-    /** 资金域（ledger）最优先保持封闭：其他域不得直接访问 ledger 的实体与仓储 */
+    /** 资金域（ledger）最优先保持封闭：其他域不得直查 ledger 的表（Repository），
+     *  但允许通过应用服务（AccountService/LedgerService）交互（技术文档 1.3）。 */
     @Test
     void ledgerDomainMustBeClosed() {
         noClasses().that().resideOutsideOfPackage("com.claw.server.domain.ledger..")
-                .should().dependOnClassesThat()
-                .resideInAPackage("com.claw.server.domain.ledger..")
-                .because("资金域只允许通过领域事件/应用服务交互（技术文档 1.3）")
+                .should().dependOnClassesThat(
+                        resideInAPackage("com.claw.server.domain.ledger..")
+                                .and(haveSimpleNameEndingWith("Repository")))
+                .because("资金域仓储只允许本域访问，跨域通过应用服务 AccountService/LedgerService 交互（技术文档 1.3）")
                 .check(CLASSES);
     }
 
