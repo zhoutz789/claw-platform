@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Claw · 车辆分期申请原型</title>
+<style>
+  :root{--bg:#0c1410;--panel:#121d18;--panel2:#16241d;--line:#22362c;
+    --green:#19c37d;--green-d:#0f9d63;--lime:#7ef0b0;--amber:#f5b14c;
+    --txt:#e9f3ee;--muted:#8aa79a;--blue:#4ea8ff;--red:#ff7a7a;--radius:16px}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1200px 600px at 50% -10%,#16352a 0%,var(--bg) 60%);color:var(--txt);min-height:100vh}
+  .app{max-width:440px;margin:0 auto;min-height:100vh;padding:0 0 80px;position:relative}
+  .topbar{padding:18px 16px 8px;display:flex;align-items:center;gap:10px}
+  .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--green),#0b7a4d);display:flex;align-items:center;justify-content:center;font-weight:800;color:#04140d;font-size:17px}
+  .hbrand{font-size:17px;font-weight:800} .hbrand small{display:block;font-size:11px;color:var(--muted);font-weight:500}
+  .locbar{margin:0 16px 12px;display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:12px}
+  .body{padding:8px 14px 0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+  .ct{font-size:13px;color:var(--lime);margin-bottom:12px;display:flex;align-items:center;gap:7px}
+  .ct::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+  .field select,.field input{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px 12px;font-size:14px;outline:none}
+  .field select:focus,.field input:focus{border-color:var(--green)}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{flex:1;min-width:80px;text-align:center;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 6px;font-size:13px;cursor:pointer}
+  .chip.on{border-color:var(--green);background:#0f2a1e;color:var(--lime);font-weight:700}
+  .calc{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:13px;margin-top:4px}
+  .kv{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px dashed var(--line)}
+  .kv:last-child{border-bottom:none} .kv .k{color:var(--muted)} .kv .v{font-weight:700}
+  .kv .v.big{font-size:17px;color:var(--lime)}
+  .warn{margin-top:10px;font-size:11.5px;border-radius:8px;padding:8px 10px;line-height:1.6}
+  .warn.ok{background:#0e1a14;border-left:3px solid var(--green);color:var(--lime)}
+  .warn.bad{background:#1a0f0f;border-left:3px solid var(--red);color:var(--red)}
+  .kyc{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px}
+  .kyc .kd{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--green),#0b7a4d);display:flex;align-items:center;justify-content:center;font-size:16px}
+  .kyc .kt{font-size:13px;font-weight:700} .kyc .ks{font-size:11px;color:var(--muted)}
+  .kyc .btn{margin-left:auto;background:var(--green);color:#042017;border:none;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer}
+  .submit{width:100%;background:linear-gradient(135deg,var(--green),var(--green-d));color:#042017;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:800;cursor:pointer}
+  .submit:active{transform:translateY(1px)}
+  .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:440px;max-width:100%;display:flex;background:rgba(14,24,20,.96);border-top:1px solid var(--line)}
+  .tab{flex:1;text-align:center;padding:9px 0;font-size:10.5px;color:var(--muted)} .tab .ti{font-size:18px;display:block;margin-bottom:2px}
+  .tab.active{color:var(--lime)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="logo">⚡</div>
+    <div class="hbrand">车辆分期申请<small>融资租赁 · 负责任信贷</small></div>
+  </div>
+  <div class="locbar">📍 当前法域：<b id="loc">柬埔寨 · 金边</b>（利率/合规随法域）</div>
+
+  <div class="body">
+    <div class="card">
+      <div class="ct">1 · 选择车型</div>
+      <div class="chips" id="model">
+        <div class="chip on" data-p="1299">电动摩托<br>$1,299</div>
+        <div class="chip" data-p="2199">电动嘟嘟车<br>$2,199</div>
+        <div class="chip" data-p="3299">电摩Pro<br>$3,299</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ct">2 · 还款方式</div>
+      <div class="chips" id="plan">
+        <div class="chip on" data-mode="month">月付<br>12 期</div>
+        <div class="chip" data-mode="week">周结<br>$15/周</div>
+        <div class="chip" data-mode="day">日结<br>$2.5/天</div>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label>首付 / 押金比例</label>
+        <select id="down">
+          <option value="0.1">10%（低门槛）</option>
+          <option value="0.2">20%</option>
+          <option value="0.3">30%</option>
+        </select>
+      </div>
+      <div class="calc" id="calc"></div>
+      <div class="warn ok" id="dti">DTI 校验：月供 + 预估换电 ≤ 净收入 50% ✅ 待填写收入后实时校验</div>
+    </div>
+
+    <div class="card">
+      <div class="ct">3 · 实名与收入（负责任信贷合规）</div>
+      <div class="kyc">
+        <div class="kd">🛡️</div>
+        <div><div class="kt">CamDigiKey 国家身份 eKYC</div><div class="ks">OAuth 2.0 · 数字签名合同（Sub-Decree 246）</div></div>
+        <button class="btn" id="kycBtn">去实名</button>
+      </div>
+      <div class="field" style="margin-top:12px">
+        <label>月净收入（用于 DTI≤50% 强制校验）</label>
+        <input id="income" type="number" placeholder="如 300" value="300" />
+      </div>
+    </div>
+
+    <button class="submit" id="submit">提交分期申请</button>
+  </div>
+
+  <div class="tabbar">
+    <div class="tab"><span class="ti">🏠</span>首页</div>
+    <div class="tab"><span class="ti">🔋</span>换电</div>
+    <div class="tab"><span class="ti">💰</span>资产</div>
+    <div class="tab active"><span class="ti">👤</span>我的</div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let model=1299,mode="month",down=0.1;
+function recalc(){
+  const dp=Math.round(model*down);
+  const loan=model-dp;
+  let mPay=0,term="",total=0;
+  if(mode==="month"){const r=0.018;mPay=Math.round(loan*r*Math.pow(1+r,12)/(Math.pow(1+r,12)-1));term="12 期";total=mPay*12+dp;}
+  else if(mode==="week"){mPay=15*4.33;term="周结";total=15*52+dp;}
+  else{mPay=2.5*30;term="日结";total=2.5*365+dp;}
+  $("calc").innerHTML=`
+    <div class="kv"><span class="k">原价</span><span class="v">$${model.toLocaleString()}</span></div>
+    <div class="kv"><span class="k">首付/押金</span><span class="v">$${dp.toLocaleString()}</span></div>
+    <div class="kv"><span class="k">融资额</span><span class="v">$${loan.toLocaleString()}</span></div>
+    <div class="kv"><span class="k">每期还款</span><span class="v big">$${Math.round(mPay).toLocaleString()} <small style="font-size:11px;color:var(--muted);font-weight:500">/ ${term}</small></span></div>
+    <div class="kv"><span class="k">预计总支出</span><span class="v">$${Math.round(total).toLocaleString()}</span></div>`;
+  checkDti(Math.round(mPay));
+}
+function checkDti(monthly){
+  const inc=parseFloat($("income").value)||0;
+  const swapEst=40; // 预估月换电
+  const ratio=inc>0?(monthly+swapEst)/inc:0;
+  const w=$("dti");
+  if(inc<=0){w.className="warn ok";w.textContent="DTI 校验：月供 + 预估换电 ≤ 净收入 50% ✅ 待填写收入后实时校验";return;}
+  if(ratio<=0.5){w.className="warn ok";w.textContent=`DTI 校验：${Math.round(ratio*100)}% ≤ 50% ✅ 通过负责任信贷红线`;}
+  else{w.className="warn bad";w.textContent=`DTI 校验：${Math.round(ratio*100)}% > 50% ⛔ 超限，须降低首付或延长周期（合规拦截）`;}
+}
+document.querySelectorAll("#model .chip").forEach(c=>c.onclick=()=>{document.querySelectorAll("#model .chip").forEach(x=>x.classList.remove("on"));c.classList.add("on");model=+c.dataset.p;recalc();});
+document.querySelectorAll("#plan .chip").forEach(c=>c.onclick=()=>{document.querySelectorAll("#plan .chip").forEach(x=>x.classList.remove("on"));c.classList.add("on");mode=c.dataset.mode;recalc();});
+$("down").onchange=()=>{down=+$("down").value;recalc();};
+$("income").oninput=()=>{const m=mode==="month"?Math.round((model*(1-down))*0.018*Math.pow(1.018,12)/(Math.pow(1.018,12)-1)):mode==="week"?15*4.33:2.5*30;checkDti(Math.round(m));};
+$("kycBtn").onclick=()=>{$("kycBtn").textContent="✅ 已实名";$("kycBtn").disabled=true;};
+$("submit").onclick=()=>{const ok=$("dti").className.includes("ok")&&$("kycBtn").disabled;$("submit").textContent=ok?"✅ 已提交 · 等待持牌租赁公司联审":"请先完成实名并通过 DTI";};
+recalc();
+</script>
+</body>
+</html>

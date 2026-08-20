@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Claw · 运营后台资产看板原型</title>
+<style>
+  :root{--bg:#0c1410;--panel:#121d18;--panel2:#16241d;--line:#22362c;
+    --green:#19c37d;--green-d:#0f9d63;--lime:#7ef0b0;--amber:#f5b14c;
+    --txt:#e9f3ee;--muted:#8aa79a;--blue:#4ea8ff;--red:#ff7a7a;--radius:16px}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--txt);min-height:100vh}
+  .layout{display:flex;max-width:1180px;margin:0 auto}
+  .side{width:200px;flex-shrink:0;padding:22px 14px;border-right:1px solid var(--line);min-height:100vh;background:#0e1a14}
+  .logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--green),#0b7a4d);
+    display:flex;align-items:center;justify-content:center;font-weight:800;color:#04140d;font-size:18px;box-shadow:0 4px 14px rgba(25,195,125,.35)}
+  .sbrand{font-size:15px;font-weight:800;margin-top:10px}
+  .sbrand small{display:block;font-size:11px;color:var(--muted);font-weight:500}
+  .nav{margin-top:24px}
+  .nav a{display:block;padding:10px 12px;border-radius:10px;color:var(--muted);font-size:13.5px;margin-bottom:4px;cursor:pointer;text-decoration:none}
+  .nav a.active{background:var(--panel2);color:var(--lime);font-weight:700}
+  .nav a:hover{color:var(--txt)}
+  .main{flex:1;padding:20px 22px}
+  .topbar{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+  .h2{font-size:18px;font-weight:800}
+  .jur{margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+  .jur select{background:transparent;border:none;color:var(--txt);font-size:13px;outline:none}
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px}
+  .kpi .kl{font-size:11px;color:var(--muted)}
+  .kpi .kv{font-size:20px;font-weight:800;color:var(--lime);margin-top:6px}
+  .kpi .kv.amber{color:var(--amber)} .kpi .kv.blue{color:var(--blue)} .kpi .kv.red{color:var(--red)}
+  .kpi .ks{font-size:10px;color:var(--muted);margin-top:2px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+  .ct{font-size:13px;color:var(--lime);margin-bottom:14px;display:flex;align-items:center;gap:7px}
+  .ct::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  .bar{margin-bottom:12px}
+  .bar .bl{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px}
+  .bar .bl .bn{color:var(--muted)} .bar .bl .bv{font-weight:700}
+  .track{height:9px;background:var(--panel2);border-radius:99px;overflow:hidden}
+  .fill{height:100%;border-radius:99px}
+  .fill.g{background:linear-gradient(90deg,var(--green),var(--green-d))}
+  .fill.a{background:linear-gradient(90deg,var(--amber),#c98a2e)}
+  .fill.b{background:linear-gradient(90deg,var(--blue),#2e6fb0)}
+  .fill.r{background:linear-gradient(90deg,var(--red),#c44)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{text-align:left;color:var(--muted);font-weight:500;padding:8px 6px;border-bottom:1px solid var(--line)}
+  td{padding:9px 6px;border-bottom:1px dashed var(--line)}
+  .pill{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:99px;font-weight:700}
+  .pill.ok{background:var(--green);color:#042017} .pill.busy{background:var(--amber);color:#1a1206}
+  .pill.off{background:#3a2a2a;color:var(--red)}
+  .twocol{display:grid;grid-template-columns:1.3fr 1fr;gap:16px}
+  .partner{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line)}
+  .partner:last-child{border-bottom:none}
+  .pa{width:34px;height:34px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:14px}
+  .partner .pn{font-size:13px;font-weight:700} .partner .pr{font-size:11px;color:var(--muted)}
+  .partner .pv{margin-left:auto;font-weight:800;color:var(--lime)}
+  @media(max-width:980px){.kpis{grid-template-columns:repeat(3,1fr)}.grid2,.twocol{grid-template-columns:1fr}.side{display:none}}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="side">
+    <div class="logo">⚡</div>
+    <div class="sbrand">Claw 运营后台<small>新能源资产 · 全球共营</small></div>
+    <nav class="nav">
+      <a class="active">📊 资产看板</a>
+      <a>🔋 资产管理</a>
+      <a>📦 订单中心</a>
+      <a>💰 财务结算</a>
+      <a>👥 人人经济</a>
+      <a>⚙️ 系统设置</a>
+    </nav>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div class="h2">资产看板</div>
+      <div class="jur">🌐 法域
+        <select id="jur">
+          <option value="KHM">🇰🇭 柬埔寨（运营中）</option>
+          <option value="CHN">🇨🇳 中国（供给枢纽）</option>
+          <option value="VNM">🇻🇳 越南（规划）</option>
+          <option value="THA">🇹🇭 泰国（规划）</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="kpis" id="kpis"></div>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="ct">车辆资产状态分布</div>
+        <div id="vehBars"></div>
+      </div>
+      <div class="card">
+        <div class="ct">电池资产状态分布</div>
+        <div id="batBars"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px">
+      <div class="ct">换电站实时运营</div>
+      <table>
+        <thead><tr><th>站点</th><th>可用电池</th><th>忙碌度</th><th>今日换电</th><th>状态</th></tr></thead>
+        <tbody id="stations"></tbody>
+      </table>
+    </div>
+
+    <div class="twocol">
+      <div class="card">
+        <div class="ct">人人经济 · 本月分润</div>
+        <div class="kpi" style="margin-bottom:12px"><div class="kl">本月分润总额</div><div class="kv amber" id="econTotal">—</div><div class="ks" id="econSub"></div></div>
+        <div id="partners"></div>
+      </div>
+      <div class="card">
+        <div class="ct">合规与风险</div>
+        <div class="kpi" style="margin-bottom:10px"><div class="kl">DTI 超限预警（月供+换电>净收入50%）</div><div class="kv red" id="dti">—</div><div class="ks">负责任信贷合规红线</div></div>
+        <div class="kpi"><div class="kl">KYC 完成率</div><div class="kv" id="kyc">—</div><div class="ks">CamDigiKey 国家身份接入</div></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const DATA={
+  KHM:{kpis:[
+      {l:"在册车辆",v:"3,842",s:"+312 本月",c:""},{l:"在册电池",v:"9,210",s:"+540 本月",c:""},
+      {l:"在线换电站",v:"126",s:"92% 在线",c:"blue"},{l:"本月换电",v:"84,520",s:"+18% MoM",c:""},
+      {l:"人人经济参与",v:"1,260",s:"+180 本月",c:"amber"},{l:"逾期率",v:"2.1%",s:"< 5% 红线",c:""}],
+    veh:[["在用/租赁中",68,"g"],["在库待租",19,"b"],["维修/保养",9,"a"],["冻结",4,"r"]],
+    bat:[["在柜可用",61,"g"],["在用电车",28,"b"],["充电中",7,"a"],["退役/梯次",4,"r"]],
+    stations:[["金边·桑园区站","12 / 20","中",342,"ok"],["金边·隆边区站","5 / 18","高",511,"busy"],["金边·玛卡拉站","0 / 12","满",298,"off"],["暹粒·市中心站","8 / 15","中",176,"ok"]],
+    econ:{total:"$38,420",sub:"分润给 1,260 位资产合伙人",partners:[["👤 陈先生","资产合伙人 · 深圳供货","$1,280"],["👤 SOKHA","司机 · 金边","$642"],["👤 李女士","投资人 · 广州","$910"],["👤 DARA","加盟站主 · 暹粒","$455"]]},
+    dti:"47 人",kyc:"96.3%"},
+  CHN:{kpis:[
+      {l:"在册车辆",v:"12,050",s:"供给枢纽",c:""},{l:"在册电池",v:"30,800",s:"供给枢纽",c:""},
+      {l:"在线换电站",v:"—",s:"以供给为主",c:"blue"},{l:"本月供货",v:"21,400",s:"发往各运营国",c:""},
+      {l:"人人经济参与",v:"3,920",s:"商家网络",c:"amber"},{l:"逾期率",v:"1.4%",s:"< 5% 红线",c:""}],
+    veh:[["供货在途",54,"g"],["在库待发",33,"b"],["质检/维修",9,"a"],["冻结",4,"r"]],
+    bat:[["在库待发",58,"g"],["供货在途",26,"b"],["充电检测",9,"a"],["退役/梯次",7,"r"]],
+    stations:[["深圳·南山仓","240 / 300","中","—","ok"],["广州·天河仓","150 / 200","中","—","ok"],["上海·中转仓","90 / 120","中","—","ok"]],
+    econ:{total:"$92,100",sub:"枢纽分润 + 商家网络返佣",partners:[["🏭 比亚迪供应","电池 OEM","$12,400"],["🏭 电芯厂A","梯次电芯","$6,800"],["🚚 物流伙伴","跨境运输","$3,200"],["🛒 商家网络","渠道返佣","$4,500"]]},
+    dti:"0 人",kyc:"98.1%"},
+  VNM:{kpis:[{l:"在册车辆",v:"规划中",s:"",c:""},{l:"在册电池",v:"规划中",s:"",c:""},{l:"在线换电站",v:"0",s:"待落地",c:"blue"},{l:"本月换电",v:"—",s:"",c:""},{l:"人人经济参与",v:"—",s:"",c:"amber"},{l:"逾期率",v:"—",s:"",c:""}],
+    veh:[["规划",100,"b"]],bat:[["规划",100,"b"]],
+    stations:[["河内·试点（规划）","—","—","—","off"]],
+    econ:{total:"$0",sub:"规划阶段",partners:[]},dti:"—",kyc:"—"},
+  THA:{kpis:[{l:"在册车辆",v:"规划中",s:"",c:""},{l:"在册电池",v:"规划中",s:"",c:""},{l:"在线换电站",v:"0",s:"待落地",c:"blue"},{l:"本月换电",v:"—",s:"",c:""},{l:"人人经济参与",v:"—",s:"",c:"amber"},{l:"逾期率",v:"—",s:"",c:""}],
+    veh:[["规划",100,"b"]],bat:[["规划",100,"b"]],
+    stations:[["曼谷·试点（规划）","—","—","—","off"]],
+    econ:{total:"$0",sub:"规划阶段",partners:[]},dti:"—",kyc:"—"}
+};
+const $=id=>document.getElementById(id);
+function render(c){
+  const d=DATA[c];
+  $("kpis").innerHTML=d.kpis.map(k=>`<div class="kpi"><div class="kl">${k.l}</div><div class="kv ${k.c}">${k.v}</div><div class="ks">${k.s}</div></div>`).join("");
+  const bars=(arr)=>arr.map(([n,p,cls])=>{const tot=arr.reduce((s,x)=>s+x[1],0);const pct=Math.round(p/tot*100);
+    return `<div class="bar"><div class="bl"><span class="bn">${n}</span><span class="bv">${p}%</span></div><div class="track"><div class="fill ${cls}" style="width:${pct}%"></div></div></div>`;}).join("");
+  $("vehBars").innerHTML=bars(d.veh); $("batBars").innerHTML=bars(d.bat);
+  const st={ok:["ok","正常"],busy:["busy","忙碌"],off:["off","离线"]};
+  $("stations").innerHTML=d.stations.map(s=>`<tr><td>${s[0]}</td><td>${s[1]}</td><td>${s[2]}</td><td>${s[3]}</td><td><span class="pill ${st[s[4]][0]}">${st[s[4]][1]}</span></td></tr>`).join("");
+  $("econTotal").textContent=d.econ.total; $("econSub").textContent=d.econ.sub;
+  $("partners").innerHTML=d.econ.partners.map(p=>`<div class="partner"><div class="pa">${p[0][0]}</div><div><div class="pn">${p[1]}</div><div class="pr">${p[2]}</div></div><div class="pv">${p[3]}</div></div>`).join("");
+  $("dti").textContent=d.dti; $("kyc").textContent=d.kyc;
+}
+$("jur").onchange=()=>render($("jur").value);
+render("KHM");
+</script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Claw · 换电扫码原型</title>
+<style>
+  :root{--bg:#0c1410;--panel:#121d18;--panel2:#16241d;--line:#22362c;
+    --green:#19c37d;--green-d:#0f9d63;--lime:#7ef0b0;--amber:#f5b14c;
+    --txt:#e9f3ee;--muted:#8aa79a;--blue:#4ea8ff;--red:#ff7a7a;--radius:16px}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1200px 600px at 50% -10%,#16352a 0%,var(--bg) 60%);color:var(--txt);min-height:100vh}
+  .app{max-width:440px;margin:0 auto;min-height:100vh;padding:0 0 80px;position:relative}
+  .topbar{padding:18px 16px 10px;display:flex;align-items:center;gap:10px}
+  .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--green),#0b7a4d);display:flex;align-items:center;justify-content:center;font-weight:800;color:#04140d;font-size:17px}
+  .hbrand{font-size:17px;font-weight:800} .hbrand small{display:block;font-size:11px;color:var(--muted);font-weight:500}
+  .locbar{margin:0 16px 12px;display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:12px}
+  .locbar b{font-weight:700} .locbar .m{color:var(--muted);margin-left:auto}
+  .body{padding:8px 14px 0}
+  /* scanner */
+  .scan{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+  .view{position:relative;height:200px;border-radius:12px;background:repeating-linear-gradient(45deg,#0e1a14,#0e1a14 12px,#101f18 12px,#101f18 24px);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--line)}
+  .view .laser{position:absolute;left:8%;right:8%;height:2px;background:var(--green);box-shadow:0 0 12px var(--green);animation:lz 2.2s infinite}
+  @keyframes lz{0%{top:14%}50%{top:84%}100%{top:14%}}
+  .view .corner{position:absolute;width:22px;height:22px;border:2px solid var(--green)}
+  .view .corner.tl{top:10px;left:10px;border-right:none;border-bottom:none}
+  .view .corner.tr{top:10px;right:10px;border-left:none;border-bottom:none}
+  .view .corner.bl{bottom:10px;left:10px;border-right:none;border-top:none}
+  .view .corner.br{bottom:10px;right:10px;border-left:none;border-top:none}
+  .view .hint{color:var(--muted);font-size:13px;text-align:center;z-index:2}
+  .scanbtn{margin-top:14px;width:100%;background:linear-gradient(135deg,var(--green),var(--green-d));color:#042017;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:800;cursor:pointer}
+  .scanbtn:active{transform:translateY(1px)}
+  /* result battery */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:none}
+  .card.show{display:block}
+  .bathead{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .ring{width:56px;height:56px;border-radius:50%;background:conic-gradient(var(--green) 0 90%,#243a30 90%);display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0}
+  .ring::after{content:"";position:absolute;inset:6px;border-radius:50%;background:var(--panel)}
+  .ring b{position:relative;font-size:14px;color:var(--lime);font-weight:800}
+  .bathead .bn{font-size:14px;font-weight:700} .bathead .bs{font-size:11.5px;color:var(--muted);margin-top:3px}
+  .kv{display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px dashed var(--line)}
+  .kv:last-child{border-bottom:none} .kv .k{color:var(--muted)} .kv .v{font-weight:700}
+  .kv .v.g{color:var(--green)} .kv .v.amber{color:var(--amber)}
+  .confirm{margin-top:14px;width:100%;background:linear-gradient(135deg,var(--green),var(--green-d));color:#042017;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:800;cursor:pointer}
+  .confirm:active{transform:translateY(1px)}
+  .steps{display:flex;justify-content:space-between;margin:14px 4px 0;font-size:10.5px;color:var(--muted)}
+  .steps .s{text-align:center;flex:1} .steps .s.on{color:var(--lime);font-weight:700}
+  .steps .dot{width:22px;height:22px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:11px}
+  .steps .s.on .dot{background:var(--green);color:#042017;border:none}
+  .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:440px;max-width:100%;display:flex;background:rgba(14,24,20,.96);border-top:1px solid var(--line)}
+  .tab{flex:1;text-align:center;padding:9px 0;font-size:10.5px;color:var(--muted)}
+  .tab .ti{font-size:18px;display:block;margin-bottom:2px}
+  .tab.active{color:var(--lime)} .tab.active .ti{filter:drop-shadow(0 0 6px var(--green))}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="logo">⚡</div>
+    <div class="hbrand">换电扫码<small>扫码即换 · 自动计费</small></div>
+  </div>
+  <div class="locbar">📍 <b id="loc">金边 · 桑园区换电站</b><span class="m" id="avail">可用电池 12</span></div>
+
+  <div class="body">
+    <div class="scan" id="scanBox">
+      <div class="view">
+        <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+        <div class="laser"></div>
+        <div class="hint">将电池柜二维码放入框内<br>或点击下方按钮模拟扫码</div>
+      </div>
+      <button class="scanbtn" id="scanBtn">📷 扫码取电池</button>
+    </div>
+
+    <div class="card" id="resBox">
+      <div class="bathead">
+        <div class="ring"><b>90%</b></div>
+        <div><div class="bn">电池 #BT-2026-KHM-0488</div><div class="bs">三元锂 · 72V/60Ah · 健康度 95%</div></div>
+      </div>
+      <div class="kv"><span class="k">目标换电站</span><span class="v">金边·桑园区站</span></div>
+      <div class="kv"><span class="k">换电方式</span><span class="v g">满电替换（原电池归还）</span></div>
+      <div class="kv"><span class="k">本次费用</span><span class="v amber" id="fee">$0.92</span></div>
+      <div class="kv"><span class="k">支付方式</span><span class="v">KHQR / ABA（Bakong 清算）</span></div>
+      <div class="kv"><span class="k">锁版价</span><span class="v">$0.12/kWh（0.18 峰值）</span></div>
+      <div class="kv"><span class="k">我的车辆</span><span class="v">电动摩托 #EM-0392</span></div>
+      <button class="confirm" id="confirmBtn">确认换电并支付</button>
+    </div>
+
+    <div class="steps">
+      <div class="s on"><div class="dot">1</div>扫码</div>
+      <div class="s" id="st2"><div class="dot">2</div>比对电池</div>
+      <div class="s" id="st3"><div class="dot">3</div>支付</div>
+      <div class="s" id="st4"><div class="dot">4</div>换电完成</div>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <div class="tab"><span class="ti">🏠</span>首页</div>
+    <div class="tab active"><span class="ti">🔋</span>换电</div>
+    <div class="tab"><span class="ti">💰</span>资产</div>
+    <div class="tab"><span class="ti">👤</span>我的</div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+$("scanBtn").onclick=()=>{
+  const hint=$("scanBox").querySelector(".hint");
+  hint.innerHTML="识别中…";
+  setTimeout(()=>{
+    $("scanBox").style.display="none";
+    $("resBox").classList.add("show");
+    $("st2").classList.add("on");
+  },900);
+};
+$("confirmBtn").onclick=()=>{
+  const b=$("confirmBtn");b.textContent="支付中…";b.disabled=true;
+  setTimeout(()=>{
+    b.textContent="✅ 换电完成 · 柜门已开";
+    $("st3").classList.add("on");$("st4").classList.add("on");
+    setTimeout(()=>{$("avail").textContent="可用电池 11";},400);
+  },1000);
+};
+</script>
+</body>
+</html>
