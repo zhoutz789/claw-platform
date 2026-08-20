@@ -1,6 +1,7 @@
 package com.claw.server.domain.jurisdiction;
 
 import com.claw.server.common.enums.JurisdictionStatus;
+import com.claw.server.common.enums.NodeRole;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -10,6 +11,10 @@ public interface CountryRepository extends JpaRepository<Country, String> {
     Optional<Country> findByCode(String code);
 
     List<Country> findByStatus(JurisdictionStatus status);
+
+    List<Country> findByNodeRole(NodeRole nodeRole);
+
+    List<Country> findByStatusAndNodeRole(JurisdictionStatus status, NodeRole nodeRole);
 
     List<Country> findByRegionOrderByPilotOrderAsc(String region);
 }

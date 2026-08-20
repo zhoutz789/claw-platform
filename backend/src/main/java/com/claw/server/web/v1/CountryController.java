@@ -3,6 +3,7 @@ package com.claw.server.web.v1;
 import com.claw.server.common.api.ApiResult;
 import com.claw.server.common.dto.JurisdictionViews;
 import com.claw.server.common.enums.JurisdictionStatus;
+import com.claw.server.common.enums.NodeRole;
 import com.claw.server.domain.jurisdiction.JurisdictionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -12,7 +13,7 @@ import java.util.List;
 /**
  * 全球化运营 / 法域开放接口。
  *
- * <p>GET /countries            国家清单（可按 status 过滤：PILOT/ACTIVE/PLANNED/EXCLUDED）
+ * <p>GET /countries            国家清单（可按 status / nodeRole 过滤；全球一家，无排除国）
  * GET /countries/{code}       某国详情（含身份/支付/牌照适配器摘要）
  * GET /jurisdictions/me       当前请求所属法域完整适配摘要（由 X-Country-Code 决定，缺省 KHM）
  */
@@ -23,11 +24,12 @@ public class CountryController {
 
     private final JurisdictionService jurisdictionService;
 
-    /** 国家清单（共营扩展路线图）。 */
+    /** 国家清单（全球互通节点；可按运营状态或网络角色过滤）。 */
     @GetMapping("/countries")
     public ApiResult<List<JurisdictionViews.CountryView>> listCountries(
-            @RequestParam(required = false) JurisdictionStatus status) {
-        return ApiResult.ok(jurisdictionService.listCountries(status));
+            @RequestParam(required = false) JurisdictionStatus status,
+            @RequestParam(required = false) NodeRole nodeRole) {
+        return ApiResult.ok(jurisdictionService.listCountries(status, nodeRole));
     }
 
     /** 某国详情（含适配器摘要）。 */

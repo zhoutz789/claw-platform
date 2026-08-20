@@ -2,6 +2,7 @@ package com.claw.server.common.dto;
 
 import com.claw.server.common.enums.CountryRegion;
 import com.claw.server.common.enums.JurisdictionStatus;
+import com.claw.server.common.enums.NodeRole;
 import com.claw.server.common.enums.OperatorType;
 import com.claw.server.common.enums.ProviderType;
 import com.claw.server.common.enums.LicenseStatus;
@@ -17,7 +18,8 @@ public final class JurisdictionViews {
     public static record CountryView(
             String code, String nameEn, String nameLocal, CountryRegion region,
             String currencyCode, String defaultLocale, int pilotOrder,
-            JurisdictionStatus status, boolean dataResidency) {
+            JurisdictionStatus status, NodeRole nodeRole,
+            String tradePolicy, boolean dataResidency) {
     }
 
     public static record IdentityProviderView(

@@ -2,10 +2,13 @@ package com.claw.server.domain.jurisdiction;
 
 import com.claw.server.common.enums.CountryRegion;
 import com.claw.server.common.enums.JurisdictionStatus;
+import com.claw.server.common.enums.NodeRole;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 
@@ -46,6 +49,15 @@ public class Country {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 16)
     private JurisdictionStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "node_role", nullable = false, length = 16)
+    private NodeRole nodeRole;
+
+    /** 跨境物资转移「各算各的」自有规则（进口关税/出口退税/本地增值税/结算币种/必备单证），JSON 字符串。 */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "trade_policy_json", columnDefinition = "jsonb")
+    private String tradePolicyJson;
 
     @Column(name = "data_residency", nullable = false)
     private boolean dataResidency;

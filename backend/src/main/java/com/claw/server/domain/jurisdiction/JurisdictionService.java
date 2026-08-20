@@ -3,6 +3,7 @@ package com.claw.server.domain.jurisdiction;
 import com.claw.server.common.api.BizException;
 import com.claw.server.common.dto.JurisdictionViews;
 import com.claw.server.common.enums.JurisdictionStatus;
+import com.claw.server.common.enums.NodeRole;
 import com.claw.server.common.security.CountryContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import java.util.List;
 /**
  * 法域服务：按国家解析活跃身份/支付/牌照适配器，并暴露国家清单。
  * 共营框架核心——进一国只需在注册表插数据，核心业务代码不变。
+ * 全球一家：所有国家都是互通节点，不再有排除国概念。
  */
 @Service
 @RequiredArgsConstructor
@@ -23,14 +25,10 @@ public class JurisdictionService {
     private final RegulatoryLicenseRepository regulatoryLicenseRepository;
     private final TenantRepository tenantRepository;
 
-    /** 当前请求所属国家（来自 X-Country-Code，缺省 KHM）。 */
+    /** 当前请求所属国家（来自 X-Country-Code，缺省 KHM）。全球开放，无排除校验。 */
     public Country currentCountry() {
-        Country c = countryRepository.findByCode(CountryContext.countryCode())
+        return countryRepository.findByCode(CountryContext.countryCode())
                 .orElseThrow(() -> BizException.of(40450, "error.country.not.found"));
-        if (c.getStatus() == JurisdictionStatus.EXCLUDED) {
-            throw BizException.of(40950, "error.country.excluded");
-        }
-        return c;
     }
 
     public JurisdictionViews.CountryView countryView(String code) {
@@ -39,10 +37,17 @@ public class JurisdictionService {
         return toView(c);
     }
 
-    public List<JurisdictionViews.CountryView> listCountries(JurisdictionStatus status) {
-        List<Country> list = (status == null)
-                ? countryRepository.findAll()
-                : countryRepository.findByStatus(status);
+    public List<JurisdictionViews.CountryView> listCountries(JurisdictionStatus status, NodeRole nodeRole) {
+        List<Country> list;
+        if (status != null && nodeRole != null) {
+            list = countryRepository.findByStatusAndNodeRole(status, nodeRole);
+        } else if (status != null) {
+            list = countryRepository.findByStatus(status);
+        } else if (nodeRole != null) {
+            list = countryRepository.findByNodeRole(nodeRole);
+        } else {
+            list = countryRepository.findAll();
+        }
         return list.stream().map(JurisdictionService::toView).toList();
     }
 
@@ -84,6 +89,6 @@ public class JurisdictionService {
         return new JurisdictionViews.CountryView(
                 c.getCode(), c.getNameEn(), c.getNameLocal(), c.getRegion(),
                 c.getCurrencyCode(), c.getDefaultLocale(), c.getPilotOrder(),
-                c.getStatus(), c.isDataResidency());
+                c.getStatus(), c.getNodeRole(), c.getTradePolicyJson(), c.isDataResidency());
     }
 }
