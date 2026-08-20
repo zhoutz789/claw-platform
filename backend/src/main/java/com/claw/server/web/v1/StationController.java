@@ -3,21 +3,28 @@ package com.claw.server.web.v1;
 import com.claw.server.common.api.ApiResult;
 import com.claw.server.common.dto.StationRequests;
 import com.claw.server.common.dto.StationViews;
+import com.claw.server.common.security.AuthContext;
+import com.claw.server.domain.station.StationOpsService;
 import com.claw.server.domain.station.StationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 站点接口（客户选购入口 + 投资者投放入口）。
+ * 站点接口（客户选购入口 + 投资者投放入口 + 服务站作业 S4）。
  *
  * <p>GET  /stations/nearby                 附近站点（?countryCode=&lat=&lng=&limit=3）
  * GET  /stations/map                      地图适配层（附近换电站 + 满电/充电中电池数）
  * GET  /stations/search?sku=&lat=&lng=    搜车型 → 附近有现货的站点
  * GET  /stations/{id}/stock               站内现货
  * POST /stations/{id}/stock               投放现货（认购入站）
+ * POST /stations/{id}/scan-out            服务站扫码发放满电电池
+ * POST /stations/{id}/scan-in             服务站扫码回收欠电电池
+ * GET  /stations/{id}/slots               服务站电池位
+ * GET  /stations/{id}/daily-bill          服务站日账单（?date=2026-08-20）
  */
 @RestController
 @RequestMapping("/api/v1/stations")
@@ -25,6 +32,7 @@ import java.util.List;
 public class StationController {
 
     private final StationService stationService;
+    private final StationOpsService stationOpsService;
 
     @GetMapping("/nearby")
     public ApiResult<List<StationViews.StationView>> nearby(
@@ -63,5 +71,39 @@ public class StationController {
     public ApiResult<StationViews.StockView> stockIn(@PathVariable Long id,
                                                      @Valid @RequestBody StationRequests.StockIn req) {
         return ApiResult.ok(stationService.stockIn(id, req.skuCode(), req.qty()));
+    }
+
+    // ------------------------------------------------------------------
+    // 服务站作业（S4）
+    // ------------------------------------------------------------------
+    @PostMapping("/{id}/scan-out")
+    public ApiResult<StationViews.HandoverView> scanOut(@PathVariable Long id,
+                                                        @Valid @RequestBody StationRequests.ScanOut req) {
+        return ApiResult.ok(stationOpsService.scanOut(id, req, requireOperator()));
+    }
+
+    @PostMapping("/{id}/scan-in")
+    public ApiResult<StationViews.HandoverView> scanIn(@PathVariable Long id,
+                                                       @Valid @RequestBody StationRequests.ScanIn req) {
+        return ApiResult.ok(stationOpsService.scanIn(id, req, requireOperator()));
+    }
+
+    @GetMapping("/{id}/slots")
+    public ApiResult<List<StationViews.SlotView>> slots(@PathVariable Long id) {
+        return ApiResult.ok(stationOpsService.slots(id));
+    }
+
+    @GetMapping("/{id}/daily-bill")
+    public ApiResult<StationViews.DailyBillView> dailyBill(@PathVariable Long id,
+                                                           @RequestParam(required = false) LocalDate date) {
+        return ApiResult.ok(stationOpsService.dailyBill(id, date));
+    }
+
+    private Long requireOperator() {
+        Long uid = AuthContext.currentUserId();
+        if (uid == null) {
+            throw new IllegalStateException("unauthenticated");
+        }
+        return uid;
     }
 }

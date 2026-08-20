@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Claw · 服务站 APP（鲜活能源版）</title>
+<style>
+  :root{--paper:#f7f4ec;--surface:#fffdf7;--paper2:#efebe0;--line:#e4dfd1;
+    --ink:#15281f;--ink2:#46594f;--muted:#819388;
+    --brand:#176a48;--brand-deep:#0d4630;--brand-soft:#e2f0e7;
+    --energy:#2fc97c;--lime:#b9f062;--amber:#efa13b;--amber-soft:#fbeeda;
+    --coral:#e2573f;--coral-soft:#fbe5de;--blue:#4a88cf;
+    --r-sm:10px;--r-md:16px;--r-lg:22px;
+    --font-disp:"Space Grotesk","Noto Sans SC",system-ui,sans-serif;
+    --font-body:"Noto Sans SC",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:var(--font-body);background:var(--paper);color:var(--ink);line-height:1.5;display:flex;justify-content:center}
+  .num{font-family:var(--font-disp);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+  .app{width:440px;max-width:100%;min-height:100vh;position:relative;background:var(--paper);overflow:hidden;padding-bottom:74px}
+
+  .topbar{padding:16px 16px 8px;display:flex;align-items:center;gap:10px}
+  .logo{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--energy));display:grid;place-items:center;color:#fff;font-size:15px;flex-shrink:0}
+  .t{font-size:16px;font-weight:900;letter-spacing:-.01em}
+  .t small{display:block;font-size:10.5px;color:var(--muted);font-weight:500}
+
+  .view{display:none;padding:0 14px;animation:fade .25s ease}
+  .view.on{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:15px;margin-bottom:12px}
+  .card h4{font-size:13.5px;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+  .card h4 .m{color:var(--muted);font-weight:500;font-size:11px;margin-left:auto}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:none;cursor:pointer;
+    font-family:var(--font-body);font-weight:700;font-size:14px;border-radius:var(--r-md);padding:13px 18px;
+    transition:transform .18s cubic-bezier(.22,1,.36,1)}
+  .btn:active{transform:scale(.97)}
+  .btn-energy{background:linear-gradient(135deg,var(--energy),var(--brand));color:#fff;box-shadow:0 6px 16px rgba(47,201,124,.3)}
+  .btn-ghost{background:transparent;color:var(--brand);box-shadow:inset 0 0 0 1.5px var(--brand)}
+  .btn-soft{background:var(--brand-soft);color:var(--brand-deep)}
+  .row2{display:flex;gap:10px}
+  .row2 .btn{flex:1}
+
+  .kv{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:8px 0;border-bottom:1px dashed var(--line)}
+  .kv:last-child{border-bottom:none}
+  .kv .k{color:var(--ink2)} .kv .v{font-weight:700;font-family:var(--font-disp)}
+  .kv .v.g{color:var(--brand)} .kv .v.a{color:#a3640e}
+
+  .slots{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .slot{aspect-ratio:1;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:700;position:relative}
+  .slot .pct{font-family:var(--font-disp);font-size:20px;font-weight:700}
+  .slot.r{background:var(--brand-soft);color:var(--brand-deep);border:1px solid #cfe7d8}
+  .slot.c{background:var(--amber-soft);color:#8a5a10;border:1px solid #f3e0c2}
+  .slot.c .pct{animation:pulse 1.6s infinite}
+  .slot.o{background:var(--paper2);color:var(--muted);border:1px dashed var(--line)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+
+  .bill-table{width:100%;font-size:12.5px;border-collapse:collapse}
+  .bill-table td{padding:8px 4px;border-bottom:1px dashed var(--line)}
+  .bill-table td:last-child{text-align:right;font-family:var(--font-disp);font-weight:600}
+  .bill-table tr:last-child td{border-bottom:none;font-size:14.5px;font-weight:800}
+  .bill-table tr:last-child td:last-child{color:var(--brand)}
+
+  .fund{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px dashed var(--line)}
+  .fund:last-child{border-bottom:none}
+  .fund .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:18px;flex-shrink:0}
+  .fund .n{font-size:13.5px;font-weight:700}
+  .fund .s{font-size:11px;color:var(--muted)}
+  .fund .v{margin-left:auto;font-family:var(--font-disp);font-weight:700;font-size:16px}
+
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700}
+  .chip.ok{background:var(--brand-soft);color:var(--brand-deep)}
+  .chip.warn{background:var(--amber-soft);color:#8a5a10}
+
+  /* 扫码弹层 */
+  .mask{position:fixed;inset:0;background:rgba(15,40,30,.5);backdrop-filter:blur(2px);display:none;align-items:flex-end;justify-content:center;z-index:50}
+  .mask.on{display:flex}
+  .sheet{width:440px;max-width:100%;background:var(--paper);border-radius:22px 22px 0 0;padding:20px 16px 24px;animation:up .3s cubic-bezier(.22,1,.36,1)}
+  @keyframes up{from{transform:translateY(100%)}to{transform:none}}
+  .scan-view{height:180px;border-radius:16px;background:repeating-linear-gradient(45deg,#f1ede2,#f1ede2 10px,#f7f4ec 10px,#f7f4ec 20px);display:grid;place-items:center;position:relative;overflow:hidden;border:1px solid var(--line);margin-bottom:14px}
+  .scan-view .frame{position:absolute;width:110px;height:110px;border:2.5px solid var(--energy);border-radius:16px}
+  .scan-view .laser{position:absolute;left:16%;right:16%;height:2px;background:var(--energy);box-shadow:0 0 12px var(--energy);animation:lz 2.2s infinite}
+  @keyframes lz{0%,100%{top:22%}50%{top:76%}}
+  .scan-view .hint{font-size:12px;color:var(--muted);z-index:2;text-align:center;margin-top:80px}
+  .sheet h3{font-size:16px;font-weight:900;margin-bottom:12px}
+  .sheet .btn{width:100%;margin-top:10px}
+
+  .toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:600;z-index:99;display:none;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+  .toast.on{display:block;animation:fade .2s}
+
+  .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:440px;max-width:100%;background:rgba(255,253,247,.94);backdrop-filter:blur(14px);border-top:1px solid var(--line);display:flex;padding:8px 6px 12px;z-index:40}
+  .tab{flex:1;text-align:center;font-size:10.5px;color:var(--muted);font-weight:500;cursor:pointer;border:none;background:none;font-family:var(--font-body)}
+  .tab i{display:block;font-style:normal;font-size:19px;margin-bottom:2px}
+  .tab.on{color:var(--brand);font-weight:800}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="logo">🏪</div>
+    <div class="t">服务站工作台<small>俄罗斯市场站 · 站长 阿肯 · 金边</small></div>
+  </div>
+
+  <!-- 工作台 -->
+  <div class="view on" id="v-home">
+    <div class="card" style="background:linear-gradient(135deg,var(--brand),var(--brand-deep));color:#fff;border:none">
+      <div style="font-size:12px;opacity:.75">今日经营概览</div>
+      <div style="display:flex;gap:24px;margin-top:12px">
+        <div><div class="num" style="font-size:26px;font-weight:700">12<em style="font-size:12px;font-weight:500;opacity:.75;font-style:normal"> 换电单</em></div></div>
+        <div><div class="num" style="font-size:26px;font-weight:700;color:var(--lime)">$24.6<em style="font-size:12px;font-weight:500;opacity:.75;font-style:normal"> 营收</em></div></div>
+        <div><div class="num" style="font-size:26px;font-weight:700">$4.60<em style="font-size:12px;font-weight:500;opacity:.75;font-style:normal"> 站方分成</em></div></div>
+      </div>
+    </div>
+
+    <div class="row2">
+      <button class="btn btn-energy" onclick="openScan('OUT')">📤 发放电池</button>
+      <button class="btn btn-ghost" onclick="openScan('IN')">📥 回收电池</button>
+    </div>
+
+    <div class="card">
+      <h4>电池位 · 3 槽 <span class="m">满电 1 · 充电 1 · 出库 1</span></h4>
+      <div class="slots">
+        <div class="slot r"><span class="pct">100</span>满电</div>
+        <div class="slot c"><span class="pct">42</span>充电中</div>
+        <div class="slot o"><span class="pct">—</span>已发放</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h4>今日日账单 <span class="m">2026-08-20</span></h4>
+      <table class="bill-table">
+        <tr><td>换电 12 单 · 24.2 度</td><td class="num">$0.88</td></tr>
+        <tr><td>电费（转付 EDC）</td><td class="num">$2.90</td></tr>
+        <tr><td>服务费（基金0.10/站0.19/平台0.03）</td><td class="num">$7.74</td></tr>
+        <tr><td>站方分成</td><td class="num" style="color:var(--brand)">$4.60</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 电池位 -->
+  <div class="view" id="v-slots">
+    <div class="card">
+      <h4>电池位总览</h4>
+      <div class="slots" style="grid-template-columns:repeat(3,1fr);gap:12px">
+        <div class="slot r"><span class="pct">100</span>#001 满电</div>
+        <div class="slot c"><span class="pct">42</span>#002 充电中</div>
+        <div class="slot o"><span class="pct">—</span>#003 出库</div>
+      </div>
+    </div>
+    <div class="card">
+      <h4>最近收发</h4>
+      <div class="kv"><span class="k">📤 发放 #003</span><span class="v g">10:24</span></div>
+      <div class="kv"><span class="k">📥 回收 #005 · SOC 42%</span><span class="v">09:58</span></div>
+      <div class="kv"><span class="k">📤 发放 #002</span><span class="v g">09:15</span></div>
+      <div class="kv"><span class="k">📥 回收 #007 · SOC 38%</span><span class="v">08:42</span></div>
+    </div>
+  </div>
+
+  <!-- 资金 -->
+  <div class="view" id="v-fund">
+    <div class="card" style="border:1px solid var(--brand-soft)">
+      <h4>💳 ABA 托管 · 三专户 <span class="m">Bakong 清算</span></h4>
+      <div class="fund"><div class="ic" style="background:var(--brand-soft)">🔒</div><div><div class="n">残值准备金</div><div class="s">ABA-ESCROW-0001</div></div><div class="v num">$1,204.00</div></div>
+      <div class="fund"><div class="ic" style="background:#eaf7cf">🔋</div><div><div class="n">电池基金</div><div class="s">ABA-ESCROW-0002</div></div><div class="v num">$863.50</div></div>
+      <div class="fund"><div class="ic" style="background:var(--amber-soft)">🚗</div><div><div class="n">车辆风险金</div><div class="s">ABA-ESCROW-0003</div></div><div class="v num">$412.00</div></div>
+    </div>
+    <div class="card">
+      <h4>日终对账</h4>
+      <div class="kv"><span class="k">对账日</span><span class="v">2026-08-19（T+1）</span></div>
+      <div class="kv"><span class="k">平台账本净额</span><span class="v num">$24.60</span></div>
+      <div class="kv"><span class="k">ABA 流水净额</span><span class="v num">$24.60</span></div>
+      <div class="kv" style="border:none"><span class="k">结果</span><span class="chip ok">✅ 零差异</span></div>
+    </div>
+    <div class="row2">
+      <button class="btn btn-soft" onclick="toast('已生成 KHQR 收单码（模拟）')">💰 充值</button>
+      <button class="btn btn-ghost" onclick="toast('已提交 ABA 出金（模拟）')">💸 提现</button>
+    </div>
+  </div>
+
+  <!-- 账单 -->
+  <div class="view" id="v-bill">
+    <div class="card">
+      <h4>8 月 20 日 日账单</h4>
+      <table class="bill-table">
+        <tr><td>换电单量</td><td class="num">12 单</td></tr>
+        <tr><td>总度数</td><td class="num">24.2 kWh</td></tr>
+        <tr><td>电费</td><td class="num">$2.90</td></tr>
+        <tr><td>服务费</td><td class="num">$7.74</td></tr>
+        <tr><td>电池基金（0.10/度）</td><td class="num">$2.42</td></tr>
+        <tr><td>站方分成（0.19/度）</td><td class="num" style="color:var(--brand)">$4.60</td></tr>
+        <tr><td>平台（0.03/度）</td><td class="num">$0.72</td></tr>
+        <tr><td>合计营收</td><td class="num" style="color:var(--brand)">$10.64</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h4>收发统计</h4>
+      <div class="kv"><span class="k">发放（OUT）</span><span class="v num">12 次</span></div>
+      <div class="kv"><span class="k">回收（IN）</span><span class="v num">11 次</span></div>
+      <div class="kv" style="border:none"><span class="k">在途电池</span><span class="v num" style="color:var(--amber)">1 块</span></div>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <button class="tab on" data-v="v-home"><i>🏪</i>工作台</button>
+    <button class="tab" data-v="v-slots"><i>🔋</i>电池位</button>
+    <button class="tab" data-v="v-fund"><i>💳</i>资金</button>
+    <button class="tab" data-v="v-bill"><i>📊</i>账单</button>
+  </div>
+</div>
+
+<!-- 扫码弹层 -->
+<div class="mask" id="mask">
+  <div class="sheet">
+    <h3 id="scanTitle">扫码发放电池</h3>
+    <div class="scan-view"><div class="laser"></div><div class="frame"></div><div class="hint">对准电池二维码<br/>点击下方按钮模拟扫码</div></div>
+    <button class="btn btn-energy" onclick="doScan()" id="scanBtn">📷 模拟扫码</button>
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="closeScan()">取消</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+let scanMode='OUT';
+function openScan(mode){
+  scanMode=mode;
+  $("scanTitle").textContent = mode==='OUT' ? '扫码发放满电电池' : '扫码回收欠电电池';
+  $("scanBtn").textContent='📷 模拟扫码';
+  $("mask").classList.add('on');
+}
+function closeScan(){ $("mask").classList.remove('on'); }
+function doScan(){
+  $("scanBtn").textContent='识别中…';
+  setTimeout(()=>{
+    closeScan();
+    toast(scanMode==='OUT' ? '✅ 已发放满电电池 #001 · 电池位→出库' : '✅ 已回收欠电电池 #007 · SOC 42% · 开始充电');
+  },900);
+}
+function toast(msg){
+  const t=$("toast"); t.textContent=msg; t.classList.add('on');
+  setTimeout(()=>t.classList.remove('on'),2200);
+}
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+    $(t.dataset.v).classList.add('on');
+  };
+});
+</script>
+</body>
+</html>

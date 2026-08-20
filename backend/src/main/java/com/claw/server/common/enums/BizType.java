@@ -18,5 +18,9 @@ public enum BizType {
     /** 资产认购结算（投资者全款购买厂家产品）。 */
     SUBSCRIPTION,
     /** 退款。 */
-    REFUND
+    REFUND,
+    /** 提现（ABA 出金，账本扣减）。 */
+    WITHDRAW,
+    /** 三专户收单（KHQR 收单入账到残值准备金/电池基金/车辆风险金）。 */
+    ESCROW_COLLECT
 }

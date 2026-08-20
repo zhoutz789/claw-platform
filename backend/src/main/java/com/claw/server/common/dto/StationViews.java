@@ -33,4 +33,26 @@ public final class StationViews {
             long readyBatteries,     // 满电电池数（可立即换电）
             long chargingBatteries) {  // 充电中电池数
     }
+
+    /** 服务站电池位视图（S4）。 */
+    public record SlotView(
+            Long id, Long stationId, Integer slotNo,
+            Long batteryId, String batteryNo,
+            String status, BigDecimal soc) {
+    }
+
+    /** 服务站扫码收发单视图（S4）。 */
+    public record HandoverView(
+            String handoverNo, Long stationId, Long batteryId, String batteryNo,
+            String opType, String orderNo, Long operatorId, BigDecimal soc, Instant createdAt) {
+    }
+
+    /** 服务站日账单视图（S4）：当日换电营收 + 分账三拆 + 收发电次数。 */
+    public record DailyBillView(
+            Long stationId, String date,
+            int swapCount, BigDecimal totalKwh,
+            BigDecimal elecFee, BigDecimal serviceFee, BigDecimal totalRevenue,
+            BigDecimal fundShare, BigDecimal stationShare, BigDecimal platformShare,
+            int outCount, int inCount) {
+    }
 }
