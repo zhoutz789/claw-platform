@@ -1,6 +1,7 @@
 package com.claw.server.domain.payment;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -10,8 +11,10 @@ import java.time.LocalDate;
  * ABA 网关模拟实现：无真实银行接入，返回可追踪的模拟值。
  *
  * <p>生产替换为真实 ABA 客户端（KHQR 收单 + Bakong 清算 + 出金 + 日对账文件拉取）。
+ * 通过 {@code claw.payment.aba.mode=mock}（缺省即 mock）激活；设为 {@code real} 切换真实客户端。
  */
 @Component
+@ConditionalOnProperty(name = "claw.payment.aba.mode", havingValue = "mock", matchIfMissing = true)
 @Slf4j
 public class AbaGatewayMock implements AbaGateway {
 

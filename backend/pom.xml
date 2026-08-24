@@ -69,6 +69,13 @@
             <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
 
+        <!-- EMQX IoT 遥测接入（B3）：真实 MQTT 订阅适配器可选启用，本地默认关闭走 REST 上报 -->
+        <dependency>
+            <groupId>org.eclipse.paho</groupId>
+            <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
+            <version>1.2.5</version>
+        </dependency>
+
         <!-- 安全：认证/鉴权 + JWT（C 端/后台登录态） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -125,6 +132,23 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- Testcontainers：核心域在真实 PostgreSQL(TimescaleDB) 上回归，验证 V1-V25 迁移可应用 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <!-- 本地开发 profile：用嵌入式 H2（PostgreSQL 兼容模式）替代真实 PostgreSQL，
@@ -149,6 +173,18 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!-- 集成测试以 *IT 结尾，Surefire 默认只包含 *Test/*Tests，需显式纳入 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <includes>
+                        <include>**/*Test.java</include>
+                        <include>**/*Tests.java</include>
+                        <include>**/*IT.java</include>
+                    </includes>
+                </configuration>
             </plugin>
             <!-- 显式将 Lombok 声明为注解处理器并 fork 独立 javac 进程：本机仅有 JDK 8 / JDK 26，
                  在 JDK 26 下 maven-compiler-plugin 对 classpath 上的注解处理器自动发现不稳定，

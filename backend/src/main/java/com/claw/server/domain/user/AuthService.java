@@ -27,17 +27,19 @@ public class AuthService {
     private final SmsCodeStore smsCodeStore;
     private final RoleGrantService roleGrantService;
     private final JwtUtil jwtUtil;
+    private final SmsGateway smsGateway;
 
     @Value("${claw.security.sms-dev-echo:true}")
     private boolean smsDevEcho;
 
-    /** 发送验证码；dev 回显验证码（生产改为网关发送）。 */
+    /** 发送验证码；dev 回显验证码（生产经 SMS 网关真实下发）。 */
     public String sendSmsCode(String phone) {
         String code = smsCodeStore.issue(phone);
         if (smsDevEcho) {
             return code;
         }
-        log.info("已向 {} 发送验证码（生产经 SMS 网关）", phone);
+        // 生产路径：经 SMS 网关真实下发（mock 仅日志），不再回显
+        smsGateway.send(phone, code);
         return null;
     }
 
