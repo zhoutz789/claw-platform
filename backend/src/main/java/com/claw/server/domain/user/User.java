@@ -52,6 +52,9 @@ public class User {
     @Builder.Default
     private Long tenantId = 1L;
 
+    /** 所属部门（数据范围 DEPARTMENT/TYPE enforcement 维度）。 */
+    private Long departmentId;
+
     @Builder.Default
     private Boolean deleted = false;
 

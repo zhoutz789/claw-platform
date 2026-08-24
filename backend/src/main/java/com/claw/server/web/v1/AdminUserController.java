@@ -4,6 +4,7 @@ import com.claw.server.common.api.ApiResult;
 import com.claw.server.common.api.BizException;
 import com.claw.server.common.dto.ApiViews;
 import com.claw.server.common.enums.RoleSource;
+import com.claw.server.common.security.AuthContext;
 import com.claw.server.domain.role.*;
 import com.claw.server.domain.user.User;
 import com.claw.server.domain.user.UserRepository;
@@ -27,13 +28,35 @@ public class AdminUserController {
     private final RoleGrantService roleGrantService;
     private final RoleRepository roleRepository;
     private final UserRolePackageRepository packageRepository;
+    private final DataScopeService dataScopeService;
 
     @GetMapping("/users")
     public ApiResult<List<ApiViews.AdminUserView>> listUsers() {
-        List<ApiViews.AdminUserView> views = userRepository.findAll().stream()
-                .map(this::toView)
-                .toList();
+        Long uid = AuthContext.currentUserId();
+        DataScopeService.DataScopeResult ds = dataScopeService.resolve(uid);
+        List<User> users = userRepository.findAll();
+        if (!ds.isAll()) {
+            users = switch (ds.scope()) {
+                case SELF -> users.stream().filter(u -> u.getId().equals(uid)).toList();
+                case DEPARTMENT -> users.stream()
+                        .filter(u -> u.getDepartmentId() != null && u.getDepartmentId().equals(ds.departmentId()))
+                        .toList();
+                case TYPE -> users; // 类型范围对用户列表无意义，按 ALL 处理
+                default -> users;
+            };
+        }
+        List<ApiViews.AdminUserView> views = users.stream().map(this::toView).toList();
         return ApiResult.ok(views);
+    }
+
+    /** 给用户设置所属部门（数据范围 DEPARTMENT/TYPE 维度锚点）。 */
+    @Transactional
+    @PutMapping("/users/{id}/department")
+    public ApiResult<Void> setUserDepartment(@PathVariable Long id, @RequestBody UserDepartmentReq req) {
+        User u = userRepository.findById(id).orElseThrow(() -> new BizException(40401, "user.not.found"));
+        u.setDepartmentId(req.departmentId());
+        userRepository.save(u);
+        return ApiResult.ok();
     }
 
     /** 整体替换某用户的角色包（分配/调整角色）。 */
@@ -84,12 +107,15 @@ public class AdminUserController {
                 .map(RoleView::roleCode)
                 .toList();
         return new ApiViews.AdminUserView(u.getId(), u.getPhone(), u.getFullName(),
-                u.getKycStatus(), u.getStatus().name(), u.getLocale(), roles);
+                u.getKycStatus(), u.getStatus().name(), u.getLocale(), roles, u.getDepartmentId());
     }
 
     public record UserRolesReq(List<String> roleCodes) {
     }
 
     public record UserRoleCodeReq(String roleCode) {
+    }
+
+    public record UserDepartmentReq(Long departmentId) {
     }
 }

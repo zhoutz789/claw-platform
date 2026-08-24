@@ -27,7 +27,7 @@ public final class ApiViews {
     }
 
     public static record AdminUserView(Long id, String phone, String fullName, KycStatus kycStatus,
-                                       String status, String locale, List<String> roles) {
+                                       String status, String locale, List<String> roles, Long departmentId) {
     }
 
     public static record KycView(Long id, KycMethod method, KycStatus status, Instant verifiedAt) {

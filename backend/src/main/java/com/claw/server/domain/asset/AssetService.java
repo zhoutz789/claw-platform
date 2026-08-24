@@ -7,8 +7,12 @@ import com.claw.server.common.dto.AssetRequests.*;
 import com.claw.server.common.enums.AclRelation;
 import com.claw.server.common.enums.AssetStatus;
 import com.claw.server.common.enums.AssetType;
+import com.claw.server.common.security.AuthContext;
+import com.claw.server.domain.role.DataScopeService;
 import com.claw.server.domain.role.PermissionService;
 import com.claw.server.domain.role.RoleGrantService;
+import com.claw.server.domain.user.User;
+import com.claw.server.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,6 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 资产域服务：车辆/电池 CRUD、状态机流转（带审计）、资产级 ACL。
@@ -39,6 +46,8 @@ public class AssetService {
     private final UserAssetsAclRepository aclRepository;
     private final PermissionService permissionService;
     private final RoleGrantService roleGrantService;
+    private final DataScopeService dataScopeService;
+    private final UserRepository userRepository;
 
     @Transactional
     public ApiViews.AssetView createVehicle(CreateVehicle req, Long operatorId) {
@@ -90,7 +99,33 @@ public class AssetService {
         } else {
             list = assetRepository.findAll();
         }
+        // 数据范围 enforcement（C3）：
+        Long uid = AuthContext.currentUserId();
+        DataScopeService.DataScopeResult ds = dataScopeService.resolve(uid);
+        if (!ds.isAll()) {
+            list = applyDataScope(list, ds, uid);
+        }
         return list.stream().map(this::toView).toList();
+    }
+
+    private List<Asset> applyDataScope(List<Asset> list, DataScopeService.DataScopeResult ds, Long uid) {
+        return switch (ds.scope()) {
+            case SELF -> list.stream()
+                    .filter(a -> Objects.equals(a.getOwnerId(), uid) || Objects.equals(a.getUserId(), uid))
+                    .toList();
+            case DEPARTMENT -> {
+                Set<Long> deptUserIds = userRepository.findByDepartmentId(ds.departmentId()).stream()
+                        .map(User::getId).collect(Collectors.toSet());
+                yield list.stream().filter(a -> deptUserIds.contains(a.getOwnerId())).toList();
+            }
+            case TYPE -> {
+                Set<String> types = ds.allowedTypes();
+                yield list.stream()
+                        .filter(a -> types.contains(a.getAssetType().name()))
+                        .toList();
+            }
+            default -> list; // ALL（已在上层短路）
+        };
     }
 
     @Transactional(readOnly = true)

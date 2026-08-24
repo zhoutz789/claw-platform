@@ -52,7 +52,7 @@ class LedgerDoubleEntryIT extends AbstractIntegrationTest {
         Account asset = newAccount(AccountType.ASSET, BigDecimal.ZERO);
 
         LedgerViews.TxnResult res = ledgerService.postEntries(
-                BizType.SWAP_PAY, "IT-SWAP-001",
+                BizType.SWAP_PAY, UUID.randomUUID().toString(),
                 List.of(
                         new LedgerRequests.Entry(master.getId(), LedgerRequests.Direction.D, new BigDecimal("100.2500"), "pay"),
                         new LedgerRequests.Entry(asset.getId(), LedgerRequests.Direction.C, new BigDecimal("100.2500"), "recv")));
@@ -73,7 +73,7 @@ class LedgerDoubleEntryIT extends AbstractIntegrationTest {
         Account asset = newAccount(AccountType.ASSET, BigDecimal.ZERO);
 
         BizException ex = assertThrows(BizException.class, () -> ledgerService.postEntries(
-                BizType.SWAP_PAY, "IT-UNBAL-001",
+                BizType.SWAP_PAY, UUID.randomUUID().toString(),
                 List.of(
                         new LedgerRequests.Entry(master.getId(), LedgerRequests.Direction.D, new BigDecimal("100.0000"), "pay"),
                         new LedgerRequests.Entry(asset.getId(), LedgerRequests.Direction.C, new BigDecimal("99.0000"), "recv"))));
@@ -88,9 +88,10 @@ class LedgerDoubleEntryIT extends AbstractIntegrationTest {
                 new LedgerRequests.Entry(master.getId(), LedgerRequests.Direction.D, new BigDecimal("10.0000"), "p"),
                 new LedgerRequests.Entry(asset.getId(), LedgerRequests.Direction.C, new BigDecimal("10.0000"), "r"));
 
-        ledgerService.postEntries(BizType.SWAP_PAY, "IT-DUP-001", entries);
+        String dupRef = UUID.randomUUID().toString();
+        ledgerService.postEntries(BizType.SWAP_PAY, dupRef, entries);
         BizException ex = assertThrows(BizException.class, () ->
-                ledgerService.postEntries(BizType.SWAP_PAY, "IT-DUP-001", entries));
+                ledgerService.postEntries(BizType.SWAP_PAY, dupRef, entries));
         assertEquals(40950, ex.getCode());
     }
 
@@ -100,7 +101,7 @@ class LedgerDoubleEntryIT extends AbstractIntegrationTest {
         Account asset = newAccount(AccountType.ASSET, BigDecimal.ZERO);
 
         BizException ex = assertThrows(BizException.class, () -> ledgerService.postEntries(
-                BizType.SWAP_PAY, "IT-INSUF-001",
+                BizType.SWAP_PAY, UUID.randomUUID().toString(),
                 List.of(
                         new LedgerRequests.Entry(master.getId(), LedgerRequests.Direction.D, new BigDecimal("100.0000"), "pay"),
                         new LedgerRequests.Entry(asset.getId(), LedgerRequests.Direction.C, new BigDecimal("100.0000"), "recv"))));
@@ -112,7 +113,7 @@ class LedgerDoubleEntryIT extends AbstractIntegrationTest {
         Account master = newAccount(AccountType.MASTER, new BigDecimal("1000.0000"));
         Account asset = newAccount(AccountType.ASSET, BigDecimal.ZERO);
         LedgerViews.TxnResult res = ledgerService.postEntries(
-                BizType.SWAP_PAY, "IT-TRACE-001",
+                BizType.SWAP_PAY, UUID.randomUUID().toString(),
                 List.of(
                         new LedgerRequests.Entry(master.getId(), LedgerRequests.Direction.D, new BigDecimal("50.0000"), "p"),
                         new LedgerRequests.Entry(asset.getId(), LedgerRequests.Direction.C, new BigDecimal("50.0000"), "r")));

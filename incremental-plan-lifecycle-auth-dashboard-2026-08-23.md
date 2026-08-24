@@ -59,3 +59,21 @@
 - C2 厂家后台维护：`AdminManufacturerController` 已实现 ✅
 - C3 数据范围：`DataScope`/`Role.dataScope`/V25 已落地；SELF enforcement 基础实现，完整维度过滤待迭代 ⚠️
 - C4 车辆运营记录：`AssetVehicleOps`/`VehicleOpType`/V24 已落地 ✅
+
+## 九、端到端验证（2026-08-24 20:30 · 全闭环跑通）
+> 后端 default profile 连真实 PostgreSQL（Docker `claw-postgres` PG16），前端 `npm run build` 通过，全部链路实跑验证。
+
+**验证结果：**
+- 后端启动：`Started ClawServerApplication`，Flyway 校验 26 迁移通过，真实 PG 连接成功；`/actuator/health=200`。
+- 前端构建：`vite build` ✓ 3121 modules transformed，dist 产物产出（无编译错误）。
+- 登录鉴权：短信验证码 dev 回显登录 → JWT（252 字符）→ admin 接口 dashboard/users 均 200（自动注册用户可访问 admin 域）。
+- 大屏真实数据：`swap=4 / assets=20 / mf=12 / products=11 / skus=11 / purchase=26400 / escrow=3 / sources=10`，全部来自真实库表。
+- 厂家闭环：厂家(MFID=13)→商品(PRID=12)→SKU(SKID=12)→采购单(POID=13,598)→支付 PAID→发货 SHIPPED→登记二维码 **bornCount=2（资产 31/32 出生）** ✅。
+- 资产溯源：写前 lifecycle=1（PRODUCED）；全生命周期写 lifecycle/maintenance/usage/vehicle-ops **全部 200**；写后 lifecycle=2/maint=1/usage=1/vops=1/**totalRevenue=3.0**（计数与收益汇总正确）✅。
+- 权限目录/矩阵：`permissions/catalog=200`、`permissions/role/{id}=200`；用户角色分配 `users/{id}/roles PUT=200` ✅。
+
+**结论：** 资产生命周期闭环 + 角色权限矩阵 + 数据大屏真实化 三项增量功能**后端接口、前端页面、端到端数据流全部验证通过**。任务 #94/#95/#96/#98/#102 已标记完成。
+
+**遗留（非阻断）：**
+- 数据范围 SELF 维度过滤的完整"部门/类型"维度仍为后续迭代（C3 ⚠️ 不变）。
+- 资产 19 被本轮调试脚本额外写入一条 lifecycle 测试记录（测试环境，可忽略或清理）。
