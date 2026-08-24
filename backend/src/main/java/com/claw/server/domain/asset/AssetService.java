@@ -188,6 +188,7 @@ public class AssetService {
 
     private ApiViews.AssetView toView(Asset a) {
         return new ApiViews.AssetView(a.getId(), a.getAssetType(), a.getAssetNo(), a.getQrCode(),
+                a.getSerialNumber(), a.getManufacturerId(), a.getProductId(), a.getSkuId(),
                 a.getOwnerId(), a.getUserId(), a.getStatus(), a.getCreatedAt());
     }
 }

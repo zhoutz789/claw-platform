@@ -1,0 +1,164 @@
+:root {
+  --paper: #f7f4ec;
+  --paper-2: #efebe0;
+  --surface: #fffdf7;
+  --ink: #15281f;
+  --ink-2: #46594f;
+  --muted: #819388;
+  --line: #e4dfd1;
+  --brand: #176a48;
+  --brand-deep: #0d4630;
+  --brand-soft: #e2f0e7;
+  --energy: #2fc97c;
+  --lime: #b9f062;
+  --amber: #efa13b;
+  --amber-soft: #fbeeda;
+  --coral: #e2573f;
+  --coral-soft: #fbe5de;
+  --blue: #4a88cf;
+  --blue-soft: #e3eef9;
+  --sh-sm: 0 1px 2px rgba(21, 40, 31, .05), 0 1px 4px rgba(21, 40, 31, .06);
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Space Grotesk", "Noto Sans SC", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-num {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== 通用面板 ===== */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: var(--sh-sm);
+}
+
+.panel-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ===== KPI 卡片 ===== */
+.kpi {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: var(--sh-sm);
+}
+.kpi .label { font-size: 12px; color: var(--muted); font-weight: 600; }
+.kpi .val {
+  font-size: 32px;
+  font-weight: 900;
+  margin-top: 6px;
+  letter-spacing: -.02em;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  line-height: 1.1;
+}
+.kpi .sub { font-size: 11px; margin-top: 4px; color: var(--ink-2); }
+.kpi .ico { position: absolute; top: 16px; right: 16px; font-size: 24px; opacity: .18; }
+.sub.up { color: var(--energy); }
+.sub.down { color: var(--coral); }
+
+/* ===== 标签 ===== */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.tag-green { background: var(--brand-soft); color: var(--brand); }
+.tag-amber { background: var(--amber-soft); color: var(--amber); }
+.tag-coral { background: var(--coral-soft); color: var(--coral); }
+.tag-blue { background: var(--blue-soft); color: var(--blue); }
+
+/* ===== 风控卡片 ===== */
+.risk {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  margin-bottom: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.risk.critical { border-color: var(--coral); background: var(--coral-soft); }
+.risk.high { border-color: var(--amber); background: var(--amber-soft); }
+.risk.medium { border-color: var(--blue); }
+
+/* ===== 站点地图 ===== */
+.map {
+  height: 400px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: linear-gradient(135deg, #e8f5ec, #d4eddd);
+  position: relative;
+  overflow: hidden;
+}
+.map::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 40%, rgba(47, 201, 124, .12), transparent 50%),
+    radial-gradient(circle at 70% 60%, rgba(185, 240, 98, .1), transparent 40%);
+}
+.map .pin {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--brand);
+  border: 3px solid #fff;
+  box-shadow: var(--sh-sm);
+  transform: translate(-50%, -50%);
+}
+.map .pin.active { background: var(--energy); }
+.map .pin.warning { background: var(--amber); }
+.map .pin.danger { background: var(--coral); }
+
+/* ===== 演示数据徽标 ===== */
+.demo-badge {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--amber-soft);
+  color: var(--amber);
+  font-weight: 700;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* ===== 滚动条 ===== */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px; }
+
+/* ===== 让 antd 卡片融入米色主题 ===== */
+.ant-layout { background: var(--paper) !important; }
+.ant-card { background: var(--surface) !important; }

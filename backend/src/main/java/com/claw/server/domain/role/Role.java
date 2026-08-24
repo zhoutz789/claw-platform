@@ -42,6 +42,16 @@ public class Role {
     @Builder.Default
     private String status = "ACTIVE";
 
+    /** 数据范围：SELF / DEPARTMENT / ALL / TYPE。 */
+    @Column(nullable = false)
+    @Builder.Default
+    private String dataScope = "SELF";
+
+    /** 特殊授权可看的类型（JSON 数组，如资产类型/国家），dataScope=TYPE 时生效。 */
+    @Column(columnDefinition = "text")
+    @Builder.Default
+    private String dataScopeTypes = "[]";
+
     @Column(nullable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();

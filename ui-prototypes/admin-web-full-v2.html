@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Claw · 管理后台 Web 全套页面设计</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --paper:#f7f4ec; --paper-2:#efebe0; --surface:#fffdf7;
+    --ink:#15281f; --ink-2:#46594f; --muted:#819388; --line:#e4dfd1;
+    --brand:#176a48; --brand-deep:#0d4630; --brand-soft:#e2f0e7;
+    --energy:#2fc97c; --lime:#b9f062; --amber:#efa13b; --amber-soft:#fbeeda;
+    --coral:#e2573f; --coral-soft:#fbe5de; --blue:#4a88cf; --blue-soft:#e3eef9;
+    --r-sm:10px; --r-md:16px; --r-lg:22px; --r-full:999px;
+    --sh-sm:0 1px 2px rgba(21,40,31,.05),0 1px 4px rgba(21,40,31,.06);
+    --sh-md:0 8px 24px rgba(21,40,31,.08),0 2px 6px rgba(21,40,31,.05);
+    --font-disp:"Space Grotesk","Noto Sans SC",system-ui,sans-serif;
+    --font-body:"Noto Sans SC",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font-body);background:var(--paper);color:var(--ink);line-height:1.6;
+    -webkit-font-smoothing:antialiased}
+  .num{font-family:var(--font-disp);font-variant-numeric:tabular-nums}
+
+  /* === 布局 === */
+  .layout{display:flex;min-height:100vh}
+  .sidebar{width:240px;background:var(--surface);border-right:1px solid var(--line);
+    padding:0 0 20px;position:sticky;top:0;height:100vh;overflow-y:auto}
+  .sidebar::-webkit-scrollbar{display:none}
+  .main{flex:1;padding:0 32px 40px;min-width:0}
+
+  /* === 侧边栏 === */
+  .sidebar-brand{display:flex;align-items:center;gap:10px;padding:20px 20px 16px;
+    border-bottom:1px solid var(--line)}
+  .sidebar-brand .logo{width:34px;height:34px;border-radius:10px;
+    background:linear-gradient(135deg,var(--brand),var(--energy));
+    display:grid;place-items:center;color:#fff;font-size:18px}
+  .sidebar-brand .name{font-weight:900;font-size:16px}
+  .sidebar-brand .name small{display:block;font-size:10px;color:var(--muted);font-weight:500}
+
+  .nav-group{padding:12px 8px}
+  .nav-group .label{font-size:10px;font-weight:700;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.1em;padding:4px 12px}
+  .nav-item{display:flex;align-items:center;gap:8px;padding:8px 12px;
+    border-radius:var(--r-sm);font-size:13px;color:var(--ink-2);
+    cursor:pointer;margin:1px 0}
+  .nav-item:hover{background:var(--paper-2);color:var(--ink)}
+  .nav-item.active{background:var(--brand-soft);color:var(--brand);font-weight:600}
+  .nav-item .ico{font-size:16px;width:20px;text-align:center}
+  .nav-item .badge{margin-left:auto;background:var(--coral);color:#fff;
+    font-size:10px;padding:1px 6px;border-radius:var(--r-full)}
+
+  /* === 顶栏 === */
+  .topbar{display:flex;align-items:center;justify-content:space-between;
+    padding:16px 0;border-bottom:1px solid var(--line);margin-bottom:24px}
+  .topbar .left{display:flex;align-items:center;gap:12px}
+  .topbar .left h1{font-size:22px;font-weight:900;letter-spacing:-.01em}
+  .topbar .search{background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--r-full);padding:8px 16px;font-size:13px;color:var(--muted);
+    width:240px}
+  .topbar .right{display:flex;align-items:center;gap:10px}
+  .topbar .avatar{width:36px;height:36px;border-radius:var(--r-full);
+    background:linear-gradient(135deg,var(--brand),var(--energy));
+    display:grid;place-items:center;color:#fff;font-size:14px;font-weight:700}
+  .topbar .uname{font-size:13px;font-weight:600}
+  .topbar .urole{font-size:10px;color:var(--muted)}
+
+  /* === 卡片 === */
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
+    padding:20px;box-shadow:var(--sh-sm)}
+  .card-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;
+    letter-spacing:.08em;margin-bottom:12px}
+
+  /* === 数据大屏 === */
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+  .kpi-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
+    padding:20px;box-shadow:var(--sh-sm);position:relative;overflow:hidden}
+  .kpi-card .label{font-size:12px;color:var(--muted);font-weight:600}
+  .kpi-card .val{font-size:32px;font-weight:900;margin-top:6px;letter-spacing:-.02em}
+  .kpi-card .sub{font-size:11px;margin-top:4px}
+  .kpi-card .sub.up{color:var(--energy)}
+  .kpi-card .sub.down{color:var(--coral)}
+  .kpi-card .ico{position:absolute;top:16px;right:16px;font-size:24px;opacity:.2}
+
+  .chart-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:24px}
+  .chart-box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
+    padding:20px;box-shadow:var(--sh-sm)}
+  .chart-area{height:200px;display:flex;align-items:flex-end;gap:8px;margin-top:12px}
+  .chart-bar{flex:1;border-radius:var(--r-sm) var(--r-sm) 0 0;min-height:4px;transition:height .3s}
+
+  .donut{width:140px;height:140px;border-radius:var(--r-full);
+    border:20px solid var(--brand);margin:0 auto}
+  .donut-center{text-align:center;margin-top:-90px;font-size:12px}
+  .donut-center .val{font-size:24px;font-weight:900}
+
+  /* === 表格 === */
+  .table{width:100%;border-collapse:collapse;font-size:13px}
+  .table th{text-align:left;padding:10px 12px;border-bottom:2px solid var(--line);
+    font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  .table td{padding:10px 12px;border-bottom:1px solid var(--line)}
+  .table tr:hover{background:var(--paper-2)}
+
+  .tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;
+    border-radius:var(--r-full);font-size:11px;font-weight:600}
+  .tag-green{background:var(--brand-soft);color:var(--brand)}
+  .tag-amber{background:var(--amber-soft);color:var(--amber)}
+  .tag-coral{background:var(--coral-soft);color:var(--coral)}
+  .tag-blue{background:var(--blue-soft);color:var(--blue)}
+
+  /* === 按钮 === */
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;
+    border-radius:var(--r-full);font-size:13px;font-weight:700;border:none;cursor:pointer}
+  .btn-primary{background:var(--brand);color:#fff}
+  .btn-ghost{background:var(--surface);border:1px solid var(--line);color:var(--ink-2)}
+  .btn-sm{padding:5px 12px;font-size:11px}
+
+  /* === 风控面板 === */
+  .risk-card{display:flex;align-items:flex-start;gap:12px;padding:14px;margin-bottom:8px;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md)}
+  .risk-card.critical{border-color:var(--coral);background:var(--coral-soft)}
+  .risk-card.high{border-color:var(--amber);background:var(--amber-soft)}
+  .risk-card.medium{border-color:var(--blue)}
+  .risk-ico{font-size:20px}
+  .risk-body{flex:1}
+  .risk-body .title{font-size:13px;font-weight:700}
+  .risk-body .desc{font-size:11px;color:var(--ink-2);margin-top:2px}
+  .risk-body .time{font-size:10px;color:var(--muted);margin-top:4px}
+
+  /* === 站点地图 === */
+  .map-container{height:400px;border-radius:var(--r-md);border:1px solid var(--line);
+    background:linear-gradient(135deg,#e8f5ec,#d4eddd);position:relative;overflow:hidden}
+  .map-container::before{content:"";position:absolute;inset:0;
+    background:radial-gradient(circle at 30% 40%,rgba(47,201,124,.1),transparent 50%),
+      radial-gradient(circle at 70% 60%,rgba(185,240,98,.08),transparent 40%)}
+  .map-pin{position:absolute;width:20px;height:20px;border-radius:var(--r-full);
+    background:var(--brand);border:3px solid #fff;box-shadow:var(--sh-sm);cursor:pointer}
+  .map-pin.active{background:var(--energy)}
+  .map-pin.warning{background:var(--amber)}
+  .map-pin.danger{background:var(--coral)}
+
+  /* === 分段标题 === */
+  .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+  .section-header h2{font-size:18px;font-weight:900}
+
+  /* === 响应 === */
+  @media(max-width:1024px){
+    .kpi-grid{grid-template-columns:repeat(2,1fr)}
+    .chart-grid{grid-template-columns:1fr}
+    .sidebar{display:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ============ 侧边栏 ============ -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="logo">⚡</div>
+      <div class="name">Claw<small>新能源资产管理平台</small></div>
+    </div>
+    <div class="nav-group">
+      <div class="label">运营</div>
+      <div class="nav-item active"><span class="ico">📊</span>数据大屏</div>
+      <div class="nav-item"><span class="ico">📦</span>订单管理<span class="badge">5</span></div>
+      <div class="nav-item"><span class="ico">🏢</span>站点管理</div>
+      <div class="nav-item"><span class="ico">🔋</span>资产管理</div>
+      <div class="nav-item"><span class="ico">🔄</span>换电记录</div>
+    </div>
+    <div class="nav-group">
+      <div class="label">财务</div>
+      <div class="nav-item"><span class="ico">💰</span>对账中心</div>
+      <div class="nav-item"><span class="ico">🏦</span>资金账户</div>
+      <div class="nav-item"><span class="ico">📊</span>分账报告</div>
+      <div class="nav-item"><span class="ico">📋</span>费率配置</div>
+    </div>
+    <div class="nav-group">
+      <div class="label">风控</div>
+      <div class="nav-item"><span class="ico">🛡</span>风控监控<span class="badge">2</span></div>
+      <div class="nav-item"><span class="ico">⚠</span>异常告警</div>
+      <div class="nav-item"><span class="ico">🔗</span>产权链追溯</div>
+      <div class="nav-item"><span class="ico">⚖</span>争议仲裁</div>
+    </div>
+    <div class="nav-group">
+      <div class="label">系统</div>
+      <div class="nav-item"><span class="ico">👤</span>用户管理</div>
+      <div class="nav-item"><span class="ico">🔑</span>角色权限</div>
+      <div class="nav-item"><span class="ico">⚙</span>系统配置</div>
+    </div>
+  </aside>
+
+  <!-- ============ 主内容区 ============ -->
+  <main class="main">
+
+    <!-- 顶栏 -->
+    <div class="topbar">
+      <div class="left">
+        <h1>数据大屏</h1>
+        <span style="font-size:12px;color:var(--muted)">| 2026-08-23 实时</span>
+      </div>
+      <div class="right">
+        <input class="search" placeholder="搜索订单/用户/站点..." />
+        <span style="font-size:16px;cursor:pointer">🔔</span>
+        <div class="avatar">管</div>
+        <div>
+          <div class="uname">管理员</div>
+          <div class="urole">SUPER_ADMIN</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ KPI 卡片 ============ -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <span class="ico">⚡</span>
+        <div class="label">今日换电次数</div>
+        <div class="val num" style="color:var(--brand)">248</div>
+        <div class="sub up">↑ 18% vs 昨日 (210)</div>
+      </div>
+      <div class="kpi-card">
+        <span class="ico">💰</span>
+        <div class="label">今日交易额</div>
+        <div class="val num" style="color:var(--energy)">$1,248</div>
+        <div class="sub up">↑ 15% vs 昨日 ($1,085)</div>
+      </div>
+      <div class="kpi-card">
+        <span class="ico">🔋</span>
+        <div class="label">在线电池</div>
+        <div class="val num" style="color:var(--blue)">1,856</div>
+        <div class="sub">满电率 64% · 充电中 22%</div>
+      </div>
+      <div class="kpi-card">
+        <span class="ico">🏢</span>
+        <div class="label">运营站点</div>
+        <div class="val num" style="color:var(--amber)">42</div>
+        <div class="sub">企业站 15 · 个人站 27</div>
+      </div>
+    </div>
+
+    <!-- ============ 图表区 ============ -->
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="section-header">
+          <h2>近 30 日换电趋势</h2>
+          <div style="display:flex;gap:4px">
+            <span class="tag tag-green">日换电</span>
+            <span class="tag tag-blue">日收入</span>
+          </div>
+        </div>
+        <div class="chart-area">
+          <div class="chart-bar" style="height:45%;background:var(--brand-soft)"></div>
+          <div class="chart-bar" style="height:55%;background:var(--brand-soft)"></div>
+          <div class="chart-bar" style="height:50%;background:var(--brand-soft)"></div>
+          <div class="chart-bar" style="height:60%;background:var(--brand-soft)"></div>
+          <div class="chart-bar" style="height:65%;background:var(--brand-soft)"></div>
+          <div class="chart-bar" style="height:58%;background:var(--brand-soft)"></div>
+          <div class="chart-bar" style="height:70%;background:var(--brand-soft)"></div>
+          <div class="chart-bar" style="height:75%;background:var(--brand-soft)"></div>
+          <div class="chart-bar" style="height:68%;background:var(--brand-soft)"></div>
+          <div class="chart-bar" style="height:72%;background:var(--brand-soft)"></div>
+          <div class="chart-bar" style="height:80%;background:var(--brand-soft)"></div>
+          <div class="chart-bar" style="height:78%;background:var(--brand-soft)"></div>
+          <div class="chart-bar" style="height:82%;background:var(--brand-soft)"></div>
+          <div class="chart-bar" style="height:85%;background:var(--brand-soft)"></div>
+          <div class="chart-bar" style="height:90%;background:var(--energy)"></div>
+          <div class="chart-bar" style="height:88%;background:var(--energy)"></div>
+          <div class="chart-bar" style="height:92%;background:var(--energy)"></div>
+          <div class="chart-bar" style="height:95%;background:var(--energy)"></div>
+          <div class="chart-bar" style="height:98%;background:var(--energy)"></div>
+          <div class="chart-bar" style="height:100%;background:var(--brand)"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:9px;color:var(--muted)">
+          <span>8/1</span><span>8/5</span><span>8/10</span><span>8/15</span><span>8/20</span><span>今日</span>
+        </div>
+      </div>
+
+      <div class="chart-box">
+        <div class="section-header"><h2>收入构成</h2></div>
+        <div class="donut" style="border-color:var(--brand) var(--brand) var(--energy) var(--energy)"></div>
+        <div class="donut-center">
+          <div class="val num">$1,248</div>
+          <div style="color:var(--muted)">今日总收入</div>
+        </div>
+        <div style="margin-top:16px">
+          <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px">
+            <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--brand);margin-right:6px"></span>换电服务费</span>
+            <span class="num" style="font-weight:700">$496 (40%)</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px">
+            <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--energy);margin-right:6px"></span>管理收益</span>
+            <span class="num" style="font-weight:700">$374 (30%)</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px">
+            <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--amber);margin-right:6px"></span>光伏电费</span>
+            <span class="num" style="font-weight:700">$249 (20%)</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px">
+            <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--blue);margin-right:6px"></span>其他</span>
+            <span class="num" style="font-weight:700">$129 (10%)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 风控监控面板 ============ -->
+    <div class="section-header" style="margin-top:24px">
+      <h2>🛡 风控监控</h2>
+      <button class="btn btn-ghost btn-sm">查看全部</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px">
+      <div class="risk-card critical">
+        <div class="risk-ico">🚨</div>
+        <div class="risk-body">
+          <div class="title" style="color:var(--coral)">站长保证金缺口 — 莫尼旺大道站</div>
+          <div class="desc">站长: 陈某 · 缺口 $320 · 经手资产 $6,400 · 已触发 FREEZE_ACCOUNT</div>
+          <div class="time">2026-08-23 09:15 · 已自动冻结管理费账户</div>
+        </div>
+      </div>
+      <div class="risk-card high">
+        <div class="risk-ico">⚠</div>
+        <div class="risk-body">
+          <div class="title" style="color:var(--amber)">异常高频转移 — 电池 #B045</div>
+          <div class="desc">今日转移 7 次 · 风险评分 65 · 疑似套利流转</div>
+          <div class="time">2026-08-23 08:42 · 已标记待人工复核</div>
+        </div>
+      </div>
+      <div class="risk-card medium">
+        <div class="risk-ico">📋</div>
+        <div class="risk-body">
+          <div class="title">争议仲裁待处理 — 车辆 #A012</div>
+          <div class="desc">资产所有人 vs 租用人 · 损坏索赔 $50 · 证据已提交</div>
+          <div class="time">2026-08-22 16:30 · 等待仲裁人指派</div>
+        </div>
+      </div>
+      <div class="risk-card medium">
+        <div class="risk-ico">📊</div>
+        <div class="risk-body">
+          <div class="title">对账差异 — 桑园 1 号站</div>
+          <div class="desc">日终对账差额 $0.02 · 可能四舍五入精度问题</div>
+          <div class="time">2026-08-23 00:01 · V9 精度修复后预计消除</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 站点地图 ============ -->
+    <div class="section-header" style="margin-top:24px">
+      <h2>🗺 站点分布图 · 金边</h2>
+      <div style="display:flex;gap:4px">
+        <span class="tag tag-green">正常 38</span>
+        <span class="tag tag-amber">告警 3</span>
+        <span class="tag tag-coral">异常 1</span>
+      </div>
+    </div>
+
+    <div class="map-container">
+      <div class="map-pin active" style="top:20%;left:15%"></div>
+      <div class="map-pin active" style="top:30%;left:25%"></div>
+      <div class="map-pin" style="top:40%;left:35%"></div>
+      <div class="map-pin warning" style="top:50%;left:45%"></div>
+      <div class="map-pin active" style="top:25%;left:55%"></div>
+      <div class="map-pin" style="top:60%;left:30%"></div>
+      <div class="map-pin active" style="top:35%;left:65%"></div>
+      <div class="map-pin" style="top:55%;left:70%"></div>
+      <div class="map-pin danger" style="top:70%;left:50%"></div>
+      <div class="map-pin active" style="top:45%;left:80%"></div>
+      <div class="map-pin" style="top:65%;left:20%"></div>
+      <div class="map-pin active" style="top:75%;left:75%"></div>
+    </div>
+
+    <!-- ============ 最近订单 ============ -->
+    <div class="section-header" style="margin-top:24px">
+      <h2>📋 最近订单</h2>
+      <button class="btn btn-primary btn-sm">导出报表</button>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>订单号</th><th>类型</th><th>用户</th><th>站点</th>
+            <th>金额</th><th>状态</th><th>时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="num">SW-20260823-0248</td>
+            <td>换电</td><td>王建国</td><td>桑园1号站</td>
+            <td class="num">$0.80</td><td><span class="tag tag-green">完成</span></td>
+            <td>09:41</td>
+          </tr>
+          <tr>
+            <td class="num">SW-20260823-0247</td>
+            <td>换电</td><td>陈志明</td><td>莫尼旺站</td>
+            <td class="num">$0.80</td><td><span class="tag tag-green">完成</span></td>
+            <td>09:38</td>
+          </tr>
+          <tr>
+            <td class="num">RC-20260823-0012</td>
+            <td>充电</td><td>李四</td><td>桑园1号站</td>
+            <td class="num">$0.45</td><td><span class="tag tag-green">完成</span></td>
+            <td>09:35</td>
+          </tr>
+          <tr>
+            <td class="num">RP-20260823-0008</td>
+            <td>租赁</td><td>赵六</td><td>桑园1号站</td>
+            <td class="num">$3.50</td><td><span class="tag tag-amber">进行中</span></td>
+            <td>09:20</td>
+          </tr>
+          <tr>
+            <td class="num">AP-20260823-0003</td>
+            <td>资产购买</td><td>孙七</td><td>—</td>
+            <td class="num">$40.00</td><td><span class="tag tag-green">完成</span></td>
+            <td>09:05</td>
+          </tr>
+          <tr>
+            <td class="num">RV-20260823-0001</td>
+            <td>残值回收</td><td>周八</td><td>桑园1号站</td>
+            <td class="num">$8.50</td><td><span class="tag tag-blue">评估中</span></td>
+            <td>08:50</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>

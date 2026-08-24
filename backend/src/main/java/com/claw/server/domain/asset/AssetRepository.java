@@ -3,6 +3,7 @@ package com.claw.server.domain.asset;
 import com.claw.server.common.enums.AssetStatus;
 import com.claw.server.common.enums.AssetType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,4 +16,7 @@ public interface AssetRepository extends JpaRepository<Asset, Long> {
     List<Asset> findByAssetTypeAndStatus(AssetType assetType, AssetStatus status);
 
     List<Asset> findByUserId(Long userId);
+
+    @Query("SELECT a.status, COUNT(a) FROM Asset a WHERE a.deleted = false GROUP BY a.status")
+    List<Object[]> countGroupByStatus();
 }

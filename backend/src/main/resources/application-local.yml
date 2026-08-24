@@ -1,0 +1,85 @@
+# ============================================================================
+# 本地开发 profile（local）
+# 用途：在没有 Docker / 真实 PostgreSQL 的本机环境，用嵌入式 H2（PostgreSQL
+#       兼容模式）把应用跑起来，供接口联调与 UI 体验测试。
+# 启动方式：
+#   java -jar claw-server-0.1.0-SNAPSHOT.jar --spring.profiles.active=local
+# 或（开发态）：
+#   mvn spring-boot:run -Plocal
+# ============================================================================
+spring:
+  # ---- 数据源：嵌入式 H2，PG 兼容模式 ----
+  # INIT 在每条连接建立时执行：
+  #   1) 建 claw 模式
+  #   2) 当前 schema 切到 claw
+  #   3) 用 CREATE DOMAIN 把实体里写死的 columnDefinition="jsonb"/"text"
+  #      映射成 H2 原生 JSON / VARCHAR，避免 Hibernate 建表时报"未知类型"
+  datasource:
+    # URL 只保留普通 key=value 参数（H2 2.2.224 无法解析含多语句 INIT=...;... 的 URL，
+    # 会把有效地址退化成 jdbc:h2:mem:claw 并报格式错误）。建库/建域改由下方
+    # hikari.connection-init-sql 在每条连接建立后执行。
+    url: "jdbc:h2:mem:claw;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1"
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+    hikari:
+      # 每条新连接建立后执行：建 claw 模式 + 用 CREATE DOMAIN 把实体里写死的
+      # columnDefinition="jsonb"/"text" 映射成 H2 原生 JSON / VARCHAR（IF NOT EXISTS 幂等）。
+      connection-init-sql: "CREATE SCHEMA IF NOT EXISTS claw; CREATE DOMAIN IF NOT EXISTS claw.jsonb AS JSON; CREATE DOMAIN IF NOT EXISTS claw.text AS VARCHAR;"
+
+  # ---- JPA：由 Hibernate 按实体建表（取代 Flyway 的 PG 专有迁移）----
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        default_schema: claw
+        format_sql: true
+
+  # ---- 关闭 Flyway：本机用 H2，不执行生产环境的 PostgreSQL 专有迁移 ----
+  flyway:
+    enabled: false
+
+  # ---- 关闭 Spring 自动执行 data.sql/schema.sql（H2 是嵌入式库，默认会触发）----
+  sql:
+    init:
+      mode: never
+
+  # ---- 排除未在本项目实际接线的 Redis / RabbitMQ 自动配置，避免健康检查噪音 ----
+  autoconfigure:
+    exclude: >
+      org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,
+      org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration,
+      org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+
+  # 本地关闭 Redis / RabbitMQ 连接配置（代码未接线，仅防止自动配置尝试）
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  rabbitmq:
+    host: localhost
+    port: 5672
+
+# 本地保留 Swagger / Actuator 暴露在 8080
+server:
+  port: 8080
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.claw: INFO
+    org.hibernate.SQL: WARN

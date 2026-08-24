@@ -52,7 +52,8 @@ public class RoleGrantService {
         UserRolePackage pkg = packageRepository.findByUserIdAndRoleId(userId, role.getId())
                 .filter(UserRolePackage::isActive)
                 .orElseGet(() -> savePackage(userId, role, RoleSource.APPLY));
-        return RoleView.of(role.getCode(), role.getNameI18n(), pkg.getSource(), pkg.getGrantedAt());
+        return RoleView.of(role.getId(), role.getCode(), role.getNameI18n(), pkg.getSource(), pkg.getGrantedAt(),
+                role.getDataScope());
     }
 
     /** 域事件触发自动授予（如购车→车主、开通功能→司机）。 */
@@ -81,7 +82,8 @@ public class RoleGrantService {
                 .filter(UserRolePackage::isActive)
                 .map(pkg -> {
                     Role role = roleRepository.findById(pkg.getRoleId()).orElseThrow();
-                    return RoleView.of(role.getCode(), role.getNameI18n(), pkg.getSource(), pkg.getGrantedAt());
+                    return RoleView.of(role.getId(), role.getCode(), role.getNameI18n(), pkg.getSource(), pkg.getGrantedAt(),
+                            role.getDataScope());
                 })
                 .toList();
     }

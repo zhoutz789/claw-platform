@@ -5,8 +5,8 @@ import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import org.junit.jupiter.api.Test;
 
-import static com.tngtech.archunit.lang.conditions.ArchConditions.haveSimpleNameEndingWith;
-import static com.tngtech.archunit.lang.conditions.ArchConditions.resideInAPackage;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.simpleNameEndingWith;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 /**
@@ -26,7 +26,7 @@ class ArchitectureBoundaryTest {
         noClasses().that().resideOutsideOfPackage("com.claw.server.domain.ledger..")
                 .should().dependOnClassesThat(
                         resideInAPackage("com.claw.server.domain.ledger..")
-                                .and(haveSimpleNameEndingWith("Repository")))
+                                .and(simpleNameEndingWith("Repository")))
                 .because("资金域仓储只允许本域访问，跨域通过应用服务 AccountService/LedgerService 交互（技术文档 1.3）")
                 .check(CLASSES);
     }

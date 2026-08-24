@@ -1,19 +1,30 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { ConfigProvider } from 'antd';
+import { ConfigProvider, App as AntApp } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
+import 'antd/dist/reset.css';
+import './theme.css';
+import App from './App';
 
-// S0 骨架：S5 交付 大屏/订单/对账/配置 四大模块
-// 路由规划：/dashboard /orders /reconciliation /settings
-function App() {
-  return (
-    <ConfigProvider locale={zhCN}>
-      <div style={{ padding: 48, fontFamily: 'sans-serif' }}>
-        <h1>Claw 管理后台</h1>
-        <p>S0 脚手架就绪。S5 交付：数据大屏 / 订单 / 财务对账 / 系统配置。</p>
-      </div>
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <ConfigProvider
+      locale={zhCN}
+      theme={{
+        token: {
+          colorPrimary: '#176a48',
+          borderRadius: 12,
+          colorBgContainer: '#fffdf7',
+          colorBorder: '#e4dfd1',
+          colorText: '#15281f',
+          colorTextSecondary: '#46594f',
+          fontFamily: '"Space Grotesk","Noto Sans SC",system-ui,-apple-system,sans-serif',
+        },
+      }}
+    >
+      <AntApp>
+        <App />
+      </AntApp>
     </ConfigProvider>
-  );
-}
-
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </React.StrictMode>
+);

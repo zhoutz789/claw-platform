@@ -1,0 +1,62 @@
+%% ① 厂家发布商品链接 + 出合格证/一致性证明
+sequenceDiagram
+    participant M as 厂家(后台)
+    participant C as AdminManufacturerController
+    participant S as ProductLinkService
+    participant DB as product_links/certificates
+    M->>C: POST /admin/manufacturer/products/{pid}/publish-link {skuId,title,cover,price}
+    C->>S: publish(skuId,...)
+    S->>S: 生成 linkToken; 生成合格证 cert(QUALIFICATION)+certNo
+    S->>DB: insert product_link; insert certificate(qualification)
+    S-->>C: ProductLinkView(linkToken, certNo)
+    C-->>M: 200
+    M->>C: POST .../products/{pid}/consistency-cert {vin,motorNo,...}
+    C->>S: issueConsistency(...)
+    S->>DB: insert certificate(CONSISTENCY, dataJson)
+    S-->>C: certNo
+    C-->>M: 200
+
+%% ② 客户购买后发设备链接（资产出生后逐台）
+sequenceDiagram
+    participant OPS as 运营(后台)
+    participant C as AdminManufacturerController
+    participant AR as AssetRepository
+    participant S as DeviceLinkService
+    participant DB as device_links
+    OPS->>C: POST /admin/manufacturer/purchase-orders/{id}/issue-device-links
+    C->>AR: 取该订单 register-qr 出生的 assets
+    C->>S: issue(assets, orderId)
+    S->>S: 每台 asset 生成 linkToken + ownerUserId=asset.ownerId
+    S->>DB: insert device_links (asset 唯一)
+    S-->>C: {count, tokens[]}
+    C-->>OPS: 200
+
+%% ③ 真实设备上报 GPS
+sequenceDiagram
+    participant HW as 车机/IoT设备
+    participant F as DeviceTokenAuthFilter
+    participant C as IoTController
+    participant S as IoTService
+    participant DB as tracks/telemetry_latest
+    HW->>F: POST /api/v1/iot/gps  Authorization: Bearer <device_token>  {lat,lng,alt,heading,speed,ts}
+    F->>F: 解析 device_token → Device (无效 401)
+    F->>C: 注入 DevicePrincipal
+    C->>S: reportGps(device, req)
+    S->>DB: upsert telemetry_latest(最新定位)
+    S->>DB: insert tracks(轨迹点, ts=req.ts)
+    S-->>C: GpsView
+    C-->>HW: 200
+
+%% ④ 客户打开设备链接聚合展示
+sequenceDiagram
+    participant U as 客户(App/H5)
+    participant C as PublicDeviceLinkController
+    participant S as AssetTraceService+DeviceLinkService+IoTService
+    U->>C: GET /public/device-links/{token}
+    C->>C: 校验登录 + owner(默认 D52)
+    C->>S: 解析 token → assetId
+    S->>S: buildTrace(assetId) 复用 lifecycle/usage/maintenance/vehicleOps/totalRevenue
+    S->>S: latestGps(assetId) 最新 tracks/telemetry
+    S->>S: mountedModules(assetId)
+    S-->>C: DeviceLinkAggregate(asset,gps,revenue,lifecycle,modules)
+    C-->>U: 200 聚合页数据

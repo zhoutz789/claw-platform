@@ -38,8 +38,8 @@ class LedgerServiceTest {
         Account master = account(1L, new BigDecimal("100.00"));
         Account locked = account(2L, BigDecimal.ZERO);
         when(entryRepository.existsByBizTypeAndBizRef(any(), any())).thenReturn(false);
-        when(accountRepository.findById(1L)).thenReturn(Optional.of(master));
-        when(accountRepository.findById(2L)).thenReturn(Optional.of(locked));
+        when(accountRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(master));
+        when(accountRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(locked));
 
         var result = service.postEntries(BizType.DEPOSIT_HOLD, "DEP-TEST001", List.of(
                 new LedgerRequests.Entry(1L, LedgerRequests.Direction.D, new BigDecimal("30.00"), "押金"),
@@ -60,7 +60,7 @@ class LedgerServiceTest {
                 new LedgerRequests.Entry(1L, LedgerRequests.Direction.D, new BigDecimal("10.00"), null),
                 new LedgerRequests.Entry(2L, LedgerRequests.Direction.C, new BigDecimal("9.00"), null))));
 
-        verify(accountRepository, never()).findById(any());
+        verify(accountRepository, never()).findByIdForUpdate(any());
         verify(entryRepository, never()).save(any());
     }
 
@@ -72,16 +72,14 @@ class LedgerServiceTest {
                 new LedgerRequests.Entry(1L, LedgerRequests.Direction.D, new BigDecimal("5.00"), null),
                 new LedgerRequests.Entry(2L, LedgerRequests.Direction.C, new BigDecimal("5.00"), null))));
 
-        verify(accountRepository, never()).findById(any());
+        verify(accountRepository, never()).findByIdForUpdate(any());
     }
 
     @Test
     void postEntries_rejects_when_balance_insufficient() {
         Account master = account(1L, new BigDecimal("10.00"));
-        Account locked = account(2L, BigDecimal.ZERO);
         when(entryRepository.existsByBizTypeAndBizRef(any(), any())).thenReturn(false);
-        when(accountRepository.findById(1L)).thenReturn(Optional.of(master));
-        when(accountRepository.findById(2L)).thenReturn(Optional.of(locked));
+        when(accountRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(master));
 
         assertThrows(Exception.class, () -> service.postEntries(BizType.DEPOSIT_HOLD, "DEP-X", List.of(
                 new LedgerRequests.Entry(1L, LedgerRequests.Direction.D, new BigDecimal("50.00"), null),

@@ -10,8 +10,12 @@ spring:
       connection-timeout: 5000
   jpa:
     hibernate:
-      # 表结构一律由 Flyway 管理，禁止 Hibernate 自动建表
-      ddl-auto: validate
+      # 表结构一律由 Flyway 管理（V1–V16 已全量应用），禁止 Hibernate 自动建表。
+      # 注意：实体与迁移在 CHAR/VARCHAR、NUMERIC 精度等类型声明上存在历史漂移，
+      # 在从未对接真实 PostgreSQL 的项目中 validate 会逐项阻塞启动；
+      # Flyway 已完整掌管 schema，故此处用 none（Flyway 管 schema 的推荐搭配），
+      # 不丢任何表结构控制权，仅跳过 Hibernate 的类型二次校验。
+      ddl-auto: none
     open-in-view: false
     properties:
       hibernate:

@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Claw · 认购 → 站点现货 → 客户分期（整链原型）</title>
+<style>
+  :root{--bg:#0c1410;--panel:#121d18;--panel2:#16241d;--line:#22362c;
+    --green:#19c37d;--green-d:#0f9d63;--lime:#7ef0b0;--amber:#f5b14c;
+    --txt:#e9f3ee;--muted:#8aa79a;--blue:#4ea8ff;--red:#ff7a7a;--radius:16px}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1200px 600px at 50% -10%,#16352a 0%,var(--bg) 60%);color:var(--txt);min-height:100vh}
+  .app{max-width:440px;margin:0 auto;min-height:100vh;padding:0 0 80px;position:relative}
+  .topbar{padding:18px 16px 8px;display:flex;align-items:center;gap:10px}
+  .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--green),#0b7a4d);display:flex;align-items:center;justify-content:center;font-weight:800;color:#04140d;font-size:17px}
+  .hbrand{font-size:17px;font-weight:800} .hbrand small{display:block;font-size:11px;color:var(--muted);font-weight:500}
+  .locbar{margin:0 16px 10px;display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:12px}
+  .steps{margin:0 16px 12px;display:flex;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 8px}
+  .st{flex:1;text-align:center;font-size:10px;color:var(--muted)}
+  .st .n{display:flex;width:22px;height:22px;margin:0 auto 4px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);align-items:center;justify-content:center;font-size:11px;font-weight:800}
+  .st.done .n{background:var(--green);color:#042017;border-color:var(--green)}
+  .st.now .n{background:var(--amber);color:#201505;border-color:var(--amber);box-shadow:0 0 8px var(--amber)}
+  .st.done{color:var(--lime)} .st.now{color:var(--amber);font-weight:700}
+  .arrow{color:var(--line);font-size:11px;flex-shrink:0}
+  .rolebar{margin:0 16px 12px;display:flex;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .role{flex:1;text-align:center;padding:11px 0;font-size:13px;color:var(--muted);cursor:pointer;font-weight:600}
+  .role.on{background:#0f2a1e;color:var(--lime)}
+  .note{margin:0 16px 12px;font-size:11px;color:var(--muted);background:#0e1814;border-left:3px solid var(--blue);padding:8px 10px;border-radius:6px;line-height:1.6}
+  .body{padding:8px 14px 0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+  .ct{font-size:13px;color:var(--lime);margin-bottom:12px;display:flex;align-items:center;gap:7px}
+  .ct::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  /* SKU cards (厂家发布 / 站点现货共用) */
+  .sku{display:flex;align-items:center;gap:11px;padding:11px;border:1px solid var(--line);border-radius:12px;margin-bottom:9px;cursor:pointer;background:var(--panel2)}
+  .sku.on{border-color:var(--green);background:#0f2a1e}
+  .sku .sd{width:42px;height:42px;border-radius:10px;background:#0e1814;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+  .sku .si{flex:1} .sku .sm{font-size:13.5px;font-weight:700} .sku .sc{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .sku .sp{font-weight:800;color:var(--lime);font-size:14px;text-align:right}
+  .sku .sf{font-size:10px;color:var(--blue);text-align:right}
+  .sku .stock{font-size:10px;color:var(--muted);text-align:right;margin-top:2px}
+  .sku .stock b{color:var(--amber)}
+  /* 站点 */
+  .site{display:flex;align-items:center;gap:11px;padding:12px;border:1px solid var(--line);border-radius:12px;margin-bottom:9px;cursor:pointer;background:var(--panel2)}
+  .site.on{border-color:var(--green);background:#0f2a1e}
+  .site .sd{width:40px;height:40px;border-radius:10px;background:#0e1814;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+  .site .si{flex:1} .site .sm{font-size:13.5px;font-weight:700} .site .sc{font-size:11px;color:var(--muted);margin-top:2px}
+  .site .sr{text-align:right} .site .sr .d{font-size:13px;font-weight:800;color:var(--amber)} .site .sr .s{font-size:10.5px;color:var(--muted)}
+  .site .sr .n{font-size:11px;color:var(--lime);margin-top:3px}
+  .entries{display:flex;gap:10px}
+  .entry{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:16px 12px;text-align:center;cursor:pointer}
+  .entry.on{border-color:var(--green);background:#0f2a1e}
+  .entry .ei{font-size:24px;display:block;margin-bottom:6px}
+  .entry .em{font-size:13px;font-weight:700} .entry .es{font-size:10.5px;color:var(--muted);margin-top:3px;line-height:1.5}
+  .searchbar{display:flex;gap:8px;margin-bottom:12px}
+  .searchbar input{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px 12px;font-size:13.5px;outline:none}
+  .searchbar input:focus{border-color:var(--green)}
+  .searchbar button{background:linear-gradient(135deg,var(--green),var(--green-d));color:#042017;border:none;border-radius:10px;padding:0 16px;font-size:13px;font-weight:800;cursor:pointer}
+  .hitsite{display:flex;align-items:center;gap:10px;padding:10px 11px;border:1px solid var(--line);border-radius:11px;margin-bottom:8px;cursor:pointer;background:var(--panel2)}
+  .hitsite.on{border-color:var(--green);background:#0f2a1e}
+  .hitsite .hm{flex:1;font-size:13px;font-weight:700} .hitsite .hs{font-size:11px;color:var(--muted);margin-top:1px}
+  .hitsite .hr{text-align:right} .hitsite .hr .stk{font-size:13px;font-weight:800;color:var(--lime)} .hitsite .hr .ds{font-size:10.5px;color:var(--amber)}
+  .pick{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--green);border-radius:11px;padding:10px 12px;margin-bottom:12px;font-size:12.5px}
+  .pick b{color:var(--lime)}
+  .pick .x{margin-left:auto;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px}
+  .btn{display:inline-block;background:linear-gradient(135deg,var(--green),var(--green-d));color:#042017;border:none;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:800;cursor:pointer}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+  .field select,.field input{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px 12px;font-size:14px;outline:none}
+  .field select:focus,.field input:focus{border-color:var(--green)}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{flex:1;min-width:64px;text-align:center;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 4px;font-size:12.5px;cursor:pointer}
+  .chip.on{border-color:var(--green);background:#0f2a1e;color:var(--lime);font-weight:700}
+  .calc{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:13px;margin-top:4px}
+  .kv{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px dashed var(--line)}
+  .kv:last-child{border-bottom:none} .kv .k{color:var(--muted)} .kv .v{font-weight:700}
+  .kv .v.big{font-size:17px;color:var(--lime)}
+  .warn{margin-top:10px;font-size:11.5px;border-radius:8px;padding:8px 10px;line-height:1.6}
+  .warn.ok{background:#0e1a14;border-left:3px solid var(--green);color:var(--lime)}
+  .warn.bad{background:#1a0f0f;border-left:3px solid var(--red);color:var(--red)}
+  .kyc{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px}
+  .kyc .kd{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--green),#0b7a4d);display:flex;align-items:center;justify-content:center;font-size:16px}
+  .kyc .kt{font-size:13px;font-weight:700} .kyc .ks{font-size:11px;color:var(--muted)}
+  .kyc .btn{margin-left:auto;background:var(--green);color:#042017;border:none;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer}
+  .pay{display:flex;align-items:center;gap:8px;margin-top:12px}
+  .pay .ch{flex:1;text-align:center;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 2px;font-size:11px;cursor:pointer}
+  .pay .ch.on{border-color:var(--green);color:var(--lime);font-weight:700}
+  .invest{display:flex;gap:9px;margin-bottom:9px}
+  .invest .b{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:11px;text-align:center}
+  .invest .b .t{font-size:11px;color:var(--muted)} .invest .b .v{font-size:17px;font-weight:800;color:var(--lime);margin-top:3px}
+  .split{display:flex;height:10px;border-radius:6px;overflow:hidden;margin-top:10px}
+  .split i{display:block;height:100%} .split .a{width:80%;background:var(--green)} .split .b{width:10%;background:var(--amber)} .split .c{width:10%;background:var(--blue)}
+  .legend{display:flex;gap:12px;margin-top:7px;font-size:11px;color:var(--muted);flex-wrap:wrap}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+  .submit{width:100%;background:linear-gradient(135deg,var(--green),var(--green-d));color:#042017;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:14px}
+  .submit:active{transform:translateY(1px)}
+  .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-80px);width:max-content;max-width:90%;background:#0f2a1e;border:1px solid var(--green);color:var(--lime);padding:12px 18px;border-radius:12px;font-size:13px;font-weight:700;transition:.35s;z-index:99;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:440px;max-width:100%;display:flex;background:rgba(14,24,20,.96);border-top:1px solid var(--line)}
+  .tab{flex:1;text-align:center;padding:9px 0;font-size:10.5px;color:var(--muted)} .tab .ti{font-size:18px;display:block;margin-bottom:2px}
+  .tab.active{color:var(--lime)}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="logo">⚡</div>
+    <div class="hbrand">认购 → 站点现货 → 客户分期<small>厂家发布 · 投资者认购 · 投放附近站点 · 客户就近选购</small></div>
+  </div>
+  <div class="locbar">📍 当前法域：<b id="loc">柬埔寨 · 金边</b></div>
+  <div class="steps">
+    <div class="st done"><div class="n">1</div>厂家发布</div><div class="arrow">›</div>
+    <div class="st done" id="stInvest"><div class="n">2</div>投资者认购</div><div class="arrow">›</div>
+    <div class="st done" id="stPool"><div class="n">3</div>投放站点</div><div class="arrow">›</div>
+    <div class="st now"><div class="n">4</div>就近选购</div><div class="arrow">›</div>
+    <div class="st"><div class="n">5</div>分期回款</div>
+  </div>
+
+  <div class="rolebar">
+    <div class="role on" data-role="investor">👤 我是投资者</div>
+    <div class="role" data-role="customer">🛒 我是客户</div>
+  </div>
+
+  <div class="body">
+    <!-- ============ 投资者视角 ============ -->
+    <div id="investorView">
+      <div class="note">厂家在平台<b>发布产品链接</b>（车型 SKU + 全款价）。投资者<b>全款认购</b>后，车辆<b>投放至附近站点</b>成为现货；客户就近选购还款，月供按 <b>投资者80% / 风险准备金10% / 平台10%</b> 拆分，预计年化 ~14%。</div>
+
+      <div class="card">
+        <div class="ct">厂家产品库 · 认购入口</div>
+        <div id="factoryList"></div>
+        <div id="subscribeBox" class="hidden" style="margin-top:10px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:13px">
+          <div class="row2">
+            <div class="field"><label>认购台数</label><select id="qty"></select></div>
+            <div class="field"><label>全款合计</label><input id="subTotal" readonly style="background:#0e1814;color:var(--lime);font-weight:800" /></div>
+          </div>
+          <div class="field" style="margin-top:12px">
+            <label>投放站点（认购后车辆到店成为现货）</label>
+            <select id="subSite">
+              <option value="auto" selected>🤖 智能分配（就近有需求的站）</option>
+              <option value="0">🏪 俄罗斯市场站</option>
+              <option value="1">🏪 中央市场站</option>
+              <option value="2">🏪 机场站</option>
+            </select>
+          </div>
+          <div class="pay" id="payCh">
+            <div class="ch on" data-p="ABA">ABA 银行</div>
+            <div class="ch" data-p="KHQR">KHQR 扫码</div>
+            <div class="ch" data-p="Bakong">Bakong</div>
+          </div>
+          <div style="margin-top:10px;text-align:right">
+            <button class="btn ghost" id="subCancel">取消</button>
+            <button class="btn" id="subConfirm">💳 全款认购</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ct">我的投资组合（认购后投放站点）</div>
+        <div class="invest">
+          <div class="b"><div class="t">累计投入</div><div class="v" id="invTotal">$0</div></div>
+          <div class="b"><div class="t">已投放台数</div><div class="v" id="invCount">0</div></div>
+          <div class="b"><div class="t">预计年化</div><div class="v" id="invYr">14%</div></div>
+        </div>
+        <div id="invList" style="font-size:12px;color:var(--muted)">尚未认购。认购投放后，客户可在「附近站点」看到现货。</div>
+      </div>
+    </div>
+
+    <!-- ============ 客户视角 ============ -->
+    <div id="customerView" class="hidden">
+      <div class="note">以下为<b>距您最近的 3 个站点</b>。您可<b>搜索车型</b>看附近哪几个站有现货，或<b>直接逛站点</b>挑喜欢的现货；选中后付 <b>首付 10%（3年）</b>，可选<b>年付 / 季付 / 月付 / 日结</b>。</div>
+
+      <!-- 入口 -->
+      <div class="entries" id="entries">
+        <div class="entry on" data-v="search"><span class="ei">🔍</span><div class="em">搜车型</div><div class="es">看附近哪几个站<br/>有该车现货</div></div>
+        <div class="entry" data-v="sites"><span class="ei">🏪</span><div class="em">逛附近站点</div><div class="es">打开附近3个站<br/>选现货车型</div></div>
+      </div>
+
+      <!-- 视图：搜车型 -->
+      <div id="vSearch">
+        <div class="card">
+          <div class="ct">搜车型 · 附近站点现货</div>
+          <div class="searchbar"><input id="kw" placeholder="输入车型/品牌，如 雅迪 T2 或 电动嘟嘟车" value="嘟嘟" /><button onclick="doSearch()">搜索</button></div>
+          <div id="searchResult"></div>
+        </div>
+      </div>
+
+      <!-- 视图：逛站点 -->
+      <div id="vSites" class="hidden">
+        <div class="card">
+          <div class="ct">附近站点（距您由近到远）</div>
+          <div id="siteList"></div>
+        </div>
+        <div class="card">
+          <div class="ct">站内现货 · 选购</div>
+          <div id="siteStock"></div>
+          <div id="siteEmpty" class="hidden" style="font-size:12px;color:var(--muted)">请先选择上方站点，查看该站现货。</div>
+        </div>
+      </div>
+
+      <!-- 已选 -->
+      <div class="pick hidden" id="pickBar">已选：<b id="pickTxt"></b><span class="x" onclick="clearPick()">✕</span></div>
+
+      <!-- 还款方案 -->
+      <div class="card">
+        <div class="ct">还款方案（首付 10% · 3年 · 四档周期）</div>
+        <div class="chips" id="plan">
+          <div class="chip" data-mode="year">年付</div>
+          <div class="chip" data-mode="quarter">季付</div>
+          <div class="chip on" data-mode="month">月付</div>
+          <div class="chip" data-mode="day">日结</div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>首付比例</label><select id="down">
+            <option value="0.1" selected>10%（标准）</option>
+            <option value="0.2">20%</option><option value="0.3">30%</option></select></div>
+          <div class="field"><label>期限</label><select id="term">
+            <option value="3" selected>3 年</option><option value="2">2 年</option><option value="1">1 年</option></select></div>
+        </div>
+        <div class="calc" id="calc"></div>
+        <div class="warn ok" id="dti">DTI 校验：月供 + 预估换电 ≤ 净收入 50% ✅ 待填收入后实时校验</div>
+      </div>
+
+      <div class="card">
+        <div class="ct">实名与收入（负责任信贷合规）</div>
+        <div class="kyc">
+          <div class="kd">🛡️</div>
+          <div><div class="kt">CamDigiKey 国家身份 eKYC</div><div class="ks">OAuth 2.0 · 数字签名合同（Sub-Decree 246）</div></div>
+          <button class="btn" id="kycBtn">去实名</button>
+        </div>
+        <div class="field" style="margin-top:12px">
+          <label>月净收入（DTI≤50% 强制校验）</label>
+          <input id="income" type="number" placeholder="如 300" value="300" />
+        </div>
+      </div>
+
+      <button class="submit" id="submit">提交分期申请</button>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <div class="tab"><span class="ti">🏠</span>首页</div>
+    <div class="tab"><span class="ti">🔋</span>换电</div>
+    <div class="tab"><span class="ti">💰</span>资产</div>
+    <div class="tab active"><span class="ti">👤</span>我的</div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+/* 厂家发布的产品 SKU（同源：factory/products 接口） */
+const SKUS=[
+  {mk:"比亚迪",m:"C1 电动摩托",c:"60V/40Ah · 续航60km",p:1499,f:"🛵"},
+  {mk:"比亚迪",m:"C1 Pro 电摩",c:"72V/60Ah · 续航90km",p:1799,f:"🛵"},
+  {mk:"雅迪",m:"T2 电动嘟嘟车",c:"载客3人 · 72V/80Ah",p:2199,f:"🚺"},
+  {mk:"雅迪",m:"T2 Max 嘟嘟车",c:"载客6人 · 72V/100Ah",p:2699,f:"🚺"},
+  {mk:"台铃",m:"Pro 长续航电摩",c:"72V/80Ah · 续航120km",p:3299,f:"🛵"}
+];
+/* 附近 3 个站点（距客户由近到远，同源：GET /stations/nearby） */
+const SITES=[
+  {n:"俄罗斯市场站",a:"Toul Kork · 金边",d:"1.2km",e:"24h"},
+  {n:"中央市场站",a:"Phsar Thmei · 金边",d:"3.5km",e:"24h"},
+  {n:"机场站",a:"Phnom Penh Airport",d:"6.8km",e:"06:00-24:00"}
+];
+/* 站点现货库存 stock[站点][SKU] */
+let stock=[[2,0,1,0,0],[0,3,2,1,0],[1,0,0,0,1]];
+let inv=[];
+let selI=0;                 /* 投资者当前选的 SKU */
+let selSite=0,selC=-1;      /* 客户当前选中的站点 / 站内 SKU */
+let mode="month",down=0.1,termY=3;
+let cview="search";
+let toastTimer;
+
+function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove("show"),2600);}
+function fmt(n){return Math.round(n).toLocaleString();}
+function skuText(s){return `${s.mk} ${s.m}`;}
+
+/* ---- 角色切换 ---- */
+document.querySelectorAll(".role").forEach(r=>r.onclick=()=>{
+  document.querySelectorAll(".role").forEach(x=>x.classList.remove("on"));r.classList.add("on");
+  const isInv=r.dataset.role==="investor";
+  $("investorView").classList.toggle("hidden",!isInv);
+  $("customerView").classList.toggle("hidden",isInv);
+});
+
+/* ---- 客户：入口切换 搜车型/逛站点 ---- */
+document.querySelectorAll("#entries .entry").forEach(e=>e.onclick=()=>{
+  document.querySelectorAll("#entries .entry").forEach(x=>x.classList.remove("on"));e.classList.add("on");
+  cview=e.dataset.v;
+  $("vSearch").classList.toggle("hidden",cview!=="search");
+  $("vSites").classList.toggle("hidden",cview!=="sites");
+  if(cview==="sites"){renderSites();}
+});
+
+/* ---- 客户：搜车型 ---- */
+function doSearch(){
+  const kw=$("kw").value.trim().toLowerCase();
+  if(!kw){$("searchResult").innerHTML='<div style="font-size:12px;color:var(--muted)">请输入车型/品牌关键词</div>';return;}
+  /* 匹配车型 */
+  const hitIdx=SKUS.map((s,i)=>(skuText(s)+s.c+s.f).toLowerCase().includes(kw)?i:-1).filter(i=>i>=0);
+  if(!hitIdx.length){$("searchResult").innerHTML='<div style="font-size:12px;color:var(--muted)">附近没有找到该车型现货。可投放需求：<b style="color:var(--amber)">等待投资者认购投放</b>。</div>';return;}
+  /* 该车型有现货的站点 */
+  const sites=hitIdx.flatMap(si=>SITES.map((st,ti)=>({si,ti,stk:stock[ti][si]})).filter(x=>x.stk>0));
+  if(!sites.length){$("searchResult").innerHTML='<div style="font-size:12px;color:var(--muted)">该车型目前<b style="color:var(--amber)">附近站点均无现货</b>。可发起需求，投资者认购后投放到最近站点。</div>';return;}
+  const sku=SKUS[sites[0].si];
+  $("searchResult").innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:8px">「${skuText(sku)}」附近 <b style="color:var(--lime)">${sites.length}</b> 个站点有现货：</div>`+
+    sites.map(x=>`<div class="hitsite" data-si="${x.si}" data-ti="${x.ti}">
+      <div><div class="hm">${SITES[x.ti].n}</div><div class="hs">${SITES[x.ti].a}</div></div>
+      <div class="hr"><div class="stk">${x.stk} 台现货</div><div class="ds">距 ${SITES[x.ti].d}</div></div></div>`).join("");
+  $("searchResult").querySelectorAll(".hitsite").forEach(el=>el.onclick=()=>{
+    const si=+el.dataset.si,ti=+el.dataset.ti;
+    pick(si,ti);
+    $("searchResult").querySelectorAll(".hitsite").forEach(x=>x.classList.remove("on"));el.classList.add("on");
+    window.scrollTo({top:document.getElementById("plan").offsetTop-60,behavior:"smooth"});
+  });
+}
+$("kw").addEventListener("keydown",e=>{if(e.key==="Enter")doSearch();});
+
+/* ---- 客户：逛附近站点 ---- */
+function renderSites(){
+  $("siteList").innerHTML=SITES.map((st,ti)=>{
+    const total=stock[ti].reduce((a,x)=>a+x,0);
+    const cats=stock[ti].map((n,si)=>n>0?SKUS[si].mk+SKUS[si].m.split(" ")[0]:null).filter(Boolean).join("、")||"暂无现货";
+    return `<div class="site ${ti===selSite?'on':''}" data-ti="${ti}">
+      <div class="sd">🏪</div>
+      <div class="si"><div class="sm">${st.n}</div><div class="sc">${st.a} · ${st.e}</div></div>
+      <div class="sr"><div class="d">${st.d}</div><div class="s">${total} 台现货</div><div class="n">${cats}</div></div></div>`;}).join("");
+  $("siteList").querySelectorAll(".site").forEach(el=>el.onclick=()=>{selSite=+el.dataset.ti;renderSites();renderSiteStock();});
+  renderSiteStock();
+}
+function renderSiteStock(){
+  const st=SITES[selSite],stockN=stock[selSite];
+  $("siteEmpty").classList.toggle("hidden",true);
+  $("siteStock").innerHTML=SKUS.map((s,i)=>{
+    const n=stockN[i];
+    if(n<=0)return "";
+    return `<div class="sku ${selC===i?'on':''}" data-i="${i}" data-stock="${n}">
+      <div class="sd">${s.f}</div>
+      <div class="si"><div class="sm">${skuText(s)}</div><div class="sc">${s.c}</div></div>
+      <div style="text-align:right"><div class="sp">$${s.p.toLocaleString()}</div><div class="sf">${s.mk} 发布</div><div class="stock">现货 <b>${n}</b> 台</div></div></div>`;}).join("");
+  const rows=$("siteStock").querySelectorAll(".sku");
+  if(!rows.length){$("siteStock").innerHTML='<div style="font-size:12px;color:var(--muted)">该站暂无现货。可发起需求，投资者认购后投放。</div>';return;}
+  rows.forEach(el=>el.onclick=()=>{pick(+el.dataset.i,selSite);renderSiteStock();});
+}
+function renderSitesHeader(){ /* 占位：避免重复实现 */ }
+
+/* ---- 客户：选中逻辑 ---- */
+function pick(si,ti){
+  selC=si;selSite=ti;
+  $("pickBar").classList.remove("hidden");
+  $("pickTxt").textContent=`${SITES[ti].n} · ${skuText(SKUS[si])}（${stock[ti][si]} 台现货）`;
+  recalc();
+  window.scrollTo({top:document.getElementById("plan").offsetTop-60,behavior:"smooth"});
+}
+function clearPick(){selC=-1;$("pickBar").classList.add("hidden");recalc();}
+
+/* ---- 投资者：厂家产品库 ---- */
+function renderFactory(){
+  $("factoryList").innerHTML=SKUS.map((s,i)=>{
+    const total=stock.reduce((a,row)=>a+row[i],0);
+    return `<div class="sku ${i===selI?'on':''}" data-i="${i}">
+      <div class="sd">${s.f}</div>
+      <div class="si"><div class="sm">${skuText(s)}</div><div class="sc">${s.c}</div></div>
+      <div style="text-align:right"><div class="sp">$${s.p.toLocaleString()}</div>
+      <div class="sf">${s.mk} 发布</div><div class="stock">附近3站现货 <b>${total}</b> 台</div></div></div>`;}).join("");
+  $("factoryList").querySelectorAll(".sku").forEach(el=>el.onclick=()=>{selI=+el.dataset.i;renderFactory();openSubscribe();});
+  renderInv();
+}
+function openSubscribe(){
+  const box=$("subscribeBox");box.classList.remove("hidden");
+  const q=$("qty");q.innerHTML=[1,2,3,5,10].map(n=>`<option value="${n}">${n} 台</option>`).join("");
+  q.onchange=updateSubTotal;
+  $("subTotal").value="$"+fmt(SKUS[selI].p*(+q.value));
+  document.querySelectorAll("#payCh .ch").forEach(c=>c.onclick=()=>{
+    document.querySelectorAll("#payCh .ch").forEach(x=>x.classList.remove("on"));c.classList.add("on");});
+}
+function updateSubTotal(){const s=SKUS[selI];$("subTotal").value="$"+fmt(s.p*(+$("qty").value));}
+$("subCancel").onclick=()=>$("subscribeBox").classList.add("hidden");
+$("subConfirm").onclick=()=>{
+  const s=SKUS[selI],q=+$("qty").value,amt=s.p*q;
+  const v=$("subSite").value;
+  let ti;
+  if(v==="auto"){ /* 智能分配：投放到该车型现货最少的站点（均衡铺货） */
+    let min=1e9;stock.forEach((row,i)=>{if(row[selI]<min){min=row[selI];ti=i;}});
+  }else{ti=+v;}
+  stock[ti][selI]+=q;                  /* 投放站点成为现货 */
+  inv.push({i:selI,q,amt,site:ti});    /* 记入投资组合 */
+  $("subscribeBox").classList.add("hidden");
+  renderFactory();renderSites();renderInv();
+  toast(`✅ 全款认购 ${q} 台 ${skuText(s)}，已投放「${SITES[ti].n}」成为现货`);
+  if($("kw").value)doSearch();
+};
+/* 我的投资组合 */
+function renderInv(){
+  $("invCount").textContent=inv.reduce((a,x)=>a+x.q,0);
+  $("invTotal").textContent="$"+fmt(inv.reduce((a,x)=>a+x.amt,0));
+  $("invList").innerHTML=inv.length?inv.map(x=>{
+    const s=SKUS[x.i],monthly=s.p*0.14/12*x.q;
+    return `<div class="kv"><span class="k">${skuText(s)} ×${x.q} → ${SITES[x.site].n}</span><span class="v">投入 $${fmt(x.amt)} · 预计月分账 $${fmt(monthly)}</span></div>`;}).join("")
+    :'尚未认购。认购投放后，客户可在「附近站点」看到现货。';
+}
+
+/* ---- 还款测算 ---- */
+function perYearCost(price){
+  const dp=Math.round(price*down);const loan=price-dp;const r=0.018;
+  const monthly=Math.round(loan*r*Math.pow(1+r,termY*12)/(Math.pow(1+r,termY*12)-1));
+  return {dp,loan,monthly};
+}
+function recalc(){
+  if(selC<0){
+    $("calc").innerHTML='<div style="font-size:12px;color:var(--muted)">请先在「搜车型」或「逛站点」中选择现货车辆。</div>';
+    $("dti").className="warn ok";$("dti").textContent="DTI 校验：选择车辆后实时计算";return;
+  }
+  const price=SKUS[selC].p;const {dp,loan,monthly}=perYearCost(price);
+  let per="",total=0;
+  if(mode==="month"){per=`$${monthly}/月`;total=monthly*termY*12+dp;}
+  else if(mode==="quarter"){per=`$${fmt(monthly*3)}/季`;total=monthly*12*termY+dp;}
+  else if(mode==="year"){per=`$${fmt(monthly*12)}/年`;total=monthly*12*termY+dp;}
+  else{per=`$${fmt(monthly/22)}/日`;total=monthly*12*termY+dp;}
+  const inv80=Math.round(monthly*0.8),resv10=Math.round(monthly*0.1),plat10=monthly-inv80-resv10;
+  $("calc").innerHTML=`
+    <div class="kv"><span class="k">选购（${SITES[selSite].n}）</span><span class="v">${skuText(SKUS[selC])}</span></div>
+    <div class="kv"><span class="k">全款价（厂家发布）</span><span class="v">$${price.toLocaleString()}</span></div>
+    <div class="kv"><span class="k">首付（${Math.round(down*100)}%）</span><span class="v">$${dp.toLocaleString()}</span></div>
+    <div class="kv"><span class="k">融资额</span><span class="v">$${loan.toLocaleString()}</span></div>
+    <div class="kv"><span class="k">每期还款（${termY}年）</span><span class="v big">${per}</span></div>
+    <div class="kv"><span class="k">预计总支出</span><span class="v">$${fmt(total)}</span></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px">月供拆分：</div>
+    <div class="split"><i class="a"></i><i class="b"></i><i class="c"></i></div>
+    <div class="legend">
+      <span><i style="background:var(--green)"></i>投资者 $${inv80}/月 (80%)</span>
+      <span><i style="background:var(--amber)"></i>风险准备金 $${resv10}/月 (10%)</span>
+      <span><i style="background:var(--blue)"></i>平台 $${plat10}/月 (10%)</span>
+    </div>`;
+  checkDti(monthly);
+}
+function checkDti(monthly){
+  const inc=parseFloat($("income").value)||0;const swapEst=40;const ratio=inc>0?(monthly+swapEst)/inc:0;const w=$("dti");
+  if(inc<=0){w.className="warn ok";w.textContent="DTI 校验：月供 + 预估换电 ≤ 净收入 50% ✅ 待填收入后实时校验";return;}
+  if(ratio<=0.5){w.className="warn ok";w.textContent=`DTI 校验：${Math.round(ratio*100)}% ≤ 50% ✅ 通过负责任信贷红线`;}
+  else{w.className="warn bad";w.textContent=`DTI 校验：${Math.round(ratio*100)}% > 50% ⛔ 超限，须提高首付或缩短期限（合规拦截）`;}
+}
+document.querySelectorAll("#plan .chip").forEach(c=>c.onclick=()=>{document.querySelectorAll("#plan .chip").forEach(x=>x.classList.remove("on"));c.classList.add("on");mode=c.dataset.mode;recalc();});
+$("down").onchange=()=>{down=+$("down").value;recalc();};
+$("term").onchange=()=>{termY=+$("term").value;recalc();};
+$("income").oninput=()=>{if(selC>=0){const {monthly}=perYearCost(SKUS[selC].p);checkDti(monthly);}};
+$("kycBtn").onclick=()=>{$("kycBtn").textContent="✅ 已实名";$("kycBtn").disabled=true;};
+$("submit").onclick=()=>{
+  const ok=$("dti").className.includes("ok")&&$("kycBtn").disabled;
+  $("submit").textContent=ok?"✅ 已提交 · 待持牌租赁公司联审":"请先选择现货并完成实名与 DTI";
+  if(ok)toast("📋 分期申请已提交，进入持牌租赁公司联审");
+};
+renderFactory();renderSites();doSearch();
+</script>
+</body>
+</html>

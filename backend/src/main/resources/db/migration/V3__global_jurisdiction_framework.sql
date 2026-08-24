@@ -177,7 +177,9 @@ CREATE TABLE claw.tenants (
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
+-- tenants.id 为 GENERATED ALWAYS AS IDENTITY，种子需显式指定 id 时必须用 OVERRIDING SYSTEM VALUE
 INSERT INTO claw.tenants (id, country_code, name, operator_type, status)
+OVERRIDING SYSTEM VALUE
 VALUES (1, 'KHM', 'Claw Cambodia (Pilot)', 'OWNED', 'ACTIVE');
 
 -- ---------------------------------------------------------------------

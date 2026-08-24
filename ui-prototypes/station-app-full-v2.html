@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Claw · 站方端 APP 全套页面设计</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --paper:#f7f4ec; --paper-2:#efebe0; --surface:#fffdf7;
+    --ink:#15281f; --ink-2:#46594f; --muted:#819388; --line:#e4dfd1;
+    --brand:#176a48; --brand-deep:#0d4630; --brand-soft:#e2f0e7;
+    --energy:#2fc97c; --lime:#b9f062; --amber:#efa13b; --amber-soft:#fbeeda;
+    --coral:#e2573f; --coral-soft:#fbe5de; --blue:#4a88cf;
+    --r-sm:10px; --r-md:16px; --r-lg:22px; --r-full:999px;
+    --sh-sm:0 1px 2px rgba(21,40,31,.05),0 1px 4px rgba(21,40,31,.06);
+    --sh-md:0 8px 24px rgba(21,40,31,.08),0 2px 6px rgba(21,40,31,.05);
+    --font-disp:"Space Grotesk","Noto Sans SC",system-ui,sans-serif;
+    --font-body:"Noto Sans SC",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font-body);background:var(--paper);color:var(--ink);line-height:1.6;
+    -webkit-font-smoothing:antialiased}
+  .num{font-family:var(--font-disp);font-variant-numeric:tabular-nums}
+
+  .page-title{text-align:center;padding:48px 0 20px}
+  .page-title h1{font-size:32px;font-weight:900;letter-spacing:-.02em}
+  .page-title p{color:var(--ink-2);font-size:14px;margin-top:8px}
+
+  .phone-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:28px;padding:20px 28px 60px}
+  .phone-wrap{position:relative}
+  .phone-label{text-align:center;font-size:13px;font-weight:700;margin-bottom:10px}
+  .phone-label small{display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:3px}
+  .phone{width:300px;height:620px;background:var(--paper-2);border-radius:38px;
+    border:3px solid var(--ink);overflow:hidden;position:relative;
+    box-shadow:0 20px 50px rgba(21,40,31,.18)}
+  .phone-screen{width:100%;height:100%;background:var(--paper);overflow-y:auto;position:relative}
+  .phone-screen::-webkit-scrollbar{display:none}
+
+  .statusbar{display:flex;justify-content:space-between;align-items:center;
+    padding:6px 20px 4px;font-size:11px;font-weight:600}
+  .statusbar .right{display:flex;gap:5px}
+  .statusbar .bar{width:14px;height:8px;border-radius:2px;background:var(--ink);opacity:.3}
+  .statusbar .bar.active{opacity:1}
+
+  .app-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 6px}
+  .app-header .title{font-size:18px;font-weight:900}
+  .app-header .icon-btn{width:36px;height:36px;border-radius:var(--r-full);
+    background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;font-size:15px}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
+    padding:16px;margin:8px 16px;box-shadow:var(--sh-sm)}
+  .card-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;
+    letter-spacing:.08em;margin-bottom:10px}
+
+  .btn{display:flex;align-items:center;justify-content:center;gap:6px;
+    padding:12px 20px;border-radius:var(--r-full);font-size:14px;font-weight:700;
+    border:none;cursor:pointer;transition:all .2s}
+  .btn-primary{background:var(--brand);color:#fff}
+  .btn-energy{background:linear-gradient(135deg,var(--brand),var(--energy));color:#fff}
+  .btn-ghost{background:var(--surface);border:1px solid var(--line);color:var(--ink-2)}
+  .btn-block{width:calc(100% - 32px);margin:8px 16px}
+
+  .tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;
+    border-radius:var(--r-full);font-size:11px;font-weight:600}
+  .tag-green{background:var(--brand-soft);color:var(--brand)}
+  .tag-amber{background:var(--amber-soft);color:var(--amber)}
+  .tag-coral{background:var(--coral-soft);color:var(--coral)}
+
+  .tabbar{position:absolute;bottom:0;left:0;right:0;display:flex;
+    background:rgba(255,253,247,.92);backdrop-filter:blur(10px);
+    border-top:1px solid var(--line);padding:6px 0 10px}
+  .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+    font-size:10px;color:var(--muted);cursor:pointer}
+  .tab.active{color:var(--brand)}
+  .tab .ico{font-size:18px}
+
+  .section-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 6px}
+  .section-head .title{font-size:14px;font-weight:700}
+  .section-head .more{font-size:12px;color:var(--brand);cursor:pointer}
+
+  /* 站方工作台特有 */
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 16px}
+  .stat-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
+    padding:12px;text-align:center}
+  .stat-card .val{font-size:22px;font-weight:900}
+  .stat-card .label{font-size:10px;color:var(--muted)}
+  .stat-card .sub{font-size:9px;color:var(--brand);margin-top:2px}
+
+  /* 电池位 */
+  .battery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px 16px}
+  .battery-slot{aspect-ratio:1;border-radius:var(--r-sm);border:2px solid var(--line);
+    display:grid;place-items:center;font-size:24px;position:relative}
+  .battery-slot.full{background:var(--brand-soft);border-color:var(--energy)}
+  .battery-slot.charging{background:var(--amber-soft);border-color:var(--amber)}
+  .battery-slot.empty{background:var(--paper-2)}
+  .battery-slot .badge{position:absolute;bottom:2px;font-size:8px;font-weight:700}
+  .battery-slot.full .badge{color:var(--energy)}
+  .battery-slot.charging .badge{color:var(--amber)}
+
+  /* 日账单 */
+  .bill-row{display:flex;justify-content:space-between;padding:8px 0;font-size:13px;
+    border-bottom:1px solid var(--line)}
+  .bill-row:last-child{border-bottom:none}
+  .bill-row .label{color:var(--ink-2)}
+  .bill-row .value{font-weight:700}
+  .bill-total{display:flex;justify-content:space-between;padding:12px 0 0;font-size:15px}
+  .bill-total .value{font-size:20px;font-weight:900;color:var(--brand)}
+
+  /* 光伏管理 */
+  .pv-card{background:linear-gradient(135deg,#fef9e7,#fff5d6);border:1px solid var(--amber);
+    border-radius:var(--r-md);padding:16px;margin:8px 16px}
+  .pv-stat{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}
+  .pv-stat .label{color:var(--ink-2)}
+  .pv-stat .value{font-weight:700}
+
+  /* 收发电池 */
+  .action-btn{display:flex;align-items:center;gap:10px;padding:14px;margin:8px 16px;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);cursor:pointer}
+  .action-btn:hover{border-color:var(--brand);background:var(--brand-soft)}
+  .action-ico{width:40px;height:40px;border-radius:var(--r-sm);
+    background:var(--brand-soft);display:grid;place-items:center;font-size:20px}
+  .action-text{flex:1}
+  .action-text .title{font-size:14px;font-weight:700}
+  .action-text .desc{font-size:11px;color:var(--muted)}
+
+  /* 站方资金 */
+  .fund-card{margin:8px 16px;padding:16px;border-radius:var(--r-md);
+    background:var(--surface);border:1px solid var(--line)}
+  .fund-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px}
+  .fund-row .label{color:var(--ink-2)}
+  .fund-row .value{font-weight:700}
+  .fund-total{border-top:2px solid var(--line);margin-top:8px;padding-top:8px}
+  .fund-total .value{font-size:20px;font-weight:900;color:var(--brand)}
+
+  /* KYC 审核 */
+  .kyc-status{margin:8px 16px;padding:16px;border-radius:var(--r-md);text-align:center}
+  .kyc-status.approved{background:var(--brand-soft);border:1px solid var(--brand)}
+  .kyc-status.pending{background:var(--amber-soft);border:1px solid var(--amber)}
+  .kyc-status .ico{font-size:36px}
+  .kyc-status .title{font-size:15px;font-weight:700;margin-top:4px}
+  .kyc-status .desc{font-size:11px;color:var(--ink-2);margin-top:2px}
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>Claw 站方端 APP</h1>
+  <p>6 个核心页面 · 工作台 / 收发电池 / 电池位 / 日账单 / 光伏 / 站方资金</p>
+</div>
+
+<div class="phone-grid">
+
+  <!-- ========== 页面1: 站长工作台 ========== -->
+  <div class="phone-wrap">
+    <div class="phone-label">站长工作台<small>Operator Dashboard</small></div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="statusbar">
+          <span>9:41</span>
+          <div class="right"><span class="bar active"></span><span class="bar active"></span><span class="bar active"></span><span class="bar"></span></div>
+        </div>
+        <div class="app-header">
+          <div>
+            <div style="font-size:11px;color:var(--muted)">🏢 桑园 1 号站</div>
+            <div class="title">站长工作台</div>
+          </div>
+          <div class="icon-btn">🔔</div>
+        </div>
+
+        <!-- 今日概览 -->
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="val num" style="color:var(--brand)">38</div>
+            <div class="label">今日换电</div>
+            <div class="sub">↑ 12% vs 昨日</div>
+          </div>
+          <div class="stat-card">
+            <div class="val num" style="color:var(--energy)">12</div>
+            <div class="label">满电电池</div>
+            <div class="sub">5 块充电中</div>
+          </div>
+          <div class="stat-card">
+            <div class="val num" style="color:var(--amber)">$12.8</div>
+            <div class="label">今日收入</div>
+            <div class="sub">服务费 +管理费</div>
+          </div>
+          <div class="stat-card">
+            <div class="val num" style="color:var(--blue)">4</div>
+            <div class="label">今日租赁</div>
+            <div class="sub">共享车辆池</div>
+          </div>
+        </div>
+
+        <!-- 快捷操作 -->
+        <div class="section-head"><span class="title">快捷操作</span></div>
+
+        <div class="action-btn">
+          <div class="action-ico">📥</div>
+          <div class="action-text">
+            <div class="title">接收电池</div>
+            <div class="desc">扫码收取用户归还的欠电电池</div>
+          </div>
+          <span style="color:var(--muted)">›</span>
+        </div>
+
+        <div class="action-btn">
+          <div class="action-ico">📤</div>
+          <div class="action-text">
+            <div class="title">派发电池</div>
+            <div class="desc">FIFO 派发满电电池给用户</div>
+          </div>
+          <span style="color:var(--muted)">›</span>
+        </div>
+
+        <div class="action-btn">
+          <div class="action-ico">💰</div>
+          <div class="action-text">
+            <div class="title">日账单</div>
+            <div class="desc">查看今日收入明细和对账</div>
+          </div>
+          <span style="color:var(--muted)">›</span>
+        </div>
+
+        <div class="action-btn">
+          <div class="action-ico">🔋</div>
+          <div class="action-text">
+            <div class="title">电池位管理</div>
+            <div class="desc">查看电池位状态、充电管理</div>
+          </div>
+          <span style="color:var(--muted)">›</span>
+        </div>
+
+        <!-- 风控提醒 -->
+        <div class="card" style="background:var(--coral-soft);border-color:var(--coral)">
+          <div style="font-size:12px;font-weight:700;color:var(--coral)">⚠ 风控提醒</div>
+          <div style="font-size:11px;color:var(--ink-2);margin-top:4px">
+            保证金缺口 $120.00<br>
+            当前经手资产 $6,400 · 要求保证金 $420<br>
+            请补充保证金以避免账户冻结
+          </div>
+        </div>
+
+        <div style="height:60px"></div>
+        <div class="tabbar">
+          <div class="tab active"><span class="ico">📊</span>工作台</div>
+          <div class="tab"><span class="ico">🔄</span>收发</div>
+          <div class="tab"><span class="ico">🔋</span>电池位</div>
+          <div class="tab"><span class="ico">💰</span>账单</div>
+          <div class="tab"><span class="ico">👤</span>我的</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 页面2: 收发电池 ========== -->
+  <div class="phone-wrap">
+    <div class="phone-label">收发电池<small>Battery Receive/Dispatch</small></div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="statusbar">
+          <span>9:42</span>
+          <div class="right"><span class="bar active"></span><span class="bar active"></span><span class="bar active"></span><span class="bar"></span></div>
+        </div>
+        <div class="app-header">
+          <div class="icon-btn">←</div>
+          <div class="title">收发电池</div>
+          <div class="icon-btn">📋</div>
+        </div>
+
+        <!-- 扫码区 -->
+        <div style="margin:12px 16px;height:160px;border-radius:var(--r-md);
+          background:var(--surface);border:2px dashed var(--brand);
+          display:grid;place-items:center;text-align:center">
+          <div>
+            <div style="font-size:40px">📷</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px">扫描电池二维码</div>
+            <div style="font-size:11px;color:var(--brand)">收取 / 派发电池</div>
+          </div>
+        </div>
+
+        <!-- 待处理 -->
+        <div class="section-head">
+          <span class="title">待处理</span>
+          <span class="tag tag-amber">3 笔</span>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:14px;font-weight:700">📥 收取 · 电池 #B045</div>
+              <div style="font-size:11px;color:var(--muted)">用户: 王建国 · SOH 68% · SOC 15%</div>
+            </div>
+            <span class="tag tag-amber">待收取</span>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:10px">
+            <button class="btn btn-primary" style="flex:1;padding:8px;font-size:12px">确认收取</button>
+            <button class="btn btn-ghost" style="padding:8px 12px;font-size:12px">详情</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:14px;font-weight:700">📤 派发 · 电池 #B012</div>
+              <div style="font-size:11px;color:var(--muted)">用户: 陈志明 · FIFO 派发 · SOH 92%</div>
+            </div>
+            <span class="tag tag-green">满电</span>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:10px">
+            <button class="btn btn-energy" style="flex:1;padding:8px;font-size:12px">确认派发</button>
+            <button class="btn btn-ghost" style="padding:8px 12px;font-size:12px">详情</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:14px;font-weight:700">🔄 管理权转移 · #B033</div>
+              <div style="font-size:11px;color:var(--muted)">从: 李四 → 到: 王建国</div>
+            </div>
+            <span class="tag tag-green">待确认</span>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:10px">
+            <button class="btn btn-primary" style="flex:1;padding:8px;font-size:12px">确认转移</button>
+          </div>
+        </div>
+
+        <!-- 今日统计 -->
+        <div class="card">
+          <div class="card-title">今日收发统计</div>
+          <div style="display:flex;justify-content:space-around;text-align:center">
+            <div><div style="font-size:20px;font-weight:900" class="num">18</div><div style="font-size:10px;color:var(--muted)">收取</div></div>
+            <div><div style="font-size:20px;font-weight:900" class="num">20</div><div style="font-size:10px;color:var(--muted)">派发</div></div>
+            <div><div style="font-size:20px;font-weight:900" class="num">38</div><div style="font-size:10px;color:var(--muted)">合计</div></div>
+          </div>
+        </div>
+
+        <div style="height:60px"></div>
+        <div class="tabbar">
+          <div class="tab"><span class="ico">📊</span>工作台</div>
+          <div class="tab active"><span class="ico">🔄</span>收发</div>
+          <div class="tab"><span class="ico">🔋</span>电池位</div>
+          <div class="tab"><span class="ico">💰</span>账单</div>
+          <div class="tab"><span class="ico">👤</span>我的</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 页面3: 电池位管理 ========== -->
+  <div class="phone-wrap">
+    <div class="phone-label">电池位管理<small>Battery Slot Management</small></div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="statusbar">
+          <span>9:43</span>
+          <div class="right"><span class="bar active"></span><span class="bar active"></span><span class="bar active"></span><span class="bar"></span></div>
+        </div>
+        <div class="app-header">
+          <div class="icon-btn">←</div>
+          <div class="title">电池位</div>
+          <div class="icon-btn">⚙</div>
+        </div>
+
+        <!-- 电池位概览 -->
+        <div style="display:flex;gap:6px;margin:8px 16px">
+          <div class="stat-card" style="flex:1;padding:8px">
+            <div class="val num" style="font-size:18px;color:var(--energy)">12</div>
+            <div class="label">满电</div>
+          </div>
+          <div class="stat-card" style="flex:1;padding:8px">
+            <div class="val num" style="font-size:18px;color:var(--amber)">5</div>
+            <div class="label">充电中</div>
+          </div>
+          <div class="stat-card" style="flex:1;padding:8px">
+            <div class="val num" style="font-size:18px;color:var(--muted)">3</div>
+            <div class="label">空位</div>
+          </div>
+        </div>
+
+        <!-- 电池位网格 -->
+        <div class="section-head"><span class="title">电池位布局 (20 位)</span></div>
+        <div class="battery-grid">
+          <div class="battery-slot full">🔋<span class="badge">92%</span></div>
+          <div class="battery-slot full">🔋<span class="badge">88%</span></div>
+          <div class="battery-slot charging">⚡<span class="badge">45%</span></div>
+          <div class="battery-slot full">🔋<span class="badge">95%</span></div>
+          <div class="battery-slot charging">⚡<span class="badge">62%</span></div>
+          <div class="battery-slot empty">○</div>
+          <div class="battery-slot full">🔋<span class="badge">90%</span></div>
+          <div class="battery-slot full">🔋<span class="badge">85%</span></div>
+          <div class="battery-slot charging">⚡<span class="badge">30%</span></div>
+          <div class="battery-slot full">🔋<span class="badge">93%</span></div>
+          <div class="battery-slot full">🔋<span class="badge">87%</span></div>
+          <div class="battery-slot empty">○</div>
+          <div class="battery-slot charging">⚡<span class="badge">55%</span></div>
+          <div class="battery-slot full">🔋<span class="badge">91%</span></div>
+          <div class="battery-slot full">🔋<span class="badge">89%</span></div>
+        </div>
+
+        <!-- 充电设置 -->
+        <div class="card">
+          <div class="card-title">充电设置</div>
+          <div class="fund-row">
+            <span class="label">充电模式</span>
+            <span class="value">智能调度</span>
+          </div>
+          <div class="fund-row">
+            <span class="label">电价来源</span>
+            <span class="value">光伏优先</span>
+          </div>
+          <div class="fund-row">
+            <span class="label">当前电价</span>
+            <span class="value num">$0.12/度</span>
+          </div>
+          <button class="btn btn-ghost btn-block" style="margin-top:8px">调整充电策略</button>
+        </div>
+
+        <!-- FIFO 队列 -->
+        <div class="card">
+          <div class="card-title">FIFO 派发队列</div>
+          <div style="font-size:11px;color:var(--ink-2);margin-bottom:8px">
+            下次派发将按入库时间先后排序
+          </div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <span class="tag tag-green">#B012</span>
+            <span class="tag tag-green">#B008</span>
+            <span class="tag tag-green">#B015</span>
+            <span class="tag tag-green">#B003</span>
+            <span class="tag" style="background:var(--amber-soft);color:var(--amber)">+8</span>
+          </div>
+        </div>
+
+        <div style="height:60px"></div>
+        <div class="tabbar">
+          <div class="tab"><span class="ico">📊</span>工作台</div>
+          <div class="tab"><span class="ico">🔄</span>收发</div>
+          <div class="tab active"><span class="ico">🔋</span>电池位</div>
+          <div class="tab"><span class="ico">💰</span>账单</div>
+          <div class="tab"><span class="ico">👤</span>我的</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 页面4: 日账单 ========== -->
+  <div class="phone-wrap">
+    <div class="phone-label">日账单<small>Daily Bill</small></div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="statusbar">
+          <span>9:44</span>
+          <div class="right"><span class="bar active"></span><span class="bar active"></span><span class="bar active"></span><span class="bar"></span></div>
+        </div>
+        <div class="app-header">
+          <div class="icon-btn">←</div>
+          <div class="title">日账单</div>
+          <div class="icon-btn">📅</div>
+        </div>
+
+        <!-- 日期选择 -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 16px;padding:8px 12px;
+          background:var(--surface);border:1px solid var(--line);border-radius:var(--r-full)">
+          <span style="color:var(--muted)">‹</span>
+          <span style="font-weight:700;font-size:14px">2026-08-23 今天</span>
+          <span style="color:var(--muted)">›</span>
+        </div>
+
+        <!-- 收入总览 -->
+        <div class="fund-card" style="background:linear-gradient(135deg,var(--brand-deep),var(--brand));color:#fff;border:none">
+          <div style="font-size:12px;opacity:.8;text-align:center">今日总收入</div>
+          <div style="font-size:32px;font-weight:900;text-align:center" class="num">$ 12.80</div>
+          <div style="display:flex;justify-content:space-around;margin-top:12px;padding-top:12px;
+            border-top:1px solid rgba(255,255,255,.15)">
+            <div style="text-align:center">
+              <div style="font-size:14px;font-weight:700" class="num">$7.60</div>
+              <div style="font-size:10px;opacity:.7">换电服务费</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:14px;font-weight:700" class="num">$3.20</div>
+              <div style="font-size:10px;opacity:.7">管理收益</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:14px;font-weight:700" class="num">$2.00</div>
+              <div style="font-size:10px;opacity:.7">光伏电费</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 明细 -->
+        <div class="card">
+          <div class="card-title">收入明细</div>
+          <div class="bill-row"><span class="label">换电服务费 (38 次)</span><span class="value num">$7.60</span></div>
+          <div class="bill-row"><span class="label">充电服务费 (12 次)</span><span class="value num">$1.80</span></div>
+          <div class="bill-row"><span class="label">管理收益 (4 辆共享车)</span><span class="value num">$3.20</span></div>
+          <div class="bill-row"><span class="label">光伏电费收入</span><span class="value num">$2.00</span></div>
+          <div class="bill-row"><span class="label">代办回收手续费</span><span class="value num">$0.20</span></div>
+          <div class="bill-total">
+            <span style="font-weight:700">合计</span>
+            <span class="value num">$12.80</span>
+          </div>
+        </div>
+
+        <!-- 对账状态 -->
+        <div class="card" style="border-color:var(--brand);background:var(--brand-soft)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:20px">✅</span>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--brand-deep)">日终对账已通过</div>
+              <div style="font-size:11px;color:var(--ink-2)">银行托管账户流水核对一致</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 保证金状态 -->
+        <div class="card">
+          <div class="card-title">保证金状态</div>
+          <div class="fund-row"><span class="label">基础保证金</span><span class="value num">$500.00</span></div>
+          <div class="fund-row"><span class="label">经手资产价值</span><span class="value num">$6,400.00</span></div>
+          <div class="fund-row"><span class="label">要求保证金 (5%)</span><span class="value num">$820.00</span></div>
+          <div class="fund-row"><span class="label">已缴纳</span><span class="value num" style="color:var(--coral)">$700.00</span></div>
+          <div class="fund-row"><span class="label">缺口</span><span class="value num" style="color:var(--coral)">$120.00</span></div>
+          <button class="btn btn-primary btn-block" style="margin-top:8px">补缴保证金</button>
+        </div>
+
+        <div style="height:60px"></div>
+        <div class="tabbar">
+          <div class="tab"><span class="ico">📊</span>工作台</div>
+          <div class="tab"><span class="ico">🔄</span>收发</div>
+          <div class="tab"><span class="ico">🔋</span>电池位</div>
+          <div class="tab active"><span class="ico">💰</span>账单</div>
+          <div class="tab"><span class="ico">👤</span>我的</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 页面5: 光伏管理 ========== -->
+  <div class="phone-wrap">
+    <div class="phone-label">光伏管理<small>Solar PV Management</small></div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="statusbar">
+          <span>9:45</span>
+          <div class="right"><span class="bar active"></span><span class="bar active"></span><span class="bar active"></span><span class="bar"></span></div>
+        </div>
+        <div class="app-header">
+          <div class="icon-btn">←</div>
+          <div class="title">光伏管理</div>
+          <div class="icon-btn">⚙</div>
+        </div>
+
+        <!-- 光伏概览 -->
+        <div class="pv-card">
+          <div style="font-size:14px;font-weight:700;color:var(--amber)">☀ 光伏电站</div>
+          <div style="font-size:11px;color:var(--ink-2);margin-top:2px">桑园 1 号站 · 20kWp 屋顶</div>
+          <div style="margin-top:12px">
+            <div class="pv-stat"><span class="label">今日发电量</span><span class="value num">82.5 kWh</span></div>
+            <div class="pv-stat"><span class="label">今日收入</span><span class="value num">$9.90</span></div>
+            <div class="pv-stat"><span class="label">自用比例</span><span class="value">68%</span></div>
+            <div class="pv-stat"><span class="label">入网比例</span><span class="value">32%</span></div>
+          </div>
+        </div>
+
+        <!-- 实时数据 -->
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="val num" style="color:var(--amber);font-size:18px">4.2kW</div>
+            <div class="label">当前功率</div>
+          </div>
+          <div class="stat-card">
+            <div class="val num" style="color:var(--blue);font-size:18px">82.5</div>
+            <div class="label">今日 kWh</div>
+          </div>
+          <div class="stat-card">
+            <div class="val num" style="color:var(--energy);font-size:18px">$9.90</div>
+            <div class="label">今日收入</div>
+          </div>
+          <div class="stat-card">
+            <div class="val num" style="color:var(--brand);font-size:18px">2,450</div>
+            <div class="label">累计 kWh</div>
+          </div>
+        </div>
+
+        <!-- 分成模式 -->
+        <div class="card">
+          <div class="card-title">收益分成（线下约定）</div>
+          <div style="font-size:11px;color:var(--ink-2);margin-bottom:8px">
+            光伏由本站自筹建设，一事一议
+          </div>
+          <div class="fund-row"><span class="label">本站（投资人+场地方）</span><span class="value">80%</span></div>
+          <div class="fund-row"><span class="label">平台管理</span><span class="value">20%</span></div>
+          <div class="fund-row"><span class="label">电价标准</span><span class="value">市价 $0.12/度</span></div>
+          <div class="fund-row"><span class="label">结算方式</span><span class="value">线下各方分成</span></div>
+        </div>
+
+        <!-- 设备状态 -->
+        <div class="card">
+          <div class="card-title">设备状态</div>
+          <div class="fund-row"><span class="label">光伏板 (60 块)</span><span class="tag tag-green">正常</span></div>
+          <div class="fund-row"><span class="label">逆变器</span><span class="tag tag-green">正常</span></div>
+          <div class="fund-row"><span class="label">储能电池 (4 组)</span><span class="tag tag-amber">1组维修</span></div>
+          <div class="fund-row"><span class="label">IoT 遥测</span><span class="tag tag-green">在线</span></div>
+        </div>
+
+        <!-- 月度报告 -->
+        <div class="card">
+          <div class="card-title">本月报告</div>
+          <div class="fund-row"><span class="label">总发电量</span><span class="value num">2,450 kWh</span></div>
+          <div class="fund-row"><span class="label">总收入</span><span class="value num">$294.00</span></div>
+          <div class="fund-row"><span class="label">自用消纳</span><span class="value num">1,666 kWh</span></div>
+          <div class="fund-row"><span class="label">入网</span><span class="value num">784 kWh</span></div>
+        </div>
+
+        <div style="height:60px"></div>
+        <div class="tabbar">
+          <div class="tab"><span class="ico">📊</span>工作台</div>
+          <div class="tab"><span class="ico">🔄</span>收发</div>
+          <div class="tab"><span class="ico">🔋</span>电池位</div>
+          <div class="tab"><span class="ico">💰</span>账单</div>
+          <div class="tab active"><span class="ico">☀</span>光伏</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 页面6: 站长个人/KYC ========== -->
+  <div class="phone-wrap">
+    <div class="phone-label">站长中心<small>Operator Profile + KYC</small></div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="statusbar">
+          <span>9:46</span>
+          <div class="right"><span class="bar active"></span><span class="bar active"></span><span class="bar active"></span><span class="bar"></span></div>
+        </div>
+        <div class="app-header">
+          <div class="icon-btn">←</div>
+          <div class="title">站长中心</div>
+          <div class="icon-btn">⚙</div>
+        </div>
+
+        <!-- 站长信息 -->
+        <div style="text-align:center;padding:20px 16px;
+          background:linear-gradient(135deg,var(--brand-soft),var(--paper))">
+          <div style="width:64px;height:64px;border-radius:var(--r-full);
+            background:linear-gradient(135deg,var(--brand),var(--energy));
+            display:grid;place-items:center;margin:0 auto 8px;font-size:28px;color:#fff">🏢</div>
+          <div style="font-size:17px;font-weight:900">桑园 1 号站</div>
+          <div style="font-size:12px;color:var(--muted)">站长: 张明 · +855 12 *** 1234</div>
+          <div style="margin-top:6px"><span class="tag tag-green">企业站 · 已认证</span></div>
+        </div>
+
+        <!-- KYC 状态 -->
+        <div class="kyc-status approved">
+          <div class="ico">✅</div>
+          <div class="title" style="color:var(--brand-deep)">KYC 已认证</div>
+          <div class="desc">CamDigiKey eKYC · 2026-08-20 通过</div>
+        </div>
+
+        <!-- 站方资金 -->
+        <div class="fund-card">
+          <div class="card-title">站方资金账户</div>
+          <div class="fund-row"><span class="label">管理费收入</span><span class="value num">$186.40</span></div>
+          <div class="fund-row"><span class="label">服务费收入</span><span class="value num">$425.80</span></div>
+          <div class="fund-row"><span class="label">光伏收益</span><span class="value num">$294.00</span></div>
+          <div class="fund-row"><span class="label">回收代办</span><span class="value num">$12.50</span></div>
+          <div class="fund-row fund-total"><span class="label">账户总余额</span><span class="value num">$918.70</span></div>
+        </div>
+
+        <!-- 保证金 -->
+        <div class="fund-card" style="border-color:var(--coral)">
+          <div class="card-title" style="color:var(--coral)">⚠ 保证金状态</div>
+          <div class="fund-row"><span class="label">站长类型</span><span class="value">企业站</span></div>
+          <div class="fund-row"><span class="label">基础保证金</span><span class="value num">$2,000</span></div>
+          <div class="fund-row"><span class="label">经手资产</span><span class="value num">$6,400</span></div>
+          <div class="fund-row"><span class="label">要求 (5%)</span><span class="value num">$2,320</span></div>
+          <div class="fund-row"><span class="label">已缴</span><span class="value num" style="color:var(--coral)">$2,000</span></div>
+          <div class="fund-row"><span class="label">缺口</span><span class="value num" style="color:var(--coral)">$320</span></div>
+        </div>
+
+        <!-- 菜单 -->
+        <div style="margin:8px 0">
+          <div class="action-btn">
+            <div class="action-ico">📋</div>
+            <div class="action-text"><div class="title">站点信息</div><div class="desc">地址/营业时间/设备</div></div>
+          </div>
+          <div class="action-btn">
+            <div class="action-ico">📊</div>
+            <div class="action-text"><div class="title">运营报告</div><div class="desc">月度运营数据报告</div></div>
+          </div>
+          <div class="action-btn">
+            <div class="action-ico">📄</div>
+            <div class="action-text"><div class="title">合同协议</div><div class="desc">站点运营合同/分成协议</div></div>
+          </div>
+          <div class="action-btn">
+            <div class="action-ico">⚙</div>
+            <div class="action-text"><div class="title">设置</div><div class="desc">充电策略/通知/账户</div></div>
+          </div>
+        </div>
+
+        <div style="height:60px"></div>
+        <div class="tabbar">
+          <div class="tab"><span class="ico">📊</span>工作台</div>
+          <div class="tab"><span class="ico">🔄</span>收发</div>
+          <div class="tab"><span class="ico">🔋</span>电池位</div>
+          <div class="tab"><span class="ico">💰</span>账单</div>
+          <div class="tab active"><span class="ico">👤</span>我的</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

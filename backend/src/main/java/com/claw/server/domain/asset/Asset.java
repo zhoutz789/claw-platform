@@ -35,6 +35,11 @@ public class Asset {
     @Column(unique = true)
     private String qrCode;
 
+    private Long manufacturerId; // 厂家
+    private Long productId;      // 商品
+    private Long skuId;          // SKU
+    private String serialNumber; // 序列号（出厂）
+
     private Long ownerId;   // 管理人
     private Long userId;    // 当前使用人
 

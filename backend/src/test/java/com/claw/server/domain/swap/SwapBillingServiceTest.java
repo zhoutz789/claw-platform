@@ -1,6 +1,7 @@
 package com.claw.server.domain.swap;
 
 import com.claw.server.common.dto.SwapViews;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,7 +26,6 @@ class SwapBillingServiceTest {
     private ElecPriceSnapshotRepository elecRepo;
     @Mock
     private FeeRuleRepository feeRepo;
-    @InjectMocks
     private SwapBillingService service;
 
     private ElecPriceSnapshot snapshot(BigDecimal pv) {
@@ -47,9 +47,10 @@ class SwapBillingServiceTest {
 
     @BeforeEach
     void setup() {
-        when(elecRepo.findFirstByEffectiveDateLessThanEqualOrderByEffectiveDateDesc(any(LocalDate.class)))
+        service = new SwapBillingService(elecRepo, feeRepo, new ObjectMapper());
+        lenient().when(elecRepo.findFirstByEffectiveDateLessThanEqualOrderByEffectiveDateDesc(any(LocalDate.class)))
                 .thenReturn(Optional.of(snapshot(new BigDecimal("0.12"))));
-        when(feeRepo.findByRuleCodeAndStatus("SWAP_SERVICE", "ACTIVE"))
+        lenient().when(feeRepo.findByRuleCodeAndStatus("SWAP_SERVICE", "ACTIVE"))
                 .thenReturn(Optional.of(feeRule(new BigDecimal("0.32"))));
     }
 

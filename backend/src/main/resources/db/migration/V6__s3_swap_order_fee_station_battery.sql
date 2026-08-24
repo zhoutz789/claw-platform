@@ -118,15 +118,15 @@ INSERT INTO claw.fee_rules (rule_code, name, unit, price, share_json) VALUES
 --    protocol_ver='P1' 统一，演示协议匹配通过
 -- ---------------------------------------------------------------------
 INSERT INTO claw.assets (asset_type, asset_no, qr_code, status) VALUES
-    ('battery', 'BAT-PP-001', 'QR-BAT-001', 'IN_STOCK'),
-    ('battery', 'BAT-PP-002', 'QR-BAT-002', 'IN_STOCK'),
-    ('battery', 'BAT-PP-003', 'QR-BAT-003', 'IN_STOCK'),
-    ('battery', 'BAT-PP-004', 'QR-BAT-004', 'IN_STOCK'),
-    ('battery', 'BAT-PP-005', 'QR-BAT-005', 'IN_STOCK'),
-    ('battery', 'BAT-PP-006', 'QR-BAT-006', 'IN_STOCK'),
-    ('battery', 'BAT-PP-007', 'QR-BAT-007', 'IN_STOCK'),
-    ('battery', 'BAT-PP-008', 'QR-BAT-008', 'IN_STOCK'),
-    ('battery', 'BAT-PP-009', 'QR-BAT-009', 'IN_STOCK');
+    ('BATTERY', 'BAT-PP-001', 'QR-BAT-001', 'IN_STOCK'),
+    ('BATTERY', 'BAT-PP-002', 'QR-BAT-002', 'IN_STOCK'),
+    ('BATTERY', 'BAT-PP-003', 'QR-BAT-003', 'IN_STOCK'),
+    ('BATTERY', 'BAT-PP-004', 'QR-BAT-004', 'IN_STOCK'),
+    ('BATTERY', 'BAT-PP-005', 'QR-BAT-005', 'IN_STOCK'),
+    ('BATTERY', 'BAT-PP-006', 'QR-BAT-006', 'IN_STOCK'),
+    ('BATTERY', 'BAT-PP-007', 'QR-BAT-007', 'IN_STOCK'),
+    ('BATTERY', 'BAT-PP-008', 'QR-BAT-008', 'IN_STOCK'),
+    ('BATTERY', 'BAT-PP-009', 'QR-BAT-009', 'IN_STOCK');
 
 INSERT INTO claw.batteries (asset_id, model, capacity_kwh, protocol_ver, soh, cycle_count, deposit_value)
 SELECT a.id, v.model, 2.00, 'P1', 100.00, v.cyc, v.dep

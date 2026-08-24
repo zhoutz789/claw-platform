@@ -22,5 +22,17 @@ public enum BizType {
     /** 提现（ABA 出金，账本扣减）。 */
     WITHDRAW,
     /** 三专户收单（KHQR 收单入账到残值准备金/电池基金/车辆风险金）。 */
-    ESCROW_COLLECT
+    ESCROW_COLLECT,
+    /** 共享池租赁结算（V12：所有人/站点/平台/保险分账）。 */
+    RENTAL_SETTLEMENT,
+    /** 资产全款购买（修改1：取消公众募资，全款购买）。 */
+    ASSET_PURCHASE,
+    /** 残值回收入账（V13：回收资金到用户账户）。 */
+    RECOVERY_PAYOUT,
+    /** 保险理赔赔付（V15：保险基金 → 用户账户）。 */
+    INSURANCE_CLAIM,
+    /** 保险基金计提（V12：每笔交易 5% 保险分成入基金）。 */
+    INSURANCE_FUND_ACCRUAL,
+    /** 站方收益结算（V10：管理收益/服务费/光伏收益到站方账户）。 */
+    OPERATOR_REVENUE
 }

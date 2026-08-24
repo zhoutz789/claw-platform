@@ -97,10 +97,11 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Lombok：实体/Builder 样板削减 -->
+        <!-- Lombok：实体/Builder 样板削减。已从 Maven Central 获取完整 1.18.46（校验通过），经最小示例验证可在本地 JDK 26 上正常生成 getter/builder/log，故锁定此版本以兼容 JDK 26 编译（本机仅有 JDK 8 与 JDK 26，无 JDK 21） -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
+            <version>1.18.46</version>
             <optional>true</optional>
         </dependency>
 
@@ -126,11 +127,45 @@
         </dependency>
     </dependencies>
 
+    <!-- 本地开发 profile：用嵌入式 H2（PostgreSQL 兼容模式）替代真实 PostgreSQL，
+         免去本机安装 Postgres/Docker 的负担。H2 通过 CREATE DOMAIN 别名把实体里
+         写死的 columnDefinition="jsonb"/"text" 映射到 H2 原生类型，Flyway 关闭、
+         改由 Hibernate 按实体建表（ddl-auto=update）。生产构建不受影响。 -->
+    <profiles>
+        <profile>
+            <id>local</id>
+            <dependencies>
+                <dependency>
+                    <groupId>com.h2database</groupId>
+                    <artifactId>h2</artifactId>
+                    <scope>runtime</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
+
     <build>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!-- 显式将 Lombok 声明为注解处理器并 fork 独立 javac 进程：本机仅有 JDK 8 / JDK 26，
+                 在 JDK 26 下 maven-compiler-plugin 对 classpath 上的注解处理器自动发现不稳定，
+                 显式 annotationProcessorPaths + fork 可强制其被加载（已用最小示例验证 lombok 1.18.46 在 JDK 26 生效） -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <fork>true</fork>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.46</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
             </plugin>
         </plugins>
     </build>

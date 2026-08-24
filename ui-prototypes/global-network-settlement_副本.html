@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Claw · 地址定位与跨境结算原型</title>
+<style>
+  :root{
+    --bg:#0c1410; --panel:#121d18; --panel2:#16241d; --line:#22362c;
+    --green:#19c37d; --green-d:#0f9d63; --lime:#7ef0b0; --amber:#f5b14c;
+    --txt:#e9f3ee; --muted:#8aa79a; --blue:#4ea8ff; --red:#ff7a7a;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1200px 600px at 80% -10%,#16352a 0%,var(--bg) 60%);
+    color:var(--txt);min-height:100vh;padding:20px 14px 60px}
+  .wrap{max-width:960px;margin:0 auto}
+  header.top{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .logo{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--green),#0b7a4d);
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#04140d;box-shadow:0 6px 20px rgba(25,195,125,.35)}
+  .brand{font-size:20px;font-weight:800;letter-spacing:.5px}
+  .brand small{display:block;font-size:12px;color:var(--muted);font-weight:500;letter-spacing:0}
+  .tagline{margin:10px 0 22px;color:var(--muted);font-size:13.5px;line-height:1.6}
+  .tagline b{color:var(--lime)}
+  section{margin-bottom:30px}
+  h2{font-size:15px;color:var(--lime);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  h2::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  /* location bar */
+  .locbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .locpin{font-size:26px}
+  .locaddr{font-size:16px;font-weight:700}
+  .locaddr small{display:block;font-size:11.5px;color:var(--muted);font-weight:500;margin-top:2px}
+  .locactions{margin-left:auto;display:flex;gap:8px}
+  .mbtn{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:10px;
+    padding:9px 13px;font-size:13px;cursor:pointer}
+  .mbtn.primary{background:linear-gradient(135deg,var(--green),var(--green-d));color:#042017;border:none;font-weight:700}
+  .mbtn:active{transform:translateY(1px)}
+  .pulse{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(25,195,125,.6);animation:p 1.6s infinite}
+  @keyframes p{0%{box-shadow:0 0 0 0 rgba(25,195,125,.55)}70%{box-shadow:0 0 0 9px rgba(25,195,125,0)}100%{box-shadow:0 0 0 0 rgba(25,195,125,0)}}
+  /* cascade picker */
+  .cascade{margin-top:14px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px;display:none}
+  .cascade.open{display:block}
+  .cascade .field{margin-bottom:0}
+  .cascade .row .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+  .cascade select{width:100%;background:#0e1814;border:1px solid var(--line);color:var(--txt);
+    border-radius:10px;padding:10px 11px;font-size:13.5px;outline:none}
+  .cascade select:disabled{opacity:.4}
+  .cascade select:focus{border-color:var(--green)}
+  /* jurisdiction summary */
+  .juris{margin-top:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .jbox{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px}
+  .jbox .jt{font-size:11.5px;color:var(--muted);margin-bottom:6px}
+  .jbox .jv{font-size:13px;font-weight:700;color:var(--lime);line-height:1.7}
+  .jbox .chip{display:inline-block;background:#0e1814;border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin:3px 4px 0 0;font-size:11.5px;color:var(--txt);font-weight:500}
+  /* calculator */
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+  .field select,.field input{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+    border-radius:10px;padding:11px 12px;font-size:14px;outline:none}
+  .field select:focus,.field input:focus{border-color:var(--green)}
+  .btn{margin-top:14px;width:100%;background:linear-gradient(135deg,var(--green),var(--green-d));color:#042017;
+    border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 8px 22px rgba(25,195,125,.25)}
+  .btn:active{transform:translateY(1px)}
+  .res{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .side{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:14px}
+  .side h3{font-size:13px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+  .side.export h3{color:var(--amber)}
+  .side.import h3{color:var(--lime)}
+  .kv{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px dashed var(--line)}
+  .kv:last-child{border-bottom:none}
+  .kv .k{color:var(--muted)}
+  .kv .v{font-weight:700}
+  .v.pos{color:var(--green)} .v.neg{color:var(--red)} .v.big{font-size:16px;color:var(--lime)}
+  .docs{margin-top:10px;font-size:11.5px;color:var(--muted);line-height:1.7}
+  .docs span{display:inline-block;background:#0e1814;border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin:3px 4px 0 0}
+  .note{margin-top:10px;font-size:11.5px;color:var(--muted);background:#0e1814;border-left:3px solid var(--green);padding:8px 10px;border-radius:6px;line-height:1.6}
+  .principle{margin-top:14px;font-size:12.5px;color:var(--lime);background:linear-gradient(90deg,#0f2a1e,#0c1410);
+    border:1px solid #1f5b41;border-radius:12px;padding:12px;line-height:1.7}
+  .muted{color:var(--muted);font-size:12px}
+  @media(max-width:560px){.row,.res,.juris{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="logo">⚡</div>
+    <div class="brand">Claw 地址定位 · 跨境结算<small>新能源资产 · 互通有无 · 各算各的</small></div>
+  </header>
+  <p class="tagline">
+    系统按客户<b>当前位置自动切换</b>国家/省/市/县与对应法域，也可手动逐级自选。
+    牵扯两国贸易的物资转移，按「<b>各算各的</b>」结算——出口国算退税、进口国算关税与增值税，中间手续线上补充、法律合规分法域落实。
+  </p>
+
+  <!-- 地址与法域 -->
+  <section>
+    <h2>我的位置（自动定位 · 可手动逐级切换）</h2>
+    <div class="card">
+      <div class="locbar">
+        <div class="locpin">📍</div>
+        <div class="locaddr" id="locAddr">定位中…<small id="locSub"><span class="pulse"></span> 正在获取您的位置</small></div>
+        <div class="locactions">
+          <button class="mbtn" id="useReal">使用真实定位</button>
+          <button class="mbtn primary" id="switch">手动切换</button>
+        </div>
+      </div>
+
+      <div class="cascade" id="cascade">
+        <div class="row">
+          <div class="field"><label>国家</label><select id="selCountry"></select></div>
+          <div class="field"><label>省 / 州</label><select id="selProv"></select></div>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <div class="field"><label>市</label><select id="selCity"></select></div>
+          <div class="field"><label>区 / 县</label><select id="selCounty"></select></div>
+        </div>
+        <button class="mbtn primary" id="applyLoc" style="margin-top:12px">确定此地址</button>
+      </div>
+
+      <div class="juris" id="juris"></div>
+    </div>
+  </section>
+
+  <!-- 跨境结算计算器 -->
+  <section>
+    <h2>跨境结算计算器（各算各的）</h2>
+    <div class="card">
+      <div class="row">
+        <div class="field">
+          <label>出口国（供货方）</label>
+          <select id="from"></select>
+        </div>
+        <div class="field">
+          <label>进口国（收货方）</label>
+          <select id="to"></select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <div class="field"><label>申报货值</label><input id="value" type="number" value="10000" min="1" /></div>
+        <div class="field"><label>货值币种</label><input id="cur" type="text" value="USD" /></div>
+      </div>
+      <button class="btn" id="calc">计算跨境结算</button>
+
+      <div class="res" id="result" style="display:none">
+        <div class="side export">
+          <h3>📤 出口国口径</h3>
+          <div class="kv"><span class="k">国家</span><span class="v" id="exCountry">—</span></div>
+          <div class="kv"><span class="k">出口退税</span><span class="v pos" id="exRebate">—</span></div>
+          <div class="kv"><span class="k">结算币种</span><span class="v" id="exFx">—</span></div>
+          <div class="docs" id="exDocs"></div>
+        </div>
+        <div class="side import">
+          <h3>📥 进口国口径</h3>
+          <div class="kv"><span class="k">国家</span><span class="v" id="imCountry">—</span></div>
+          <div class="kv"><span class="k">进口关税</span><span class="v neg" id="imDuty">—</span></div>
+          <div class="kv"><span class="k">进口增值税</span><span class="v neg" id="imVat">—</span></div>
+          <div class="kv"><span class="k">到岸总成本</span><span class="v big" id="imLanded">—</span></div>
+          <div class="kv"><span class="k">结算币种</span><span class="v" id="imFx">—</span></div>
+          <div class="docs" id="imDocs"></div>
+        </div>
+      </div>
+      <div class="note" id="compliance" style="display:none"></div>
+      <div class="principle" id="principle" style="display:none">
+        <b>各算各的：</b>出口国按自身退税/单证计算，进口国按自身关税/增值税/单证计算，双方互不直接抵扣。
+        中间手续（报关/发票/许可证等）由平台<b>线上补充</b>采集，法律合规分别落实于两国法域。
+      </div>
+    </div>
+  </section>
+
+  <p class="muted">原型仅用于视觉与交互验收。地址定位对应后端 X-Country-Code 国家上下文；结算数值与 <code>POST /api/v1/settlements/cross-border</code> 同源（各国规则来自 countries.trade_policy_json）。</p>
+</div>
+
+<script>
+/* 国家 + 法域适配器（身份/支付/牌照） */
+const COUNTRIES = {
+  KHM:{n:"柬埔寨",f:"🇰🇭",r:"OPERATOR",cur:"USD",
+    idp:["CamDigiKey eKYC"],pay:["ABA","KHQR","Bakong","Wing","Cash"],lic:["电力局","NBC","ABA三专户"]},
+  CHN:{n:"中国",f:"🇨🇳",r:"HUB",cur:"CNY",
+    idp:["微信/支付宝实名","CTID 国家平台"],pay:["微信","支付宝","银联"],lic:["营业执照","电力业务许可"]},
+  USA:{n:"美国",f:"🇺🇸",r:"MARKET",cur:"USD",
+    idp:["SSN / 驾照"],pay:["ACH","Zelle","Card"],lic:["州公用事业委员会"]},
+  DEU:{n:"德国",f:"🇩🇪",r:"MARKET",cur:"EUR",
+    idp:["eID"],pay:["SEPA","卡"],lic:["Bundesnetzagentur"]},
+  JPN:{n:"日本",f:"🇯🇵",r:"MARKET",cur:"JPY",idp:["My Number"],pay:["银行转账","卡"],lic:["经济产业省"]},
+  VNM:{n:"越南",f:"🇻🇳",r:"OPERATOR",cur:"VND",idp:["VNeID"],pay:["MoMo","银行卡"],lic:["工贸部"]},
+  THA:{n:"泰国",f:"🇹🇭",r:"OPERATOR",cur:"THB",idp:["DNP eKYC"],pay:["PromptPay","银行卡"],lic:["能源监管委员会"]},
+  RUS:{n:"俄罗斯",f:"🇷🇺",r:"OPERATOR",cur:"RUB",idp:["Gosuslugi"],pay:["Mir","SBP"],lic:["能源监督局"]}
+};
+const CTRY_ORDER=["KHM","CHN","USA","DEU","JPN","VNM","THA","RUS"];
+
+/* 省市县级联数据（示意，重点是交互而非全量） */
+const ADDR = {
+  KHM:{ "金边":{ "金边市":["隆边区","桑园区","玛卡拉区"] }, "暹粒省":{ "暹粒市":["暹粒县"] }, "西哈努克省":{ "西哈努克市":["独立区","胜利区"] } },
+  CHN:{ "广东省":{ "深圳市":["南山区","福田区","宝安区"], "广州市":["天河区","越秀区"] },
+        "浙江省":{ "杭州市":["西湖区","滨江区"], "宁波市":["海曙区","江北区"] },
+        "北京市":{ "北京市":["朝阳区","海淀区","东城区"] },
+        "江苏省":{ "南京市":["玄武区","鼓楼区"], "苏州市":["姑苏区","工业园区"] } },
+  USA:{ "加利福尼亚":{ "洛杉矶县":["洛杉矶市","长滩"], "旧金山县":["旧金山市"] },
+        "纽约州":{ "纽约县":["曼哈顿","布鲁克林"] } },
+  DEU:{ "巴伐利亚":{ "慕尼黑":["市中心","郊区"] }, "柏林":{ "柏林市":["米特区","夏洛滕堡"] } },
+  JPN:{ "东京都":{ "东京市":["千代田区","港区"] } },
+  VNM:{ "胡志明市":{ "胡志明市":["第一郡","第七郡"] } },
+  THA:{ "曼谷":{ "曼谷市":["巴吞旺","宛他那"] } },
+  RUS:{ "莫斯科":{ "莫斯科市":["中央区","北区"] } }
+};
+
+/* 跨境贸易规则（与后端 trade_policy_json 同源） */
+const TRADE = {
+  KHM:{importDuty:0.15,exportRebate:0,vat:0.10,fx:"本币(KHR)",
+    importDocs:["商业发票","提单","进口许可证","海关申报单"],exportDocs:["出口报关单","商业发票"],
+    note:"柬埔寨：进口电动车与电池可享投资优惠，单证经海关单一窗口线上提交。"},
+  CHN:{importDuty:0.07,exportRebate:0.13,vat:0.13,fx:"开放(可人民币结算)",
+    importDocs:["商业发票","装箱单","进口报关单","CCC认证"],exportDocs:["出口报关单","商业发票","出口退税申报"],
+    note:"中国：出口退税在线申报；作为全球供给枢纽向各运营国供货。"},
+  USA:{importDuty:0.03,exportRebate:0,vat:0.00,fx:"本币(USD)",
+    importDocs:["商业发票","提单","CBP报关","FDA/EPA(视商品)"],exportDocs:["出口报关单","商业发票"],
+    note:"美国：关税依 HTS 编码；州销售税另计，不在进口环节统一征收。"},
+  DEU:{importDuty:0.04,exportRebate:0,vat:0.19,fx:"欧元(EUR)",
+    importDocs:["商业发票","EUR.1优惠产地证","进口增值税申报"],exportDocs:["出口报关单","商业发票"],
+    note:"欧盟：共同对外关税 CET；进口增值税可在申报环节抵扣。"}
+};
+const DEFAULT={importDuty:0.10,exportRebate:0,vat:0.10,fx:"本币",
+  importDocs:["商业发票","海关申报单"],exportDocs:["出口报关单","商业发票"],
+  note:"未配置国别策略，采用平台默认：进口关税10% / 增值税10%。"};
+const policyOf=c=>TRADE[c]||DEFAULT;
+const fmt=n=>n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+
+/* ---------- 地址定位 ---------- */
+const $ = id=>document.getElementById(id);
+const selCountry=$("selCountry"),selProv=$("selProv"),selCity=$("selCity"),selCounty=$("selCounty");
+let current = {c:"KHM",p:"金边",ci:"金边市",co:"桑园区"};
+
+function fill(sel,arr,placeholder,disabled){
+  sel.innerHTML="";
+  if(placeholder) sel.add(new Option(placeholder,""));
+  arr.forEach(x=>sel.add(new Option(x,x)));
+  sel.disabled=!!disabled;
+}
+function refreshCascade(){
+  fill(selCountry,CTRY_ORDER.map(c=>COUNTRIES[c].f+" "+COUNTRIES[c].n),null);
+  selCountry.value=current.c;
+  const provs=Object.keys(ADDR[current.c]||{});
+  fill(selProv,provs,provs.length?"选择省/州":null,!provs.length);
+  selProv.value=current.p && provs.includes(current.p)?current.p:provs[0];
+  refreshCity();
+}
+function refreshCity(){
+  const provs=ADDR[current.c]||{};
+  const cities=Object.keys(provs[selProv.value]||{});
+  fill(selCity,cities,cities.length?"选择市":null,!cities.length);
+  selCity.value=current.ci && cities.includes(current.ci)?current.ci:cities[0];
+  refreshCounty();
+}
+function refreshCounty(){
+  const cities=(ADDR[current.c]||{})[selProv.value]||{};
+  const counties=cities[selCity.value]||[];
+  fill(selCounty,counties,counties.length?"选择区/县":null,!counties.length);
+  selCounty.value=current.co && counties.includes(current.co)?current.co:counties[0];
+}
+selCountry.addEventListener("change",()=>{current.c=selCountry.value;refreshCascade();});
+selProv.addEventListener("change",refreshCity);
+selCity.addEventListener("change",refreshCounty);
+
+function locLabel(o){
+  const nm=COUNTRIES[o.c].n;
+  return [nm,o.p,o.ci,o.co].filter(Boolean).join(" · ");
+}
+function renderJuris(){
+  const c=COUNTRIES[current.c];
+  const roleTxt={OPERATOR:"自营运营",HUB:"供给枢纽",MARKET:"市场网络"}[c.r];
+  $("juris").innerHTML=`
+    <div class="jbox"><div class="jt">当前法域</div><div class="jv">${c.f} ${c.n}<br><small style="color:var(--muted);font-weight:500">${roleTxt}</small></div></div>
+    <div class="jbox"><div class="jt">身份 / 支付</div><div class="jv">${c.idp.map(x=>`<span class="chip">${x}</span>`).join("")}${c.pay.map(x=>`<span class="chip">${x}</span>`).join("")}</div></div>
+    <div class="jbox"><div class="jt">牌照 / 合规</div><div class="jv">${c.lic.map(x=>`<span class="chip">${x}</span>`).join("")}</div></div>`;
+}
+function setAddr(o,sub){
+  current=o;
+  $("locAddr").firstChild.textContent=locLabel(o);
+  $("locSub").innerHTML=sub;
+  renderJuris();
+  // 联动结算出口国
+  $("from").value=o.c;
+}
+function simulateLocate(){
+  $("locAddr").firstChild.textContent="定位中…";
+  $("locSub").innerHTML='<span class="pulse"></span> 正在获取您的位置';
+  setTimeout(()=>{ setAddr({c:"KHM",p:"金边",ci:"金边市",co:"桑园区"},
+    '已根据您的位置自动匹配（演示）· 法域 KHM'); },900);
+}
+$("useReal").addEventListener("click",()=>{
+  if(!navigator.geolocation){ setAddr(current,"本设备不支持定位，保留当前地址"); return; }
+  $("locSub").innerHTML='<span class="pulse"></span> 请求定位授权…';
+  navigator.geolocation.getCurrentPosition(
+    pos=>{ setAddr(current,`真实坐标 ${pos.coords.latitude.toFixed(2)}, ${pos.coords.longitude.toFixed(2)}（需后端逆地理编码到省市县）`); },
+    ()=>{ setAddr(current,"定位被拒绝，保留当前地址"); });
+});
+$("switch").addEventListener("click",()=>{
+  const c=$("cascade"); c.classList.toggle("open");
+  if(c.classList.contains("open")) refreshCascade();
+});
+$("applyLoc").addEventListener("click",()=>{
+  const o={c:selCountry.value,p:selProv.value||undefined,ci:selCity.value||undefined,co:selCounty.value||undefined};
+  setAddr(o,'已手动选择 · 法域 '+o.c);
+  $("cascade").classList.remove("open");
+});
+
+/* ---------- 跨境结算 ---------- */
+const from=$("from"),to=$("to");
+CTRY_ORDER.forEach(c=>from.add(new Option(COUNTRIES[c].f+" "+COUNTRIES[c].n,c)));
+CTRY_ORDER.forEach(c=>to.add(new Option(COUNTRIES[c].f+" "+COUNTRIES[c].n,c)));
+from.value="CHN"; to.value="KHM";
+
+function docsHtml(arr){return arr.map(d=>`<span>${d}</span>`).join("");}
+$("calc").addEventListener("click",()=>{
+  const fc=from.value,tc=to.value;
+  if(fc===tc){alert("同国无需跨境结算");return;}
+  const v=parseFloat($("value").value);
+  if(!(v>0)){alert("申报货值必须大于零");return;}
+  const cur=$("cur").value||"USD";
+  const fp=policyOf(fc),tp=policyOf(tc);
+  const exRebate=v*fp.exportRebate;
+  const imDuty=v*tp.importDuty;
+  const imVat=(v+imDuty)*tp.vat;
+  const landed=v+imDuty+imVat;
+  const nm=c=>COUNTRIES[c].n;
+  $("exCountry").textContent=nm(fc);
+  $("exRebate").textContent="+"+fmt(exRebate)+" "+cur;
+  $("exFx").textContent=fp.fx;
+  $("exDocs").innerHTML=docsHtml(fp.exportDocs);
+  $("imCountry").textContent=nm(tc);
+  $("imDuty").textContent="-"+fmt(imDuty)+" "+cur;
+  $("imVat").textContent="-"+fmt(imVat)+" "+cur;
+  $("imLanded").textContent=fmt(landed)+" "+cur;
+  $("imFx").textContent=tp.fx;
+  $("imDocs").innerHTML=docsHtml(tp.importDocs);
+  $("compliance").style.display="block";
+  $("compliance").textContent="合规说明 ｜ 出口国："+fp.note+"　进口国："+tp.note;
+  $("principle").style.display="block";
+  $("result").style.display="grid";
+});
+
+/* 初始化 */
+refreshCascade();
+simulateLocate();
+</script>
+</body>
+</html>

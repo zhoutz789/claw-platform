@@ -50,9 +50,9 @@ class SwapServiceTest {
 
     private Station activeStation() {
         Station s = mock(Station.class);
-        when(s.getId()).thenReturn(1L);
-        when(s.getStatus()).thenReturn("ACTIVE");
-        when(s.getName()).thenReturn("中央市场站");
+        lenient().when(s.getId()).thenReturn(1L);
+        lenient().when(s.getStatus()).thenReturn("ACTIVE");
+        lenient().when(s.getName()).thenReturn("中央市场站");
         return s;
     }
 
@@ -78,25 +78,26 @@ class SwapServiceTest {
     }
 
     private void stubCreateBasics() {
-        when(stationRepository.findById(1L)).thenReturn(Optional.of(activeStation()));
-        when(stationBatteryRepository.findByStationIdOrderBySlotNoAsc(1L))
+        Station station = activeStation();
+        lenient().when(stationRepository.findById(1L)).thenReturn(Optional.of(station));
+        lenient().when(stationBatteryRepository.findByStationIdOrderBySlotNoAsc(1L))
                 .thenReturn(List.of(readySlot(10L, 1), readySlot(11L, 2)));
-        when(assetRepository.findById(10L)).thenReturn(Optional.of(batteryAsset(10L, "BAT-PP-001")));
-        when(assetRepository.findById(20L)).thenReturn(Optional.of(batteryAsset(20L, "BAT-PP-007")));
+        lenient().when(assetRepository.findById(10L)).thenReturn(Optional.of(batteryAsset(10L, "BAT-PP-001")));
+        lenient().when(assetRepository.findById(20L)).thenReturn(Optional.of(batteryAsset(20L, "BAT-PP-007")));
 
         BatteryDetail out = new BatteryDetail();
         out.setAssetId(10L); out.setProtocolVer("P1"); out.setDepositValue(new BigDecimal("40.00"));
-        when(batteryDetailRepository.findByAssetId(10L)).thenReturn(Optional.of(out));
+        lenient().when(batteryDetailRepository.findByAssetId(10L)).thenReturn(Optional.of(out));
         BatteryDetail in = new BatteryDetail();
         in.setAssetId(20L); in.setProtocolVer("P1"); in.setDepositValue(new BigDecimal("36.00"));
-        when(batteryDetailRepository.findByAssetId(20L)).thenReturn(Optional.of(in));
+        lenient().when(batteryDetailRepository.findByAssetId(20L)).thenReturn(Optional.of(in));
 
-        when(accountService.getOrCreateUserAccount(100L)).thenReturn(account(1L, "100.00"));
-        when(accountService.getOrCreateSubAccount(100L, AccountType.DEPOSIT_LOCKED)).thenReturn(account(2L, "0.00"));
-        when(accountService.getOrCreatePlatformAccount(AccountType.MASTER)).thenReturn(account(3L, "0.00"));
-        when(billingService.quote(any(BigDecimal.class))).thenReturn(quote());
-        when(billingService.snapshotJson()).thenReturn("{\"elecRate\":0.12,\"serviceRate\":0.32}");
-        when(swapOrderRepository.save(any(SwapOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+        lenient().when(accountService.getOrCreateUserAccount(100L)).thenReturn(account(1L, "100.00"));
+        lenient().when(accountService.getOrCreateSubAccount(100L, AccountType.DEPOSIT_LOCKED)).thenReturn(account(2L, "0.00"));
+        lenient().when(accountService.getOrCreatePlatformAccount(AccountType.MASTER)).thenReturn(account(3L, "0.00"));
+        lenient().when(billingService.quote(any(BigDecimal.class))).thenReturn(quote());
+        lenient().when(billingService.snapshotJson()).thenReturn("{\"elecRate\":0.12,\"serviceRate\":0.32}");
+        lenient().when(swapOrderRepository.save(any(SwapOrder.class))).thenAnswer(inv -> inv.getArgument(0));
     }
 
     // ------------------------------------------------------------------
@@ -132,7 +133,8 @@ class SwapServiceTest {
 
     @Test
     void create_rejects_when_no_ready_battery() {
-        when(stationRepository.findById(1L)).thenReturn(Optional.of(activeStation()));
+        Station station = activeStation();
+        when(stationRepository.findById(1L)).thenReturn(Optional.of(station));
         StationBattery charging = StationBattery.builder().id(1L).stationId(1L)
                 .batteryId(10L).slotNo(1).status("CHARGING").build();
         when(stationBatteryRepository.findByStationIdOrderBySlotNoAsc(1L))
@@ -144,7 +146,8 @@ class SwapServiceTest {
 
     @Test
     void create_rejects_protocol_mismatch() {
-        when(stationRepository.findById(1L)).thenReturn(Optional.of(activeStation()));
+        Station station = activeStation();
+        when(stationRepository.findById(1L)).thenReturn(Optional.of(station));
         when(stationBatteryRepository.findByStationIdOrderBySlotNoAsc(1L))
                 .thenReturn(List.of(readySlot(10L, 1)));
         when(assetRepository.findById(10L)).thenReturn(Optional.of(batteryAsset(10L, "BAT-PP-001")));

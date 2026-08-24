@@ -16,14 +16,16 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 复式记账引擎（S2 核心）。
+ * 复式记账引擎（S2 核心，v0.5 T-S1 并发安全修复）。
  *
- * <p>约束（技术文档 2.1 + V1 表结构）：
+ * <p>约束（技术文档 2.1 + V1 表结构 + v0.5 并发安全加固）：
  * <ul>
  *   <li>每笔交易 N 条分录，借贷必须平衡（sum(D) == sum(C)），否则拒绝；</li>
  *   <li>同 bizType + bizRef 只允许入账一次（幂等键，DB 唯一索引兜底）；</li>
  *   <li>出账（D）前校验账户余额充足（balance - amount &gt;= 0，DB CHECK 兜底）；</li>
- *   <li>同一 txnId 的所有分录在同一事务内原子写入并同步账户余额。</li>
+ *   <li>同一 txnId 的所有分录在同一事务内原子写入并同步账户余额；</li>
+ *   <li><b>★v0.5 T-S1 修复</b>：使用悲观写锁（SELECT ... FOR UPDATE）查询账户，
+ *       确保并发换电/购买/结算不会产生余额竞态条件。</li>
  * </ul>
  */
 @Service
@@ -36,6 +38,9 @@ public class LedgerService {
 
     /**
      * 复式记账：原子写入分录并更新账户余额。
+     *
+     * <p><b>T-S1 修复</b>：使用 {@code findByIdForUpdate}（SELECT ... FOR UPDATE）
+     * 替代 {@code findById}，在事务内锁定账户行，防止并发写入导致余额竞态。
      *
      * @param bizType 业务类型
      * @param bizRef  业务单号（幂等键；为空则不幂等，仅内部调用）
@@ -68,7 +73,8 @@ public class LedgerService {
         UUID txnId = UUID.randomUUID();
         List<Account> touched = new ArrayList<>();
         for (LedgerRequests.Entry e : entries) {
-            Account account = accountRepository.findById(e.accountId())
+            // ★v0.5 T-S1 修复：悲观写锁查询，防止并发竞态
+            Account account = accountRepository.findByIdForUpdate(e.accountId())
                     .orElseThrow(() -> BizException.notFound("error.account.not.found"));
             if (e.direction() == LedgerRequests.Direction.D) {
                 if (account.getBalance().compareTo(e.amount()) < 0) {

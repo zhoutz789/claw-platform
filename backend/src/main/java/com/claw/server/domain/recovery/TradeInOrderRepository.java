@@ -1,0 +1,10 @@
+package com.claw.server.domain.recovery;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface TradeInOrderRepository extends JpaRepository<TradeInOrder, Long> {
+
+    List<TradeInOrder> findByOwnerUserIdAndDeletedFalse(Long ownerUserId);
+}
