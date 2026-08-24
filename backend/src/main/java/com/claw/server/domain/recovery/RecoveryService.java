@@ -4,6 +4,8 @@ import com.claw.server.common.api.BizException;
 import com.claw.server.common.enums.RecoveryOrderStatus;
 import com.claw.server.common.enums.RecoveryType;
 import com.claw.server.common.enums.ValuationStatus;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,9 @@ public class RecoveryService {
     private final TradeInOrderRepository tradeInOrderRepository;
     private final ClawScoreRepository clawScoreRepository;
     private final StationBlacklistRepository blacklistRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     // ------------------------------------------------------------------
     // 1. 残值评估
@@ -120,6 +125,11 @@ public class RecoveryService {
         }
         v.setUpdatedAt(Instant.now());
         v = valuationRepository.save(v);
+        // 触发器 trg_valuation_final_price 在三方齐全时自动计算 final_price 并置 FINALIZED。
+        // 注意：EntityManager.refresh() 不会先 flush 挂起的改动，必须先显式 flush，
+        // 否则 refresh 会用数据库旧值覆盖本应写入的 third_party_estimate/status 等字段。
+        entityManager.flush();
+        entityManager.refresh(v);
 
         log.info("第三方估价完成 valuationId={} estimate={} by={}", valuationId, estimate, thirdPartyName);
         return v;

@@ -5,6 +5,7 @@ import {
   GlobalOutlined, SafetyOutlined, AlertOutlined, LinkOutlined, AuditOutlined, TeamOutlined,
   KeyOutlined, MessageOutlined, LogoutOutlined, BellOutlined, BankOutlined,
   PartitionOutlined, SafetyCertificateOutlined,
+  ToolOutlined, ShareAltOutlined, SolutionOutlined, FileTextOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { clearToken } from '../auth';
@@ -22,6 +23,8 @@ const groups = [
       { key: 'asset-trace', icon: <PartitionOutlined />, label: '资产溯源' },
       { key: 'manufacturer', icon: <BankOutlined />, label: '厂家与商品' },
       { key: 'swap-orders', icon: <SwapOutlined />, label: '换电记录' },
+      { key: 'recovery', icon: <ToolOutlined />, label: '残值回收' },
+      { key: 'shared-pool', icon: <ShareAltOutlined />, label: '共享池' },
     ],
   },
   {
@@ -34,6 +37,7 @@ const groups = [
       { key: 'payments', icon: <CreditCardOutlined />, label: '支付流水' },
       { key: 'settlements', icon: <GlobalOutlined />, label: '跨境结算' },
       { key: 'deposits', icon: <SafetyOutlined />, label: '押金管理' },
+      { key: 'operator', icon: <SolutionOutlined />, label: '运营方财务' },
     ],
   },
   {
@@ -42,6 +46,7 @@ const groups = [
       { key: 'risk', icon: <AlertOutlined />, label: '风控监控', badge: 2 },
       { key: 'alerts', icon: <BellOutlined />, label: '异常告警' },
       { key: 'custody', icon: <LinkOutlined />, label: '产权链追溯' },
+      { key: 'insurance', icon: <FileTextOutlined />, label: '保险管理' },
       { key: 'arbitration', icon: <AuditOutlined />, label: '争议仲裁' },
       { key: 'complaints', icon: <MessageOutlined />, label: '投诉处理' },
     ],

@@ -3,6 +3,7 @@ package com.claw.server.domain.sharedpool;
 import com.claw.server.common.api.BizException;
 import com.claw.server.common.enums.PoolEntryStatus;
 import com.claw.server.common.enums.RentalOrderStatus;
+import com.claw.server.common.enums.RentalType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -53,11 +54,13 @@ public class SharedPoolService {
     public SharedPoolEntry poolAsset(Long assetId, Long ownerUserId, Long stationId,
                                     BigDecimal ownerSplitRate, BigDecimal stationSplitRate,
                                     BigDecimal dailyUsageFee, BigDecimal perSwapFee) {
-        // 校验分成比例下限
-        if (ownerSplitRate.compareTo(BigDecimal.valueOf(0.50)) < 0) {
+        // 校验分成比例下限（未传则使用平台默认：业主 70% / 站点 15%）
+        BigDecimal ownerRate = ownerSplitRate != null ? ownerSplitRate : BigDecimal.valueOf(0.70);
+        BigDecimal stationRate = stationSplitRate != null ? stationSplitRate : BigDecimal.valueOf(0.15);
+        if (ownerRate.compareTo(BigDecimal.valueOf(0.50)) < 0) {
             throw BizException.invalidParam("error.split.owner.min");
         }
-        if (stationSplitRate.compareTo(BigDecimal.valueOf(0.15)) < 0) {
+        if (stationRate.compareTo(BigDecimal.valueOf(0.15)) < 0) {
             throw BizException.invalidParam("error.split.station.min");
         }
 
@@ -71,8 +74,8 @@ public class SharedPoolService {
                 .ownershipId(ownership.getId())
                 .currentStationId(stationId)
                 .status(PoolEntryStatus.IN_POOL)
-                .ownerSplitRate(ownerSplitRate)
-                .stationSplitRate(stationSplitRate)
+                .ownerSplitRate(ownerRate)
+                .stationSplitRate(stationRate)
                 .dailyUsageFee(dailyUsageFee != null ? dailyUsageFee : BigDecimal.ZERO)
                 .perSwapFee(perSwapFee != null ? perSwapFee : BigDecimal.ZERO)
                 .pooledAt(Instant.now())
@@ -97,7 +100,7 @@ public class SharedPoolService {
                 .assetId(assetId)
                 .renterUserId(renterUserId)
                 .stationId(stationId)
-                .rentalType(com.claw.server.common.enums.RentalType.valueOf(rentalType))
+                .rentalType(rentalType != null ? RentalType.valueOf(rentalType) : RentalType.VEHICLE_RENTAL)
                 .poolEntryId(poolEntryId)
                 .status(RentalOrderStatus.CREATED)
                 .build();

@@ -2,6 +2,8 @@ package com.claw.server.domain.custody;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -37,6 +39,7 @@ public class CustodyDispute {
     @Column(nullable = false)
     private String description;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String evidenceUrls;
 

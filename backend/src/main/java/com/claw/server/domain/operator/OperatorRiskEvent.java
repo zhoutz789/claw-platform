@@ -5,6 +5,8 @@ import com.claw.server.common.enums.RiskEventType;
 import com.claw.server.common.enums.RiskSeverity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -41,6 +43,7 @@ public class OperatorRiskEvent {
     private BigDecimal detectedValue;
     private BigDecimal expectedValue;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String metadata;
 

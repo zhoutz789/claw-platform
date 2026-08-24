@@ -2,6 +2,8 @@ package com.claw.server.domain.compliance;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -44,6 +46,7 @@ public class ComplianceCheck {
     @Column(nullable = false, length = 16)
     private String result;      // PASS | REJECT
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String evidence;    // 复核依据（银行流水/收入证明引用），JSON 字符串
 

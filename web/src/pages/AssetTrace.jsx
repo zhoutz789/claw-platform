@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Tabs, Card, InputNumber, Button, Input, Space, Table, Descriptions, Tag, message, Spin } from 'antd';
+import { Tabs, Card, InputNumber, Button, Input, Space, Table, Descriptions, Tag, message, Spin, Form, Select } from 'antd';
 import { useSearchParams } from 'react-router-dom';
 import api from '../api';
 import { LIFECYCLE_LABEL, OP_LABEL, ASSET_STATUS_LABEL, ASSET_TYPE } from '../enums';
@@ -7,6 +7,7 @@ import { LIFECYCLE_LABEL, OP_LABEL, ASSET_STATUS_LABEL, ASSET_TYPE } from '../en
 export default function AssetTrace() {
   const [params] = useSearchParams();
   const [assetId, setAssetId] = useState(params.get('id') ? Number(params.get('id')) : null);
+  const [writeId, setWriteId] = useState(params.get('id') ? Number(params.get('id')) : null);
   const [trace, setTrace] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -69,6 +70,48 @@ export default function AssetTrace() {
               <Descriptions.Item label="车辆运营累计收益">{trace.totalRevenue}</Descriptions.Item>
               <Descriptions.Item label="说明">收益取自资产「车辆运营」记录（客运/物流/流动售卖/广告/录像）的营收汇总。</Descriptions.Item>
             </Descriptions> },
+            { key: 'write', label: '写入生命周期', children: (
+              <div>
+                <Space style={{ marginBottom: 12 }}>
+                  <InputNumber placeholder="资产 ID" value={writeId} onChange={setWriteId} style={{ width: 200 }} />
+                  <Button onClick={() => setWriteId(assetId)}>用当前资产</Button>
+                </Space>
+                <Card size="small" title="生命周期阶段" style={{ marginBottom: 12 }}>
+                  <Form layout="vertical" onFinish={(v) => api.post(`/v1/admin/manufacturer/assets/${writeId}/lifecycle`, v).then(() => message.success('已写入')).catch((e) => message.error(e.message))}>
+                    <Form.Item name="stage" label="阶段" rules={[{ required: true }]}><Select options={[{ label: '生产出厂', value: 'PRODUCED' }, { label: '流通在途', value: 'IN_TRANSIT' }, { label: '使用中', value: 'IN_USE' }, { label: '维修保养', value: 'MAINTENANCE' }, { label: '回收', value: 'RECYCLED' }]} /></Form.Item>
+                    <Form.Item name="location" label="地点"><Input /></Form.Item>
+                    <Form.Item name="note" label="备注"><Input /></Form.Item>
+                    <Button type="primary" htmlType="submit">写入</Button>
+                  </Form>
+                </Card>
+                <Card size="small" title="维修记录" style={{ marginBottom: 12 }}>
+                  <Form layout="vertical" onFinish={(v) => api.post(`/v1/admin/manufacturer/assets/${writeId}/maintenance`, v).then(() => message.success('已写入')).catch((e) => message.error(e.message))}>
+                    <Form.Item name="mtype" label="类型"><Input /></Form.Item>
+                    <Form.Item name="vendor" label="服务商"><Input /></Form.Item>
+                    <Form.Item name="cost" label="费用"><InputNumber style={{ width: '100%' }} precision={2} /></Form.Item>
+                    <Form.Item name="note" label="备注"><Input /></Form.Item>
+                    <Button type="primary" htmlType="submit">写入</Button>
+                  </Form>
+                </Card>
+                <Card size="small" title="使用记录" style={{ marginBottom: 12 }}>
+                  <Form layout="vertical" onFinish={(v) => api.post(`/v1/admin/manufacturer/assets/${writeId}/usage`, v).then(() => message.success('已写入')).catch((e) => message.error(e.message))}>
+                    <Form.Item name="mileageKm" label="里程(km)"><InputNumber style={{ width: '100%' }} /></Form.Item>
+                    <Form.Item name="cycles" label="循环"><InputNumber style={{ width: '100%' }} /></Form.Item>
+                    <Form.Item name="energyKwh" label="能耗(kWh)"><InputNumber style={{ width: '100%' }} precision={2} /></Form.Item>
+                    <Form.Item name="note" label="备注"><Input /></Form.Item>
+                    <Button type="primary" htmlType="submit">写入</Button>
+                  </Form>
+                </Card>
+                <Card size="small" title="车辆运营">
+                  <Form layout="vertical" onFinish={(v) => api.post(`/v1/admin/manufacturer/assets/${writeId}/vehicle-ops`, v).then(() => message.success('已写入')).catch((e) => message.error(e.message))}>
+                    <Form.Item name="opType" label="运营类型" rules={[{ required: true }]}><Select options={[{ label: '客运', value: 'PASSENGER' }, { label: '物流', value: 'LOGISTICS' }, { label: '流动售卖', value: 'MOBILE_SELL' }, { label: '广告', value: 'ADVERTISING' }]} /></Form.Item>
+                    <Form.Item name="revenue" label="收益"><InputNumber style={{ width: '100%' }} precision={2} /></Form.Item>
+                    <Form.Item name="note" label="备注"><Input /></Form.Item>
+                    <Button type="primary" htmlType="submit">写入</Button>
+                  </Form>
+                </Card>
+              </div>
+            ) },
             { key: 'qr', label: '二维码', children: <div>
               <p style={{ color: 'var(--muted)' }}>序列号二维码为资产全链路溯源的唯一标识，扫码即可定位上述全部数据。</p>
               <Input.TextArea value={trace.asset?.qrCode || ''} rows={3} readOnly />

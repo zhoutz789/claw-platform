@@ -2,11 +2,13 @@ package com.claw.server.web.v1;
 
 import com.claw.server.common.api.ApiResult;
 import com.claw.server.common.dto.AdminDtos.*;
+import com.claw.server.common.enums.RiskMetricType;
 import com.claw.server.common.enums.RiskMonitorStatus;
 import com.claw.server.domain.operator.OperatorRiskEvent;
 import com.claw.server.domain.operator.OperatorRiskEventRepository;
 import com.claw.server.domain.risk.InsuranceFund;
 import com.claw.server.domain.risk.InsuranceFundRepository;
+import com.claw.server.domain.risk.RiskMonitorService;
 import com.claw.server.domain.risk.StationRiskMonitor;
 import com.claw.server.domain.risk.StationRiskMonitorRepository;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +37,7 @@ public class AdminRiskController {
     private final StationRiskMonitorRepository monitorRepository;
     private final OperatorRiskEventRepository eventRepository;
     private final InsuranceFundRepository fundRepository;
+    private final RiskMonitorService riskMonitorService;
 
     @GetMapping("/monitors")
     public ApiResult<List<StationRiskMonitorView>> listMonitors() {
@@ -45,24 +48,12 @@ public class AdminRiskController {
 
     @PostMapping("/monitors")
     public ApiResult<StationRiskMonitorView> createMonitor(@RequestBody StationRiskMonitorReq req) {
-        StationRiskMonitor m = StationRiskMonitor.builder()
-                .stationId(req.stationId())
-                .operatorId(req.operatorId())
-                .metricType(req.metricType() == null ? com.claw.server.common.enums.RiskMetricType.BOND_SHORTFALL
-                        : com.claw.server.common.enums.RiskMetricType.valueOf(req.metricType()))
-                .metricValue(req.metricValue())
-                .threshold(req.threshold())
-                .baseline(req.baseline())
-                .riskScore(req.riskScore() == null ? 0 : req.riskScore())
-                .status(req.status() == null ? RiskMonitorStatus.NORMAL : RiskMonitorStatus.valueOf(req.status()))
-                .triggeredReason(req.triggeredReason())
-                .resolutionNote(req.resolutionNote())
-                .tenantId(1L)
-                .deleted(false)
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
-                .build();
-        return ApiResult.ok(toMonitorView(monitorRepository.save(m)));
+        // 走 RiskMonitorService，触发 V16 触发器真实评分/熔断（此前直接用 repository 绕过业务逻辑）
+        StationRiskMonitor m = riskMonitorService.recordMetric(req.stationId(), req.operatorId(),
+                req.metricType() == null ? RiskMetricType.BOND_SHORTFALL
+                        : RiskMetricType.valueOf(req.metricType()),
+                req.metricValue(), req.threshold(), req.baseline(), req.triggeredReason());
+        return ApiResult.ok(toMonitorView(m));
     }
 
     @PutMapping("/monitors/{id}")

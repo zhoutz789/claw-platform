@@ -108,15 +108,20 @@ public class InsuranceService {
         AccidentClaim claim = claimRepository.findById(claimId)
                 .orElseThrow(() -> BizException.notFound("error.claim.not.found"));
 
-        if (claim.getStatus() != ClaimStatus.UNDER_REVIEW) {
+        // 状态机：FILED -> UNDER_REVIEW -> ASSESSED（分步落库，满足 trg_claim_status_check 流转约束，
+        // 避免单次 UPDATE 触发 FILED -> ASSESSED 被触发器拒绝）。
+        if (claim.getStatus() == ClaimStatus.FILED) {
             claim.setStatus(ClaimStatus.UNDER_REVIEW);
+            claim = claimRepository.save(claim);
+            claimRepository.flush();
+            claim.setStatus(ClaimStatus.ASSESSED);
+        } else {
+            claim.setStatus(ClaimStatus.ASSESSED);
         }
 
         claim.setAssessedAmount(assessedAmount);
-        claim.setDeductibleApplied(assessedAmount.min(
-                claim.getInsuranceId() != null ? BigDecimal.ZERO : BigDecimal.ZERO)); // 简化
-        claim.setPayoutAmount(assessedAmount.subtract(claim.getDeductibleApplied()));
-        claim.setStatus(ClaimStatus.ASSESSED);
+        // 免赔额与赔付额由 trg_claim_calc_payout 触发器基于 assessed_amount 自动计算，
+        // 此处不再手动覆盖，避免与触发器结果冲突。
         claim.setReviewedBy(reviewedBy);
         claim.setReviewedAt(Instant.now());
         claim.setReviewNotes(notes);

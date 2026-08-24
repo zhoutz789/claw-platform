@@ -26,6 +26,10 @@ import Settings from './pages/Settings';
 import Manufacturer from './pages/Manufacturer';
 import AssetTrace from './pages/AssetTrace';
 import Permission from './pages/Permission';
+import Recovery from './pages/Recovery';
+import Insurance from './pages/Insurance';
+import Operator from './pages/Operator';
+import SharedPool from './pages/SharedPool';
 
 export default function App() {
   const authed = getToken();
@@ -41,6 +45,10 @@ export default function App() {
           <Route path="assets" element={<Assets />} />
           <Route path="asset-trace" element={<AssetTrace />} />
           <Route path="manufacturer" element={<Manufacturer />} />
+          <Route path="recovery" element={<Recovery />} />
+          <Route path="insurance" element={<Insurance />} />
+          <Route path="operator" element={<Operator />} />
+          <Route path="shared-pool" element={<SharedPool />} />
           <Route path="swap-orders" element={<SwapOrders />} />
           <Route path="ledger" element={<Ledger />} />
           <Route path="users" element={<Users />} />

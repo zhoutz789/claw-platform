@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Drawer, Descriptions, Tag, message, Button, Empty } from 'antd';
+import { Table, Drawer, Descriptions, Tag, message, Button, Empty, Form, InputNumber, Input, Card, Select } from 'antd';
 import PageCard from '../components/PageCard';
 import api from '../api';
 import { TRANSFER_TYPE, ASSET_TYPE } from '../enums';
@@ -25,6 +25,7 @@ export default function CustodyChain() {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState(null);
+  const [createForm] = Form.useForm();
 
   const load = () => {
     setLoading(true);
@@ -41,7 +42,24 @@ export default function CustodyChain() {
   };
 
   return (
-    <PageCard title="产权链追溯" subtitle="资产所有权转移链（含审计轨迹）的只读追溯">
+    <PageCard title="产权链追溯" subtitle="资产所有权转移链（含审计轨迹）：可追溯 + 可登记转移">
+      <Card size="small" title="登记产权转移（形成不可篡改产权链）" style={{ marginBottom: 12 }}>
+        <Form form={createForm} layout="vertical" onFinish={(v) => api.post('/v1/admin/custody/transfers', v).then(() => { message.success('已登记转移'); createForm.resetFields(); load(); }).catch((e) => message.error(e.message))}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+            <Form.Item name="assetId" label="资产ID" rules={[{ required: true }]}><InputNumber style={{ width: '100%' }} /></Form.Item>
+            <Form.Item name="assetType" label="资产类型" rules={[{ required: true }]}><Input /></Form.Item>
+            <Form.Item name="transferType" label="转移类型" rules={[{ required: true }]}><Select options={[{ label: '换电交换', value: 'SWAP_EXCHANGE' }, { label: '租赁开始', value: 'RENTAL_START' }, { label: '租赁结束', value: 'RENTAL_END' }, { label: '共享池入', value: 'SHARED_POOL_ENTRY' }, { label: '共享池出', value: 'SHARED_POOL_EXIT' }, { label: '回收', value: 'RECOVERY' }, { label: '以旧换新', value: 'TRADE_IN' }]} /></Form.Item>
+            <Form.Item name="fromUserId" label="转出方ID" rules={[{ required: true }]}><InputNumber style={{ width: '100%' }} /></Form.Item>
+            <Form.Item name="toUserId" label="转入方ID" rules={[{ required: true }]}><InputNumber style={{ width: '100%' }} /></Form.Item>
+            <Form.Item name="stationId" label="站点ID"><InputNumber style={{ width: '100%' }} /></Form.Item>
+            <Form.Item name="swapOrderId" label="关联换电单ID"><InputNumber style={{ width: '100%' }} /></Form.Item>
+            <Form.Item name="assetSoh" label="SOH(%)"><InputNumber style={{ width: '100%' }} /></Form.Item>
+            <Form.Item name="assetSoc" label="SOC(%)"><InputNumber style={{ width: '100%' }} /></Form.Item>
+          </div>
+          <Form.Item name="assetCycleCount" label="循环次数"><InputNumber style={{ width: 200 }} /></Form.Item>
+          <Button type="primary" htmlType="submit">登记转移</Button>
+        </Form>
+      </Card>
       <Table rowKey="id" loading={loading} dataSource={data} columns={columns} pagination={{ pageSize: 10 }} size="middle" scroll={{ x: 'max-content' }} />
       <Drawer title="产权转移详情" open={open} onClose={() => setOpen(false)} width={640}>
         {detail ? (

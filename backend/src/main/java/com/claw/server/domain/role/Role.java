@@ -2,6 +2,8 @@ package com.claw.server.domain.role;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 
@@ -29,6 +31,7 @@ public class Role {
     @Column(name = "name_i18n", nullable = false)
     private String nameI18n;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     @Builder.Default
     private String grants = "{}";
@@ -36,6 +39,7 @@ public class Role {
     @Builder.Default
     private Boolean autoGrant = false;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String grantRule;
 

@@ -3,15 +3,18 @@ package com.claw.server.web.v1;
 import com.claw.server.common.api.ApiResult;
 import com.claw.server.common.api.BizException;
 import com.claw.server.common.dto.AdminDtos.*;
+import com.claw.server.common.enums.TransferType;
 import com.claw.server.domain.custody.CustodyDispute;
 import com.claw.server.domain.custody.CustodyDisputeRepository;
 import com.claw.server.domain.custody.CustodyTransfer;
 import com.claw.server.domain.custody.CustodyTransferAudit;
 import com.claw.server.domain.custody.CustodyTransferAuditRepository;
 import com.claw.server.domain.custody.CustodyTransferRepository;
+import com.claw.server.domain.custody.CustodyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
@@ -33,12 +36,25 @@ public class AdminCustodyController {
     private final CustodyTransferRepository transferRepository;
     private final CustodyTransferAuditRepository auditRepository;
     private final CustodyDisputeRepository disputeRepository;
+    private final CustodyService custodyService;
 
     @GetMapping("/transfers")
     public ApiResult<List<CustodyTransferView>> listTransfers() {
         return ApiResult.ok(transferRepository.findAll().stream()
                 .filter(t -> !Boolean.TRUE.equals(t.getDeleted()))
                 .map(this::toTransferView).toList());
+    }
+
+    /**
+     * 创建产权转移记录（S 级修复：此前产权链仅由 V19 种子演示数据写入，业务流从未调用 recordTransfer）。
+     * 实际业务（换电/租赁/回收/以旧换新/共享池）应在各自完成后调用本端点，形成不可篡改产权链。
+     */
+    @PostMapping("/transfers")
+    public ApiResult<CustodyTransferView> createTransfer(@RequestBody CustodyTransferReq req) {
+        CustodyTransfer t = custodyService.recordTransfer(req.assetId(), req.assetType(), req.fromUserId(),
+                req.toUserId(), TransferType.valueOf(req.transferType()), req.stationId(), req.swapOrderId(),
+                req.assetSoh(), req.assetSoc(), req.assetCycleCount());
+        return ApiResult.ok(toTransferView(t));
     }
 
     @GetMapping("/transfers/{id}")
@@ -126,5 +142,10 @@ public class AdminCustodyController {
                 d.getRespondentId(), d.getDisputeType(), d.getDescription(), d.getEvidenceUrls(),
                 d.getClaimAmount(), d.getAwardedAmount(), d.getStatus(), d.getArbitratorId(),
                 d.getResolution(), d.getResolvedAt(), d.getCreatedAt());
+    }
+
+    public record CustodyTransferReq(Long assetId, String assetType, Long fromUserId, Long toUserId,
+                                     String transferType, Long stationId, Long swapOrderId,
+                                     BigDecimal assetSoh, BigDecimal assetSoc, Integer assetCycleCount) {
     }
 }

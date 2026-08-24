@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 迁移完整性集成测试：在真实 PostgreSQL(TimescaleDB) 容器上验证 V1-V26 全部迁移可应用，
+ * 迁移完整性集成测试：在真实 PostgreSQL(TimescaleDB) 容器上验证全部迁移可应用，
  * 且关键表结构与 JPA 实体映射一致。取代此前仅依赖内存/H2 的弱校验。
  */
 class SchemaMigrationIT extends AbstractIntegrationTest {
@@ -26,8 +26,9 @@ class SchemaMigrationIT extends AbstractIntegrationTest {
     void allMigrationsAppliedOnRealPostgres() {
         Integer applied = jdbc.queryForObject(
                 "SELECT count(*) FROM claw.flyway_schema_history WHERE version IS NOT NULL", Integer.class);
-        // V1-V26 共 26 个迁移脚本（不含 Flyway 自身的 SCHEMA 标记行），全部应在真实库中成功应用
-        assertEquals(26, applied, "Flyway 应在真实 PostgreSQL 上应用全部 26 个迁移");
+        // V1-V28 共 28 个迁移脚本（不含 Flyway 自身的 SCHEMA 标记行），全部应在真实库中成功应用。
+        // 注意：V27 修复残值评估中位数触发器，V28 放开保险单 template_id 非空约束。
+        assertEquals(28, applied, "Flyway 应在真实 PostgreSQL 上应用全部迁移（当前 V1-V28）");
     }
 
     @Test
