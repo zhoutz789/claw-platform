@@ -1,0 +1,32 @@
+sequenceDiagram
+    actor Admin
+    participant Ctrl as AdminCustomerOrderController
+    participant Ord as CustomerOrderService
+    participant Reg as UnitRegistrationService
+    participant Ast as AssetService
+    participant DBr as AssetRepository/VehicleRepository
+    participant Evt as AssetProvisionedEvent
+    participant Intg as AssetProvisionedIntegration
+    participant Pool as SharedPoolService
+
+    Admin->>Ctrl: POST /{orderId}/items/{itemId}/registrations (N 台: qr+vin+frame+motor+components)
+    Ctrl->>Reg: registerUnits(orderItemId, batch)
+    Reg->>Reg: 校验 order 状态∈{PAID,CERTIFICATED} 且未发货；seq 不重复
+    loop 每台单元
+        Reg->>Ast: provisionFromRegistration(req{assetType,productId,skuId,ownerId(buyer),qr,vin,...})
+        Ast->>DBr: 建 Asset(productId,skuId,ownerId,serialNo,orderItemId,IN_STOCK) + 扩展(Vehicle/Drone/Battery)
+        Ast->>Ast: grantOwnership(ownerId)  // 产权建立
+        Ast-->>Reg: AssetView(assetId)
+        Reg->>DBr: 存 UnitRegistration(order_item_id,seq,qr,vin,...,asset_id,REGISTERED)
+        Reg->>Evt: publish AssetProvisionedEvent(orderId,itemId,assetId,productId,skuId,ownerId,usageMode,stationId,...)
+    end
+    Evt-->>Intg: AFTER_COMMIT 消费
+    alt 有 stationId（自营/站方部署）
+        Intg->>Ast: bindDevice(assetId, stationId)  // IN_STOCK→IN_USE + DEPLOY 产权链首笔
+    else 共享模式
+        Intg->>Pool: poolAsset(assetId, ownerId, stationId)  // 入共享池
+    else 纯自营待用户激活
+        Note over Intg: 资产留 IN_STOCK，用户扫码激活再 bindDevice
+    end
+    Reg-->>Ctrl: UnitRegistrationView 列表 + 进度 N/total
+    Ctrl-->>Admin: 200 OK

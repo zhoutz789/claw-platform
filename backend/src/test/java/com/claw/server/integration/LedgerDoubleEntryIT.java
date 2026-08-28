@@ -97,14 +97,16 @@ class LedgerDoubleEntryIT extends AbstractIntegrationTest {
 
     @Test
     void insufficientBalanceRejected() {
-        Account master = newAccount(AccountType.MASTER, new BigDecimal("5.0000"));
+        // 改用普通业务账户（ASSET）验证"余额不足拦截"：平台 MASTER 清算户已在 V37 豁免
+        // （允许零/负，作 PROJECT_LEDGER 内部对冲侧），故不再用 MASTER 测拦截。
         Account asset = newAccount(AccountType.ASSET, BigDecimal.ZERO);
+        Account other = newAccount(AccountType.ASSET, BigDecimal.ZERO);
 
         BizException ex = assertThrows(BizException.class, () -> ledgerService.postEntries(
                 BizType.SWAP_PAY, UUID.randomUUID().toString(),
                 List.of(
-                        new LedgerRequests.Entry(master.getId(), LedgerRequests.Direction.D, new BigDecimal("100.0000"), "pay"),
-                        new LedgerRequests.Entry(asset.getId(), LedgerRequests.Direction.C, new BigDecimal("100.0000"), "recv"))));
+                        new LedgerRequests.Entry(asset.getId(), LedgerRequests.Direction.D, new BigDecimal("100.0000"), "pay"),
+                        new LedgerRequests.Entry(other.getId(), LedgerRequests.Direction.C, new BigDecimal("100.0000"), "recv"))));
         assertEquals(42251, ex.getCode());
     }
 

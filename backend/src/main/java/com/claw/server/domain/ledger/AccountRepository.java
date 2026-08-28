@@ -34,6 +34,12 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     Optional<Account> findByUserIdIsNullAndAccountTypeAndCurrency(AccountType accountType, String currency);
 
+    /**
+     * 取平台内部户（user_id 为空）时按 id 升序取第一条，容忍重复（如集成测试库累积的
+     * 多条 userId=null 的 MASTER 账户），避免 NonUniqueResultException。
+     */
+    Optional<Account> findFirstByUserIdIsNullAndAccountTypeAndCurrencyOrderByIdAsc(AccountType accountType, String currency);
+
     List<Account> findByUserId(Long userId);
 
     List<Account> findByUserIdAndAccountType(Long userId, AccountType accountType);

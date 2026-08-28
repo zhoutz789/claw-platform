@@ -1,9 +1,13 @@
 package com.claw.server.domain.sharedpool;
 
 import com.claw.server.common.api.BizException;
+import com.claw.server.common.enums.OwnershipStatus;
+import com.claw.server.common.enums.OwnershipType;
 import com.claw.server.common.enums.PoolEntryStatus;
+import com.claw.server.common.enums.RevenueShareBasis;
 import com.claw.server.common.enums.RentalOrderStatus;
 import com.claw.server.common.enums.RentalType;
+import com.claw.server.common.enums.SettlementStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -11,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,6 +42,7 @@ public class SharedPoolService {
     private final RentalUsageSessionRepository usageSessionRepository;
     private final RevenueSplitRuleRepository splitRuleRepository;
     private final AssetOwnershipRepository ownershipRepository;
+    private final RevenueSettlementRepository settlementRepository;
 
     /**
      * 资产入池：将资产放入共享池，指定站点和分成比例。
@@ -215,5 +221,101 @@ public class SharedPoolService {
     @Transactional(readOnly = true)
     public List<RentalOrder> listRenterOrders(Long renterUserId) {
         return rentalOrderRepository.findByRenterUserIdAndDeletedFalse(renterUserId);
+    }
+
+    /**
+     * 建立资产产权（全款购买）。order 域经此方法建产权，避免直持 AssetOwnershipRepository。
+     *
+     * @param assetId          资产 ID
+     * @param ownerUserId       所有人 ID
+     * @param purchasePrice     购买总价
+     * @param purchaseOrderNo   购买订单号（客户订单支付单号）
+     * @return 产权记录
+     */
+    @Transactional
+    public AssetOwnership establishOwnership(Long assetId, Long ownerUserId,
+                                            BigDecimal purchasePrice, String purchaseOrderNo) {
+        AssetOwnership ownership = AssetOwnership.builder()
+                .assetId(assetId)
+                .ownerUserId(ownerUserId)
+                .ownershipType(OwnershipType.FULL)
+                .purchasePrice(purchasePrice)
+                .purchaseDate(LocalDate.now())
+                .purchaseOrderNo(purchaseOrderNo)
+                .status(OwnershipStatus.ACTIVE)
+                .tenantId(1L)
+                .deleted(false)
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
+                .build();
+        ownership = ownershipRepository.save(ownership);
+        log.info("建立产权 assetId={} owner={} ownershipId={}", assetId, ownerUserId, ownership.getId());
+        return ownership;
+    }
+
+    /**
+     * 创建分成规则（资产入池时调用）。平台/保险比例固定，owner/station 由入池参数给定。
+     *
+     * @param assetId       资产 ID
+     * @param poolEntryId   入池记录 ID
+     * @param ownerRate     所有人分成比例
+     * @param stationRate   站点分成比例
+     * @return 分成规则 ID
+     */
+    @Transactional
+    public Long createSplitRule(Long assetId, Long poolEntryId,
+                                BigDecimal ownerRate, BigDecimal stationRate) {
+        RevenueSplitRule rule = RevenueSplitRule.builder()
+                .assetId(assetId)
+                .poolEntryId(poolEntryId)
+                .ownerRate(ownerRate)
+                .stationRate(stationRate)
+                .platformRate(BigDecimal.valueOf(0.10))
+                .insuranceRate(BigDecimal.valueOf(0.05))
+                .shareBasis(RevenueShareBasis.PER_SWAP)
+                .status("ACTIVE")
+                .tenantId(1L)
+                .deleted(false)
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
+                .build();
+        rule = splitRuleRepository.save(rule);
+        log.info("创建分成规则 assetId={} poolEntryId={} ruleId={}", assetId, poolEntryId, rule.getId());
+        return rule.getId();
+    }
+
+    /**
+     * 创建分账结算（订单完成时调用）。首笔结算为对账起点，totalRevenue 默认 0，各份额 = 0 × rate。
+     *
+     * @param poolEntryId 入池记录 ID
+     * @param periodStart 结算周期起
+     * @param periodEnd   结算周期止
+     * @return 结算记录（PENDING）
+     */
+    @Transactional
+    public RevenueSettlement createSettlement(Long poolEntryId, Instant periodStart, Instant periodEnd) {
+        String settlementNo = "SET-" + LocalDate.now().toString().replace("-", "")
+                + "-" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+        BigDecimal totalRevenue = BigDecimal.ZERO;
+        RevenueSettlement settlement = RevenueSettlement.builder()
+                .settlementNo(settlementNo)
+                .settlementDate(LocalDate.now())
+                .poolEntryId(poolEntryId)
+                .totalRevenue(totalRevenue)
+                .ownerShare(totalRevenue.multiply(BigDecimal.valueOf(0.70)))
+                .stationShare(totalRevenue.multiply(BigDecimal.valueOf(0.15)))
+                .platformShare(totalRevenue.multiply(BigDecimal.valueOf(0.10)))
+                .insuranceShare(totalRevenue.multiply(BigDecimal.valueOf(0.05)))
+                .status(SettlementStatus.PENDING)
+                .periodStart(periodStart)
+                .periodEnd(periodEnd)
+                .tenantId(1L)
+                .deleted(false)
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
+                .build();
+        settlement = settlementRepository.save(settlement);
+        log.info("创建分账结算 poolEntryId={} settlementNo={} id={}", poolEntryId, settlementNo, settlement.getId());
+        return settlement;
     }
 }

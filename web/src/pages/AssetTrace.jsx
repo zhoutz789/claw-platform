@@ -68,7 +68,7 @@ export default function AssetTrace() {
             { key: 'ops', label: `车辆运营(${trace.vehicleOps?.length || 0})`, children: <Table rowKey="id" size="small" dataSource={trace.vehicleOps || []} columns={vopsCols} pagination={false} /> },
             { key: 'rev', label: '收益数据', children: <Descriptions column={1} bordered size="small">
               <Descriptions.Item label="车辆运营累计收益">{trace.totalRevenue}</Descriptions.Item>
-              <Descriptions.Item label="说明">收益取自资产「车辆运营」记录（客运/物流/流动售卖/广告/录像）的营收汇总。</Descriptions.Item>
+              <Descriptions.Item label="说明">收益取自资产「运营」记录（共享出租 / 换电调度 / 无人机作业）的营收汇总。</Descriptions.Item>
             </Descriptions> },
             { key: 'write', label: '写入生命周期', children: (
               <div>

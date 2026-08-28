@@ -14,6 +14,8 @@ app/.flutter_build/
 # Node / Web
 web/node_modules/
 web/dist/
+# Vite 构建临时文件，不入库
+web/vite.config.js.timestamp-*.mjs
 
 # IDE
 .idea/

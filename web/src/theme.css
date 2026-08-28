@@ -162,3 +162,76 @@ body {
 /* ===== 让 antd 卡片融入米色主题 ===== */
 .ant-layout { background: var(--paper) !important; }
 .ant-card { background: var(--surface) !important; }
+
+/* ===== 工作台 ===== */
+.wb-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 26px;
+  margin-bottom: 16px;
+  border-radius: 18px;
+  background: linear-gradient(120deg, var(--brand-deep), var(--brand) 55%, var(--energy));
+  box-shadow: 0 12px 28px rgba(13, 70, 48, .22);
+}
+.wb-kpi { border-radius: 16px !important; box-shadow: var(--sh-sm); border: 1px solid var(--line); }
+.wb-card { box-shadow: var(--sh-sm); border: 1px solid var(--line); }
+
+.wb-todo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--brand);
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.wb-todo:hover { transform: translateY(-2px); box-shadow: var(--sh-sm); }
+.wb-todo-ico {
+  width: 36px; height: 36px; border-radius: 10px; flex: none;
+  display: grid; place-items: center; color: #fff; font-size: 17px;
+}
+
+.wb-quick {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: 10px;
+}
+.wb-quick-tile {
+  padding: 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: transform .15s ease, background .15s ease, box-shadow .15s ease;
+}
+.wb-quick-tile:hover { background: var(--brand-soft); transform: translateY(-2px); box-shadow: var(--sh-sm); }
+.wb-quick-label { display: block; font-size: 13px; font-weight: 600; color: var(--ink); }
+.wb-quick-group { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ===== 全局搜索命令面板 ===== */
+.wb-search-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(21, 40, 31, .14);
+  padding: 6px;
+  min-width: 280px;
+  max-height: 320px;
+  overflow: auto;
+}
+.wb-search-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.wb-search-item:hover { background: var(--brand-soft); }
+.wb-search-group { font-size: 11px; color: var(--muted); }

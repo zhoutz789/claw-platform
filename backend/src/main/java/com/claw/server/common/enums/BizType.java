@@ -34,5 +34,7 @@ public enum BizType {
     /** 保险基金计提（V12：每笔交易 5% 保险分成入基金）。 */
     INSURANCE_FUND_ACCRUAL,
     /** 站方收益结算（V10：管理收益/服务费/光伏收益到站方账户）。 */
-    OPERATOR_REVENUE
+    OPERATOR_REVENUE,
+    /** 项目专属核算（V36 项目管理域：每项目独立双记账）。 */
+    PROJECT_LEDGER
 }

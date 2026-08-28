@@ -6,6 +6,7 @@ public enum AssetLifecycleStage {
     IN_TRANSIT,  // 流通在途
     IN_USE,      // 使用中
     MAINTENANCE, // 维修保养
-    RECYCLED,    // 回收
+    RETIRED,     // 退役（结束服务）
+    RECYCLED,    // 回收（梯次利用/残值返还）
     DESTROYED    // 销毁
 }

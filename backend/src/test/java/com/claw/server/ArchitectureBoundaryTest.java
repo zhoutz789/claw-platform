@@ -31,6 +31,18 @@ class ArchitectureBoundaryTest {
                 .check(CLASSES);
     }
 
+    /** 订单域不得直持资产域仓储：跨域只经 AssetService 服务接口 + AssetProvisionedEvent 事件，
+     *  否则拆分微服务时资产表被订单域强耦合（技术文档 1.3 + V38 设计 §6 边界）。 */
+    @Test
+    void orderDomainMustNotHoldAssetRepository() {
+        noClasses().that().resideInAPackage("com.claw.server.domain.order..")
+                .should().dependOnClassesThat(
+                        resideInAPackage("com.claw.server.domain.asset..")
+                                .and(simpleNameEndingWith("Repository")))
+                .because("订单域只经 AssetService 接口与领域事件与资产域交互，不得直持资产域 Repository（V38 边界）")
+                .check(CLASSES);
+    }
+
     /** 通用层不依赖任何域：common/config/infra 保持纯粹 */
     @Test
     void commonLayerMustNotDependOnDomains() {

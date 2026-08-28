@@ -1,0 +1,31 @@
+classDiagram
+    class CustomerOrder { +Long id +String orderNo +Long buyerUserId +Long productId +Long assetId +String assetType +String status }
+    class CustomerOrderItem { +Long id +Long orderId +Long skuId +String assetType +Integer quantity +BigDecimal unitPrice }
+    class UnitRegistration { +Long id +Long orderId +Long orderItemId +Integer seq +String qrCode +String vin +String frameNo +String motorNo +String componentNosJson +Long assetId +String status }
+    class Asset { +Long id +Long productId +Long skuId +Long manufacturerId +Long ownerId +Long orderItemId +String serialNumber +String qrCode +String componentNosJson +String status }
+    class Vehicle { +Long assetId +String vin +String frameNo +String motorNo +String model }
+    class Drone { +Long assetId +String remoteId +String model }
+    class Battery { +Long assetId +String model +BigDecimal capacityKwh }
+    class AssetMaintenanceRecord { +Long id +Long assetId +String componentType +String oldComponentNo +String newComponentNo +String mtype }
+    class AssetLifecycleEvent { +Long id +Long assetId +String stage }
+
+    class CustomerOrder "1" --> "0..*" CustomerOrderItem : 订单项(sku+qty)
+    class CustomerOrderItem "1" --> "0..*" UnitRegistration : 逐台登记(1->N)
+    class UnitRegistration "1" --> "1" Asset : 登记即生成资产
+    class Asset "1" --> "0..1" Vehicle : 车辆扩展
+    class Asset "1" --> "0..1" Drone : 无人机扩展
+    class Asset "1" --> "0..1" Battery : 电池扩展
+    class Asset "1" --> "0..*" AssetMaintenanceRecord : 维修/更换留痕
+    class Asset "1" --> "0..*" AssetLifecycleEvent : 闭环溯源
+
+    class UnitRegistrationService
+    class CustomerOrderService
+    class AssetService
+    class AssetProvisionedEvent
+    class AssetProvisionedIntegration
+
+    CustomerOrderService "..>" UnitRegistrationService : 注入/编排(ship守卫)
+    UnitRegistrationService "..>" AssetService : provisionFromRegistration(服务接口)
+    UnitRegistrationService "..>" AssetProvisionedEvent : publish
+    AssetProvisionedIntegration "..>" AssetService : bindDevice/入池(同域/服务接口)
+    AssetProvisionedEvent "..>" AssetProvisionedIntegration : AFTER_COMMIT消费

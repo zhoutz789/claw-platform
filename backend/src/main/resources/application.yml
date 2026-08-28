@@ -1,6 +1,11 @@
 spring:
   application:
     name: claw-server
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 200MB
+      max-request-size: 200MB
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:claw}
     username: ${DB_USER:claw}
@@ -29,11 +34,11 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-  rabbitmq:
-    host: ${MQ_HOST:localhost}
-    port: ${MQ_PORT:5672}
-    username: ${MQ_USER:claw}
-    password: ${MQ_PASSWORD:claw_dev_password}
+    rabbitmq:
+      host: ${MQ_HOST:localhost}
+      port: ${MQ_PORT:5672}
+      username: ${MQ_USER:claw}
+      password: ${MQ_PASSWORD:claw_dev_password}
 
 server:
   port: 8080
@@ -45,6 +50,22 @@ claw:
     jwt-ttl-minutes: 1440            # 登录态有效期 24h
     # dev 环境短信验证码 stub：直接把验证码回显给客户端，便于联调（生产关闭）
     sms-dev-echo: true
+
+  iot:
+    emqx:
+      enabled: false                        # 启用(true)后连接真实 EMQX（入站+出站全开）；默认关，走 REST 上报
+      broker-url: tcp://localhost:1883      # 生产建议 ssl://host:8883 + 双向 TLS
+      username: ${CLAW_IOT_EMQX_USERNAME:}
+      password: ${CLAW_IOT_EMQX_PASSWORD:}
+      topic: claw/telemetry/+               # 老 BMS 链路订阅主题
+      client-id: claw-emqx-inbound
+      down-topic: claw/iot/%s/down          # 车辆终端下行主题模板（%s = deviceNo）
+      ssl:
+        enabled: false                       # 开启后下行/入站以 TLS 连接（broker-url 需为 ssl://）
+        truststore-path: ${CLAW_IOT_SSL_TRUSTSTORE:}      # 信任库(JKS)，导出 EMQX CA
+        truststore-pass: ${CLAW_IOT_SSL_TRUSTSTORE_PASS:claw123}
+        keystore-path: ${CLAW_IOT_SSL_KEYSTORE:}         # 双向 TLS 客户端证书(PKCS12)；单向可空
+        keystore-pass: ${CLAW_IOT_SSL_KEYSTORE_PASS:claw123}
 
 springdoc:
   swagger-ui:

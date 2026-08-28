@@ -1,120 +1,97 @@
-import { Layout, Menu, Input, Badge, Avatar, Space, Typography, Button } from 'antd';
+import { useMemo, useState, useEffect } from 'react';
+import { Layout, Menu, Input, Badge, Avatar, Space, Typography, Button, Dropdown, Empty } from 'antd';
 import {
-  DashboardOutlined, ShoppingCartOutlined, ShopOutlined, DatabaseOutlined, SwapOutlined,
-  ReconciliationOutlined, WalletOutlined, PieChartOutlined, SettingOutlined, CreditCardOutlined,
-  GlobalOutlined, SafetyOutlined, AlertOutlined, LinkOutlined, AuditOutlined, TeamOutlined,
-  KeyOutlined, MessageOutlined, LogoutOutlined, BellOutlined, BankOutlined,
-  PartitionOutlined, SafetyCertificateOutlined,
-  ToolOutlined, ShareAltOutlined, SolutionOutlined, FileTextOutlined,
+  DashboardOutlined, LogoutOutlined, BellOutlined, SearchOutlined, ArrowRightOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { clearToken } from '../auth';
+import {
+  AppstoreOutlined,
+} from '@ant-design/icons';
+import {
+  useMenuNav, getFlatNav, ancestorKeysOfActive, getVisibleNav, ICON_BY_KEY,
+} from '../menuStore';
+import ErrorBoundary from '../ErrorBoundary';
 
 const { Header, Sider, Content } = Layout;
 
-const groups = [
-  {
-    label: '运营',
-    items: [
-      { key: 'dashboard', icon: <DashboardOutlined />, label: '数据大屏' },
-      { key: 'orders', icon: <ShoppingCartOutlined />, label: '订单管理', badge: 5 },
-      { key: 'stations', icon: <ShopOutlined />, label: '站点管理' },
-      { key: 'assets', icon: <DatabaseOutlined />, label: '资产管理' },
-      { key: 'asset-trace', icon: <PartitionOutlined />, label: '资产溯源' },
-      { key: 'manufacturer', icon: <BankOutlined />, label: '厂家与商品' },
-      { key: 'swap-orders', icon: <SwapOutlined />, label: '换电记录' },
-      { key: 'recovery', icon: <ToolOutlined />, label: '残值回收' },
-      { key: 'shared-pool', icon: <ShareAltOutlined />, label: '共享池' },
-    ],
-  },
-  {
-    label: '财务',
-    items: [
-      { key: 'reconciliations', icon: <ReconciliationOutlined />, label: '对账中心' },
-      { key: 'ledger', icon: <WalletOutlined />, label: '资金账户' },
-      { key: 'profit', icon: <PieChartOutlined />, label: '分账报告' },
-      { key: 'fee', icon: <SettingOutlined />, label: '费率配置' },
-      { key: 'payments', icon: <CreditCardOutlined />, label: '支付流水' },
-      { key: 'settlements', icon: <GlobalOutlined />, label: '跨境结算' },
-      { key: 'deposits', icon: <SafetyOutlined />, label: '押金管理' },
-      { key: 'operator', icon: <SolutionOutlined />, label: '运营方财务' },
-    ],
-  },
-  {
-    label: '风控',
-    items: [
-      { key: 'risk', icon: <AlertOutlined />, label: '风控监控', badge: 2 },
-      { key: 'alerts', icon: <BellOutlined />, label: '异常告警' },
-      { key: 'custody', icon: <LinkOutlined />, label: '产权链追溯' },
-      { key: 'insurance', icon: <FileTextOutlined />, label: '保险管理' },
-      { key: 'arbitration', icon: <AuditOutlined />, label: '争议仲裁' },
-      { key: 'complaints', icon: <MessageOutlined />, label: '投诉处理' },
-    ],
-  },
-  {
-    label: '系统',
-    items: [
-      { key: 'users', icon: <TeamOutlined />, label: '用户管理' },
-      { key: 'roles', icon: <KeyOutlined />, label: '角色权限' },
-      { key: 'permission', icon: <SafetyCertificateOutlined />, label: '权限矩阵' },
-      { key: 'countries', icon: <GlobalOutlined />, label: '国家 / 法域' },
-      { key: 'settings', icon: <SettingOutlined />, label: '系统配置' },
-    ],
-  },
-];
+// 当前路由对应的菜单 key（与 NAV 的 key 一致）
+const keyOf = (pathname) => {
+  const seg = pathname.replace('/', '');
+  if (!seg || seg === 'dashboard' || seg === 'workbench') return 'workbench';
+  return seg;
+};
 
-const allItems = groups.flatMap((g) => g.items);
-const labelOf = (key) => allItems.find((i) => i.key === key)?.label || '数据大屏';
+const labelOf = (key, nav, flat) => {
+  const hit = flat.find((i) => i.key === key);
+  if (hit) return hit.label;
+  const top = nav.find((i) => i.key === key);
+  return top?.label || '工作台';
+};
 
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const selected = location.pathname.replace('/', '') || 'dashboard';
-  const title = labelOf(selected);
+  const selected = keyOf(location.pathname);
+  const nav = useMenuNav();
+  const flat = useMemo(() => getFlatNav(), [nav]);
+  const title = labelOf(selected, nav, flat);
 
-  const menuChildren = groups.map((g) => ({
-    type: 'group',
-    label: g.label,
-    children: g.items.map((it) => ({
-      key: it.key,
-      icon: it.icon,
-      label: it.badge ? (
-        <span>
-          {it.label}
-          <Badge count={it.badge} size="small" style={{ marginLeft: 8, backgroundColor: '#e2573f' }} />
-        </span>
-      ) : (
-        it.label
-      ),
-    })),
-  }));
+  // 全局搜索：过滤全部菜单项，点击即跳转
+  const [search, setSearch] = useState('');
+  const hits = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return [];
+    return flat.filter(
+      (m) => m.label.toLowerCase().includes(q) || m.group.toLowerCase().includes(q) || m.key.includes(q)
+    ).slice(0, 8);
+  }, [search, flat]);
+
+  const goSearch = (m) => {
+    navigate(m.path);
+    setSearch('');
+  };
+
+  // 递归构建菜单项：分组（含 children）渲染为 SubMenu，叶子渲染为可点击项
+  const buildItems = (nodes, depth = 0) => {
+    if (depth > 12) return []; // 护栏：异常嵌套直接截断，绝不让整页崩溃
+    return nodes.map((n) => {
+      const Icon = n.icon || ICON_BY_KEY[n.key] || AppstoreOutlined;
+      return n.children
+        ? { key: n.key, icon: <Icon />, label: n.label, children: buildItems(n.children, depth + 1) }
+        : { key: n.key, label: n.label };
+    });
+  };
+  const menuChildren = buildItems(getVisibleNav());
+
+  // 自动展开包含当前选中项的所有祖先分组（支持二级嵌套）
+  const [openKeys, setOpenKeys] = useState(() => ancestorKeysOfActive(selected));
+  useEffect(() => {
+    setOpenKeys((prev) => Array.from(new Set([...prev, ...ancestorKeysOfActive(selected)])));
+  }, [selected]);
+
+  // 演示数据提示：后端不可达/鉴权失败时回落到内置演示数据，顶部给出明确标识。
+  const [mockMode, setMockMode] = useState(!!window.__CLAW_MOCK__);
+  useEffect(() => {
+    const onMock = () => setMockMode(true);
+    window.addEventListener('claw:mock', onMock);
+    return () => window.removeEventListener('claw:mock', onMock);
+  }, []);
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider width={240} style={{ background: 'var(--surface)', borderRight: '1px solid var(--line)' }}>
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            padding: '20px 20px 16px',
+            display: 'flex', alignItems: 'center', gap: 10, padding: '20px 20px 16px',
             borderBottom: '1px solid var(--line)',
           }}
         >
-          <div
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: 10,
-              background: 'linear-gradient(135deg,var(--brand),var(--energy))',
-              display: 'grid',
-              placeItems: 'center',
-              color: '#fff',
-              fontSize: 18,
-            }}
-          >
-            ⚡
-          </div>
+          <div style={{
+            width: 34, height: 34, borderRadius: 10,
+            background: 'linear-gradient(135deg,var(--brand),var(--energy))',
+            display: 'grid', placeItems: 'center', color: '#fff', fontSize: 18,
+          }}>⚡</div>
           <div style={{ fontWeight: 900, fontSize: 16 }}>
             Claw
             <small style={{ display: 'block', fontSize: 10, color: 'var(--muted)', fontWeight: 500 }}>
@@ -125,28 +102,63 @@ export default function AdminLayout() {
         <Menu
           mode="inline"
           selectedKeys={[selected]}
+          openKeys={openKeys}
+          onOpenChange={setOpenKeys}
           items={menuChildren}
-          onClick={({ key }) => navigate(`/${key}`)}
+          onClick={({ key }) => { if (flat.some((f) => f.key === key)) navigate(`/${key}`); }}
           style={{ background: 'transparent', borderInlineEnd: 'none', paddingTop: 8 }}
         />
       </Sider>
+
       <Layout>
+        {mockMode && (
+          <div
+            style={{
+              background: 'linear-gradient(90deg,#fef3c7,#fde68a)', color: '#92400e',
+              fontSize: 12, fontWeight: 600, padding: '6px 24px', textAlign: 'center',
+              borderBottom: '1px solid #fcd34d',
+            }}
+          >
+            ⚠️ 演示数据模式：后端当前不可达 / 鉴权未通过，页面展示的是内置演示数据（闭环可见，但非真实库数据）。接入真实后端并登录后将自动切换为实时数据。
+          </div>
+        )}
         <Header
           style={{
-            background: 'var(--surface)',
-            padding: '0 24px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderBottom: '1px solid var(--line)',
-            height: 64,
+            background: 'var(--surface)', padding: '0 24px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            borderBottom: '1px solid var(--line)', height: 64,
           }}
         >
-          <Typography.Title level={4} style={{ margin: 0 }}>
-            {title}
-          </Typography.Title>
           <Space size="middle">
-            <Input.Search placeholder="搜索订单/用户/站点..." allowClear style={{ width: 240 }} />
+            <Typography.Title level={4} style={{ margin: 0 }}>{title}</Typography.Title>
+          </Space>
+
+          <Space size="middle">
+            <Dropdown
+              trigger={[]}
+              open={search.trim().length > 0 && hits.length > 0}
+              dropdownRender={() => (
+                <div className="wb-search-panel">
+                  {hits.map((m) => (
+                    <div key={m.key} className="wb-search-item" onClick={() => goSearch(m)}>
+                      <span>{m.label}</span>
+                      <span className="wb-search-group">{m.group}<ArrowRightOutlined style={{ marginLeft: 6 }} /></span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            >
+              <Input
+                allowClear
+                prefix={<SearchOutlined style={{ color: 'var(--muted)' }} />}
+                placeholder="搜索模块（如：对账、保险、站点）"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onPressEnter={() => hits[0] && goSearch(hits[0])}
+                style={{ width: 280 }}
+              />
+            </Dropdown>
+
             <Badge count={3} size="small">
               <BellOutlined style={{ fontSize: 18, color: 'var(--ink-2)' }} />
             </Badge>
@@ -157,17 +169,17 @@ export default function AdminLayout() {
             </div>
             <Button
               icon={<LogoutOutlined />}
-              onClick={() => {
-                clearToken();
-                window.location.hash = '#/login';
-              }}
+              onClick={() => { clearToken(); window.location.hash = '#/login'; }}
             >
               退出
             </Button>
           </Space>
         </Header>
+
         <Content style={{ margin: 16, padding: 16, background: 'transparent' }}>
-          <Outlet />
+          <ErrorBoundary resetKey={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </Content>
       </Layout>
     </Layout>

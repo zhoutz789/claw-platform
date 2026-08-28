@@ -32,6 +32,11 @@ public class AssetMaintenanceRecord {
     private BigDecimal cost;
     private String note;
 
+    // ===== V38：主部件更换留痕（F7.4 / F16.5）=====
+    private String componentType;    // MOTOR/BATTERY/CONTROLLER/REMOTE/CHARGER...
+    private String oldComponentNo;   // 更换前编号
+    private String newComponentNo;   // 更换后编号
+
     @Column(nullable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>爪平台 · 类别管理原型（淘宝式类目→属性）</title>
+<style>
+  :root{--primary:#1677ff;--border:#e5e7eb;--bg:#f5f6f8;--text:#1f2329;--muted:#8a9099;}
+  *{box-sizing:border-box;font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;}
+  body{margin:0;background:var(--bg);color:var(--text);}
+  .layout{display:flex;min-height:100vh;}
+  .sider{width:220px;background:#001529;color:#fff;padding:16px 0;}
+  .logo{padding:0 20px 16px;font-size:18px;font-weight:700;color:#fff;}
+  .menu{padding:0;list-style:none;margin:0;}
+  .menu .group{font-size:12px;color:#7a8390;padding:12px 20px 4px;}
+  .menu li{padding:10px 20px;cursor:pointer;font-size:14px;}
+  .menu li.active{background:var(--primary);}
+  .main{flex:1;display:flex;flex-direction:column;}
+  .header{height:56px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;}
+  .content{padding:20px;}
+  .card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:16px;}
+  .btn{background:var(--primary);color:#fff;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:13px;}
+  .btn.ghost{background:#fff;color:var(--primary);border:1px solid var(--primary);}
+  .btn.sm{padding:3px 10px;font-size:12px;}
+  .btn:disabled{background:#c9cdd4;cursor:not-allowed;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);}
+  th{background:#fafafa;color:var(--muted);font-weight:600;}
+  .tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;background:#e6f0ff;color:var(--primary);}
+  .note{font-size:12px;color:var(--muted);}
+  .pill{font-size:11px;background:#fff3e0;color:#d46b08;padding:1px 6px;border-radius:4px;}
+  .row-ops{display:flex;gap:6px;}
+  .modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;padding:40px 0;z-index:50;overflow:auto;}
+  .modal{background:#fff;width:620px;border-radius:8px;padding:24px;}
+  .modal h3{margin:0 0 16px;}
+  .form-row{margin-bottom:12px;}
+  .form-row label{display:block;font-size:13px;margin-bottom:6px;}
+  .form-row input,.form-row select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;}
+  .prop-row{display:grid;grid-template-columns:1.2fr 1fr 2fr 70px 36px;gap:6px;align-items:center;margin-bottom:8px;}
+  .prop-row input,.prop-row select{padding:6px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;}
+  .modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;border-top:1px solid var(--border);padding-top:14px;}
+  .prop-head{font-size:12px;color:var(--muted);display:grid;grid-template-columns:1.2fr 1fr 2fr 70px 36px;gap:6px;margin-bottom:4px;}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sider">
+    <div class="logo">爪平台 · 管理后台</div>
+    <ul class="menu">
+      <li>工作台</li>
+      <li class="group">产品管理</li>
+      <li>产品中心</li>
+      <li>产品模板字段</li>
+      <li class="group">商品 / 类目</li>
+      <li>商品管理（D 期）</li>
+      <li class="active">类别管理</li>
+      <li class="group">资产 / 订单</li>
+      <li>资产大厅</li>
+      <li>项目管理（C 期）</li>
+      <li>订单管理（E 期）</li>
+      <li class="group">系统</li>
+      <li>系统设置</li>
+    </ul>
+  </aside>
+  <main class="main">
+    <header class="header">
+      <div><b>类别管理</b> <span class="pill">淘宝式类目→属性</span> <span class="note">定义商品类别及其基本属性，发布商品时（D 期第三步）一览填写</span></div>
+      <div>管理员</div>
+    </header>
+    <div class="content">
+      <section class="card">
+        <div class="toolbar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <b>类别列表</b>
+          <button class="btn" onclick="openEdit()">+ 新增类别</button>
+        </div>
+        <table>
+          <thead><tr><th>类别名称</th><th>关联产品类型</th><th>基本属性</th><th>操作</th></tr></thead>
+          <tbody id="catBody"></tbody>
+        </table>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="modal-mask" id="catMask">
+  <div class="modal">
+    <h3 id="catModalTitle">新增类别</h3>
+    <div class="form-row"><label>类别名称</label><input id="mName" placeholder="如：光伏设备"></div>
+    <div class="form-row"><label>关联产品类型（可选）</label>
+      <select id="mType"><option value="">-- 不限定 --</option><option>光伏</option><option>电池</option><option>无人机</option><option>车辆</option></select></div>
+    <div class="form-row"><label>基本属性定义（淘宝式：发布时由商家逐一填写）</label>
+      <div class="prop-head"><span>属性名</span><span>类型</span><span>选项(用逗号分隔,select 用)</span><span>必填</span><span></span></div>
+      <div id="propList"></div>
+      <button class="btn ghost sm" onclick="addProp()">+ 添加属性</button>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeEdit()">取消</button>
+      <button class="btn" onclick="saveCat()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let cats=[
+  {id:'C1',name:'光伏设备',type:'光伏',props:[{name:'额定功率',type:'text',opts:'',req:true},{name:'电池容量',type:'text',opts:'',req:true},{name:'防护等级',type:'select',opts:'IP65,IP67',req:false}]},
+  {id:'C2',name:'电池',type:'电池',props:[{name:'标称电压',type:'text',opts:'',req:true},{name:'容量',type:'text',opts:'',req:true},{name:'循环次数',type:'number',opts:'',req:false}]},
+  {id:'C3',name:'无人机',type:'无人机',props:[{name:'载重',type:'text',opts:'',req:true},{name:'续航',type:'text',opts:'',req:true},{name:'飞行分钟',type:'number',opts:'',req:false}]}
+];
+let editId=null,editProps=[];
+function renderCats(){
+  document.getElementById('catBody').innerHTML=cats.map(c=>`
+    <tr>
+      <td><b>${c.name}</b></td>
+      <td>${c.type||'—'}</td>
+      <td>${c.props.map(p=>`<span class="tag">${p.name}${p.req?'*':''}</span>`).join(' ')}</td>
+      <td><div class="row-ops">
+        <button class="btn ghost sm" onclick="openEdit('${c.id}')">编辑</button>
+        <button class="btn sm" style="background:#ff4d4f" onclick="delCat('${c.id}')">删除</button>
+      </div></td>
+    </tr>`).join('');
+}
+function delCat(id){if(confirm('删除类别将同步移除其属性定义，已发布商品的历史数据保留。确认？')){cats=cats.filter(c=>c.id!==id);renderCats();}}
+function openEdit(id){
+  editId=id||null;
+  document.getElementById('catModalTitle').textContent=id?'编辑类别':'新增类别';
+  if(id){const c=cats.find(x=>x.id===id);document.getElementById('mName').value=c.name;document.getElementById('mType').value=c.type||'';editProps=c.props.map(p=>({...p}));}
+  else{document.getElementById('mName').value='';document.getElementById('mType').value='';editProps=[{name:'',type:'text',opts:'',req:false}];}
+  renderProps();document.getElementById('catMask').style.display='flex';
+}
+function closeEdit(){document.getElementById('catMask').style.display='none';}
+function renderProps(){
+  document.getElementById('propList').innerHTML=editProps.map((p,i)=>`
+    <div class="prop-row">
+      <input placeholder="属性名" value="${p.name}" oninput="editProps[${i}].name=this.value">
+      <select onchange="editProps[${i}].type=this.value"><option value="text" ${p.type==='text'?'selected':''}>文本</option><option value="number" ${p.type==='number'?'selected':''}>数字</option><option value="select" ${p.type==='select'?'selected':''}>下拉</option></select>
+      <input placeholder="选项,逗号分隔" value="${p.opts||''}" oninput="editProps[${i}].opts=this.value">
+      <input type="checkbox" ${p.req?'checked':''} onchange="editProps[${i}].req=this.checked" title="必填">
+      <button class="btn sm" style="background:#ff4d4f" onclick="editProps.splice(${i},1);renderProps()">×</button>
+    </div>`).join('');
+}
+function addProp(){editProps.push({name:'',type:'text',opts:'',req:false});renderProps();}
+function saveCat(){
+  const name=document.getElementById('mName').value.trim();
+  if(!name){alert('请填写类别名称');return;}
+  const type=document.getElementById('mType').value;
+  const props=editProps.filter(p=>p.name.trim()).map(p=>({name:p.name.trim(),type:p.type,opts:p.type==='select'?p.opts:'',req:p.req}));
+  if(editId){const c=cats.find(x=>x.id===editId);c.name=name;c.type=type;c.props=props;}
+  else{cats.push({id:'C'+Date.now().toString().slice(-4),name,type,props});}
+  renderCats();closeEdit();
+}
+renderCats();
+</script>
+</body>
+</html>

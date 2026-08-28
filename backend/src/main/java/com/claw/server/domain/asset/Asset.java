@@ -40,6 +40,14 @@ public class Asset {
     private Long skuId;          // SKU
     private String serialNumber; // 序列号（出厂）
 
+    /** 订单项溯源（V38：资产从哪个订单项登记生成；非订单资产为 null）。 */
+    @Column(name = "order_item_id")
+    private Long orderItemId;
+
+    /** 当前主部件编号快照（V38：JSON 数组，结构见设计 §2.4；随更换更新）。 */
+    @Column(name = "component_nos_json")
+    private String componentNosJson;
+
     private Long ownerId;   // 管理人
     private Long userId;    // 当前使用人
 

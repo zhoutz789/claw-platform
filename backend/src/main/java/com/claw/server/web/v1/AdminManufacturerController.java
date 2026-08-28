@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -92,8 +93,7 @@ public class AdminManufacturerController {
         return ApiResult.ok(productRepository.findAll().stream()
                 .filter(p -> !Boolean.TRUE.equals(p.getDeleted()))
                 .filter(p -> manufacturerId == null || p.getManufacturerId().equals(manufacturerId))
-                .map(p -> new ProductView(p.getId(), p.getManufacturerId(), p.getName(), p.getAssetType(),
-                        p.getModel(), p.getDescription(), p.getStatus()))
+                .map(this::toProductView)
                 .toList());
     }
 
@@ -103,10 +103,20 @@ public class AdminManufacturerController {
             throw new BizException(40401, "manufacturer.not.found");
         Product p = Product.builder().manufacturerId(req.manufacturerId()).name(req.name())
                 .assetType(req.assetType()).model(req.model()).description(req.description())
-                .status(req.status() == null ? "ON_SALE" : req.status()).build();
+                .status(req.status() == null ? "ON_SALE" : req.status())
+                .brand(req.brand()).category(req.category()).paramsJson(req.paramsJson())
+                .coverImagesJson(req.coverImagesJson()).detail(req.detail()).videoUrl(req.videoUrl())
+                .liveEnabled(req.liveEnabled() != null && req.liveEnabled())
+                .liveUrl(req.liveUrl())
+                .rewardRate(req.rewardRate() != null ? req.rewardRate() : BigDecimal.ZERO)
+                .build();
         p = productRepository.save(p);
-        return ApiResult.ok(new ProductView(p.getId(), p.getManufacturerId(), p.getName(), p.getAssetType(),
-                p.getModel(), p.getDescription(), p.getStatus()));
+        // 生成唯一分享码（需先落库拿到自增 id）
+        if (p.getShareCode() == null) {
+            p.setShareCode("P" + p.getId());
+            p = productRepository.save(p);
+        }
+        return ApiResult.ok(toProductView(p));
     }
 
     @PutMapping("/products/{id}")
@@ -118,10 +128,36 @@ public class AdminManufacturerController {
         if (req.model() != null) p.setModel(req.model());
         if (req.description() != null) p.setDescription(req.description());
         if (req.status() != null) p.setStatus(req.status());
+        if (req.brand() != null) p.setBrand(req.brand());
+        if (req.category() != null) p.setCategory(req.category());
+        if (req.paramsJson() != null) p.setParamsJson(req.paramsJson());
+        if (req.coverImagesJson() != null) p.setCoverImagesJson(req.coverImagesJson());
+        if (req.detail() != null) p.setDetail(req.detail());
+        if (req.videoUrl() != null) p.setVideoUrl(req.videoUrl());
+        if (req.liveEnabled() != null) p.setLiveEnabled(req.liveEnabled());
+        if (req.liveUrl() != null) p.setLiveUrl(req.liveUrl());
+        if (req.rewardRate() != null) p.setRewardRate(req.rewardRate());
         p.setUpdatedAt(Instant.now());
         p = productRepository.save(p);
-        return ApiResult.ok(new ProductView(p.getId(), p.getManufacturerId(), p.getName(), p.getAssetType(),
-                p.getModel(), p.getDescription(), p.getStatus()));
+        return ApiResult.ok(toProductView(p));
+    }
+
+    @GetMapping("/products/{id}")
+    public ApiResult<ProductView> getProduct(@PathVariable Long id) {
+        Product p = productRepository.findById(id).orElseThrow(() -> new BizException(40401, "product.not.found"));
+        return ApiResult.ok(toProductView(p));
+    }
+
+    @PostMapping("/products/{id}/share")
+    public ApiResult<Map<String, String>> createShare(@PathVariable Long id) {
+        Product p = productRepository.findById(id).orElseThrow(() -> new BizException(40401, "product.not.found"));
+        if (p.getShareCode() == null) {
+            p.setShareCode("P" + p.getId());
+            p.setUpdatedAt(Instant.now());
+            p = productRepository.save(p);
+        }
+        String code = p.getShareCode();
+        return ApiResult.ok(Map.of("shareCode", code, "shareUrl", "https://claw.app/g/" + code));
     }
 
     @DeleteMapping("/products/{id}")
@@ -271,6 +307,14 @@ public class AdminManufacturerController {
         return new PurchaseOrderView(o.getId(), o.getOrderNo(), o.getProductId(), o.getSkuId(), o.getBuyerId(),
                 o.getQty(), o.getUnitPrice(), o.getTotalAmount(), o.getCurrency(), o.getStatus(),
                 o.getPaidAt(), o.getShippedAt());
+    }
+
+    private ProductView toProductView(Product p) {
+        return new ProductView(p.getId(), p.getManufacturerId(), p.getName(), p.getAssetType(),
+                p.getModel(), p.getDescription(), p.getStatus(),
+                p.getBrand(), p.getCategory(), p.getParamsJson(), p.getCoverImagesJson(),
+                p.getDetail(), p.getVideoUrl(), p.isLiveEnabled(), p.getLiveUrl(),
+                p.getShareCode(), p.getRewardRate());
     }
 
     /* ===================== 资产溯源 + 全生命周期数据 ===================== */

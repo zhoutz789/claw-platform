@@ -21,7 +21,9 @@ public final class ManufacturerDtos {
     }
 
     public record ProductView(Long id, Long manufacturerId, String name, AssetType assetType,
-                              String model, String description, String status) {
+                              String model, String description, String status, String brand, String category,
+                              String paramsJson, String coverImagesJson, String detail, String videoUrl,
+                              Boolean liveEnabled, String liveUrl, String shareCode, BigDecimal rewardRate) {
     }
 
     public record ProductSkuView(Long id, Long productId, String skuCode, BigDecimal price,
@@ -61,7 +63,9 @@ public final class ManufacturerDtos {
     }
 
     public record UpsertProduct(Long manufacturerId, String name, AssetType assetType, String model,
-                                String description, String status) {
+                                String description, String status, String brand, String category,
+                                String paramsJson, String coverImagesJson, String detail, String videoUrl,
+                                Boolean liveEnabled, String liveUrl, BigDecimal rewardRate) {
     }
 
     public record UpsertSku(Long productId, String skuCode, BigDecimal price, String currency,

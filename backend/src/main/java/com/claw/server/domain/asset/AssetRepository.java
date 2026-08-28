@@ -19,4 +19,10 @@ public interface AssetRepository extends JpaRepository<Asset, Long> {
 
     @Query("SELECT a.status, COUNT(a) FROM Asset a WHERE a.deleted = false GROUP BY a.status")
     List<Object[]> countGroupByStatus();
+
+    /** 产品下所有设备（点 1/4：产品中心内联设备列表）。 */
+    List<Asset> findByProductId(Long productId);
+
+    /** 按订单项溯源资产（V38：资产→订单项反向查询）。 */
+    List<Asset> findByOrderItemId(Long orderItemId);
 }

@@ -5,6 +5,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.AuthorityUtils;
@@ -23,6 +24,13 @@ import java.io.IOException;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+
+    /**
+     * 仅开发态生效：无有效 token 时注入虚拟操作员，使 requireOperator()/AuthContext
+     * 在本地直连真实库体验时不抛未认证。生产态（false）不注入，必须合法 JWT。
+     */
+    @Value("${claw.security.dev-open-access:false}")
+    private boolean devOpenAccess;
 
     public JwtAuthFilter(JwtUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
@@ -48,6 +56,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 SecurityContextHolder.clearContext();
             }
         }
+
+        // 开发态：未携带有效 token 时填充虚拟操作员，便于全链路真实库体验。
+        if (devOpenAccess && SecurityContextHolder.getContext().getAuthentication() == null) {
+            ClawUser dev = new ClawUser(1L, "dev-operator", "OPERATOR");
+            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                    dev, null, AuthorityUtils.createAuthorityList(ClawUser.AUTHORITY_USER));
+            auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(auth);
+        }
+
         chain.doFilter(request, response);
     }
 }

@@ -3,7 +3,9 @@ package com.claw.server.common.enums;
 /** 资产类型（对应 assets.asset_type）。 */
 public enum AssetType {
     VEHICLE,
+    EV,
     BATTERY,
     CHARGER,
-    PV_STATION
+    PV_STATION,
+    DRONE
 }

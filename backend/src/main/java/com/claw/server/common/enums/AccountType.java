@@ -18,5 +18,7 @@ public enum AccountType {
     /** 电池基金专户（换电基金计提归集）。 */
     BATTERY_FUND,
     /** 车辆风险准备金专户（分期违约风险缓冲）。 */
-    VEHICLE_RISK
+    VEHICLE_RISK,
+    /** 项目专属核算账户（V36 项目管理域：每项目一账户，走 ledger 双记账）。 */
+    PROJECT
 }

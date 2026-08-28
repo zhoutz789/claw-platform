@@ -3,6 +3,7 @@ import { getToken } from './auth';
 import Login from './pages/Login';
 import AdminLayout from './layout/AdminLayout';
 import Dashboard from './pages/Dashboard';
+import Workbench from './pages/Workbench';
 import Orders from './pages/Orders';
 import Stations from './pages/Stations';
 import Assets from './pages/Assets';
@@ -30,16 +31,43 @@ import Recovery from './pages/Recovery';
 import Insurance from './pages/Insurance';
 import Operator from './pages/Operator';
 import SharedPool from './pages/SharedPool';
+import ProductIot from './pages/ProductIot';
+import ProductCenter from './pages/ProductCenter';
+import ProjectManagement from './pages/ProjectManagement';
+import GoodsList from './pages/GoodsList';
+import ProductWizard from './pages/ProductWizard';
+import Certificate from './pages/Certificate';
+import BindOwnership from './pages/BindOwnership';
+import DeviceDataAccess from './pages/DeviceDataAccess';
+import BrandOnboarding from './pages/BrandOnboarding';
+import MenuPermission from './pages/MenuPermission';
+import MenuManager from './pages/MenuManager';
+import AssetParams from './pages/AssetParams';
+import AppPortal from './pages/AppPortal';
+// —— 子菜单化：新增包装页 / 独立子菜单页 ——
+import ProductTemplate from './pages/ProductTemplate';
+import Authorization from './pages/Authorization';
+import ProductPublish from './pages/ProductPublish';
+import OrderManage from './pages/OrderManage';
+import TaskDrone from './pages/TaskDrone';
+import TaskLogi from './pages/TaskLogi';
+import TaskAd from './pages/TaskAd';
+import TaskVideo from './pages/TaskVideo';
+import TaskRent from './pages/TaskRent';
+import TaskNear from './pages/TaskNear';
+import ErrorBoundary from './ErrorBoundary';
 
 export default function App() {
   const authed = getToken();
   return (
     <HashRouter>
+      <ErrorBoundary>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={authed ? <AdminLayout /> : <Navigate to="/login" replace />}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
+          <Route index element={<Navigate to="/workbench" replace />} />
+          <Route path="workbench" element={<Workbench />} />
+          <Route path="dashboard" element={<Workbench />} />
           <Route path="orders" element={<Orders />} />
           <Route path="stations" element={<Stations />} />
           <Route path="assets" element={<Assets />} />
@@ -67,9 +95,37 @@ export default function App() {
           <Route path="roles" element={<Roles />} />
           <Route path="permission" element={<Permission />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="product-iot" element={<ProductIot />} />
+          <Route path="product-center" element={<ProductCenter />} />
+          <Route path="project-management" element={<ProjectManagement />} />
+          <Route path="certificate" element={<Certificate />} />
+          <Route path="bind-ownership" element={<BindOwnership />} />
+          <Route path="device-data-access" element={<DeviceDataAccess />} />
+          {/* 任务发布中心：6 个独立子页（原 /task-publish 已拆分） */}
+          <Route path="task-drone" element={<TaskDrone />} />
+          <Route path="task-logi" element={<TaskLogi />} />
+          <Route path="task-ad" element={<TaskAd />} />
+          <Route path="task-video" element={<TaskVideo />} />
+          <Route path="task-rent" element={<TaskRent />} />
+          <Route path="task-near" element={<TaskNear />} />
+          {/* 产品管理子菜单：独立子页 */}
+          <Route path="product-template" element={<ProductTemplate />} />
+          <Route path="authorization" element={<Authorization />} />
+          {/* 旧 device-detail / device-twin 已被 ProductCenter 取代，路由移除 */}
+          {/* 商品管理子菜单：独立子页 */}
+          <Route path="goods-list" element={<GoodsList />} />
+          <Route path="product-wizard" element={<ProductWizard />} />
+          <Route path="product-publish" element={<ProductPublish />} />
+          <Route path="order-manage" element={<OrderManage />} />
+          <Route path="brand-onboarding" element={<BrandOnboarding />} />
+          <Route path="app-portal" element={<AppPortal />} />
+          <Route path="menu-permission" element={<MenuPermission />} />
+          <Route path="menu-manager" element={<MenuManager />} />
+          <Route path="asset-params" element={<AssetParams />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
+      </ErrorBoundary>
     </HashRouter>
   );
 }

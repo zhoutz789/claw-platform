@@ -11,5 +11,6 @@ public enum TransferType {
     SHARED_POOL_EXIT,
     RECOVERY,
     TRADE_IN,
-    INITIAL_PURCHASE
+    INITIAL_PURCHASE,
+    DEPLOY       // 设备上线部署（绑定到站点/产权人，产权链首笔）
 }

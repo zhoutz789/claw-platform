@@ -3,6 +3,7 @@ package com.claw.server.web.v1;
 import com.claw.server.common.api.ApiResult;
 import com.claw.server.common.dto.ApiViews;
 import com.claw.server.common.dto.AssetRequests;
+import com.claw.server.common.dto.AssetRequests.ReplaceComponentReq;
 import com.claw.server.common.enums.AssetStatus;
 import com.claw.server.common.enums.AssetType;
 import com.claw.server.common.security.AuthContext;
@@ -33,6 +34,11 @@ public class AssetController {
         return ApiResult.ok(assetService.createBattery(req, requireOperator()));
     }
 
+    @PostMapping("/drone")
+    public ApiResult<ApiViews.AssetView> createDrone(@Valid @RequestBody AssetRequests.CreateDrone req) {
+        return ApiResult.ok(assetService.createDrone(req, requireOperator()));
+    }
+
     @GetMapping
     public ApiResult<List<ApiViews.AssetView>> list(@RequestParam(required = false) AssetType assetType,
                                                     @RequestParam(required = false) AssetStatus status) {
@@ -59,6 +65,28 @@ public class AssetController {
     @PostMapping("/{id}/functions")
     public ApiResult<String> openFunction(@PathVariable Long id) {
         return ApiResult.ok(assetService.openFunction(id, requireOperator()));
+    }
+
+    /** 设备上线部署（绑定到站点/产权人，写产权链首笔 + 补建 IoT 设备行）。 */
+    @PostMapping("/{id}/bind")
+    public ApiResult<ApiViews.AssetView> bindDevice(@PathVariable Long id,
+                                                    @Valid @RequestBody AssetRequests.BindDevice req) {
+        return ApiResult.ok(assetService.bindDevice(req, requireOperator()));
+    }
+
+    /** 资产全生命周期轨迹（闭环溯源）。 */
+    @GetMapping("/{id}/lifecycle")
+    public ApiResult<List<com.claw.server.domain.asset.AssetLifecycleEvent>> lifecycle(@PathVariable Long id) {
+        return ApiResult.ok(assetService.getLifecycle(id));
+    }
+
+    /** 主部件更换留痕（F7.4 / F16.5）：更新资产当前主部件快照 + 写维修记录。 */
+    @PostMapping("/{id}/components/replace")
+    public ApiResult<Void> replaceComponent(@PathVariable Long id,
+                                            @Valid @RequestBody ReplaceComponentReq req) {
+        assetService.replaceComponent(id, req.componentType(), req.oldComponentNo(),
+                req.newComponentNo(), requireOperator());
+        return ApiResult.ok();
     }
 
     private Long requireOperator() {

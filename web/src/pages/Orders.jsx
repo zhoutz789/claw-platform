@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Tabs, Table, Button, Tag, message, Modal, Form, Select, Input } from 'antd';
 import PageCard from '../components/PageCard';
 import api from '../api';
 import { SWAP_STATUS, RENTAL_ORDER_STATUS } from '../enums';
+import { listCustomerOrders } from '../api/order';
 
 const swapColumns = [
   { title: 'ID', dataIndex: 'id', width: 70 },
@@ -37,7 +39,7 @@ const rentalColumns = [
   { title: '保险', dataIndex: 'insuranceShare', render: (v) => `$${v}` },
 ];
 
-function SwapPanel() {
+export function SwapPanel() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -85,7 +87,7 @@ function SwapPanel() {
   );
 }
 
-function RentalPanel() {
+export function RentalPanel() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   useEffect(() => {
@@ -93,6 +95,42 @@ function RentalPanel() {
     api.get('/v1/admin/orders/rental').then(setData).catch((e) => message.error(e.message)).finally(() => setLoading(false));
   }, []);
   return <Table rowKey="id" loading={loading} dataSource={data} columns={rentalColumns} pagination={{ pageSize: 10 }} size="middle" scroll={{ x: 'max-content' }} />;
+}
+
+export function CustomerOrdersPanel() {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const load = () => {
+    setLoading(true);
+    listCustomerOrders().then((d) => setData(Array.isArray(d) ? d : []))
+      .catch((e) => message.error(e.message))
+      .finally(() => setLoading(false));
+  };
+  useEffect(load, []);
+
+  const columns = [
+    { title: 'ID', dataIndex: 'id', width: 70 },
+    { title: '订单号', dataIndex: 'orderNo', width: 160 },
+    { title: '买家', dataIndex: 'buyerUserId', width: 90 },
+    { title: '状态', dataIndex: 'status', width: 110, render: (v) => <Tag>{v}</Tag> },
+    {
+      title: '操作', width: 110,
+      render: (_, r) => (
+        <Button size="small" type="link" onClick={() => navigate(`/order-manage?orderId=${r.id}`)}>
+          去登记
+        </Button>
+      ),
+    },
+  ];
+
+  return (
+    <PageCard title="客户订单" subtitle="选择订单进入发货前逐台登记">
+      <Table rowKey="id" loading={loading} dataSource={data} columns={columns}
+        pagination={{ pageSize: 10 }} size="middle" scroll={{ x: 'max-content' }} />
+    </PageCard>
+  );
 }
 
 export default function Orders() {
@@ -113,6 +151,10 @@ export default function Orders() {
             <RentalPanel />
           </PageCard>
         ),
+      },
+      {
+        key: 'customer', label: '客户订单',
+        children: <CustomerOrdersPanel />,
       },
     ]} />
   );

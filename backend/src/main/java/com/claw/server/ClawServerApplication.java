@@ -2,6 +2,7 @@ package com.claw.server;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Claw 新能源资产全生命周期运营管理平台 — 模块化单体入口。
@@ -18,6 +19,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  *  domain.report      报表域（大屏/对账）
  */
 @SpringBootApplication
+@EnableScheduling
 public class ClawServerApplication {
 
     public static void main(String[] args) {

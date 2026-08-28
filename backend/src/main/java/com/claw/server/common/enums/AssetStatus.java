@@ -10,5 +10,8 @@ public enum AssetStatus {
     SHARED,     // 共享中
     REPAIR,     // 维修中
     DISABLED,   // 停用
-    SCRAPPED    // 报废
+    RETIRED,    // 退役（结束服务，待回收/残值评估）
+    RECYCLED,   // 回收（梯次利用/残值返还流程中）
+    SCRAPPED,   // 报废（销毁，终态）
+    LISTED      // 资产大厅·公开可见（V36 转让至资产大厅）
 }

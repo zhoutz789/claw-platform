@@ -18,7 +18,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
- * IoT 域单元测试：遥测上报（更新 latest + 落轨迹）、轨迹查询、设备不存在拒绝。
+ * IoT 域单元测试：遥测上报（更新 latest + 落轨迹 + 联动编排）、轨迹查询、设备不存在拒绝。
  */
 @ExtendWith(MockitoExtension.class)
 class IoTServiceTest {
@@ -26,6 +26,8 @@ class IoTServiceTest {
     @Mock private DeviceRepository deviceRepository;
     @Mock private TelemetryLatestRepository telemetryLatestRepository;
     @Mock private TrackRepository trackRepository;
+    @Mock private DeviceLinkageEventRepository linkageEventRepository;
+    @Mock private TelemetryLinkageService linkageService;
     @InjectMocks private IoTService service;
 
     private Device device() {
@@ -36,7 +38,7 @@ class IoTServiceTest {
     private IoTRequests.TelemetryReport report() {
         return new IoTRequests.TelemetryReport("IMEI-B001", new BigDecimal("30.00"),
                 new BigDecimal("80.00"), new BigDecimal("35.5"), new BigDecimal("60.0"),
-                "[\"BMS_OVERTEMP\"]", new BigDecimal("11.56"), new BigDecimal("104.89"));
+                "[\"BMS_OVERTEMP\"]", new BigDecimal("11.56"), new BigDecimal("104.89"), null);
     }
 
     @Test
@@ -72,7 +74,7 @@ class IoTServiceTest {
         when(deviceRepository.findByImei("IMEI-UNKNOWN")).thenReturn(Optional.empty());
 
         assertThrows(Exception.class, () -> service.reportTelemetry(
-                new IoTRequests.TelemetryReport("IMEI-UNKNOWN", null, null, null, null, null, null, null)));
+                new IoTRequests.TelemetryReport("IMEI-UNKNOWN", null, null, null, null, null, null, null, null)));
         verify(trackRepository, never()).save(any());
     }
 

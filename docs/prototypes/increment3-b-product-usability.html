@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>爪平台 · 产品中心 + 设备全功能菜单 · 集成原型 (B 期 v4 修正)</title>
+<style>
+  :root{--primary:#1677ff;--border:#e5e7eb;--bg:#f5f6f8;--text:#1f2329;--muted:#8a9099;}
+  *{box-sizing:border-box;font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;}
+  body{margin:0;background:var(--bg);color:var(--text);}
+  .layout{display:flex;min-height:100vh;}
+  .sider{width:220px;background:#001529;color:#fff;padding:16px 0;}
+  .logo{padding:0 20px 16px;font-size:18px;font-weight:700;color:#fff;}
+  .menu{padding:0;list-style:none;margin:0;}
+  .menu .group{font-size:12px;color:#7a8390;padding:12px 20px 4px;}
+  .menu li{padding:10px 20px;cursor:pointer;font-size:14px;}
+  .menu li.active{background:var(--primary);}
+  .main{flex:1;display:flex;flex-direction:column;}
+  .header{height:56px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;}
+  .content{padding:20px;}
+  .card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:16px;}
+  .btn{background:var(--primary);color:#fff;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:13px;}
+  .btn.ghost{background:#fff;color:var(--primary);border:1px solid var(--primary);}
+  .btn.danger{background:#ff4d4f;color:#fff;}
+  .btn.sm{padding:3px 10px;font-size:12px;}
+  .toolbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;}
+  .search{width:260px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;}
+  .prod-item{padding:12px 14px;border:1px solid var(--border);border-radius:6px;margin-bottom:10px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+  .prod-item:hover{border-color:var(--primary);background:#f0f6ff;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);}
+  th{background:#fafafa;color:var(--muted);font-weight:600;}
+  .tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;background:#e6f0ff;color:var(--primary);}
+  .tag.green{background:#e8f7ee;color:#18a058;}
+  .tag.orange{background:#fff3e0;color:#d46b08;}
+  .tag.gray{background:#f0f0f0;color:#8a9099;}
+  .row-ops{display:flex;gap:6px;}
+  .note{font-size:12px;color:var(--muted);margin-top:8px;}
+  .pill{font-size:11px;background:#fff3e0;color:#d46b08;padding:1px 6px;border-radius:4px;}
+  .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 12px;font-size:13px;}
+  .kv .k{color:var(--muted);}
+  .mask{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;padding:40px 0;z-index:50;overflow:auto;}
+  .modal{background:#fff;width:920px;border-radius:8px;padding:24px;}
+  .modal h3{margin:0 0 14px;}
+  .modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;border-top:1px solid var(--border);padding-top:14px;}
+  .field-head,.field-row{display:grid;grid-template-columns:1.2fr 1fr 1.4fr 1fr 36px;gap:6px;align-items:center;margin-bottom:8px;}
+  .field-head{font-size:12px;color:var(--muted);}
+  .field-row input,.field-row select{padding:6px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;}
+
+  /* 设备详情：左侧菜单 + 右侧（上：白底图+实时数据 / 下：菜单内容） */
+  .dev-mask{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:60;}
+  .dev-panel{background:#fff;width:1040px;height:700px;border-radius:8px;display:flex;flex-direction:column;overflow:hidden;}
+  .dev-head{height:54px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex:none;}
+  .dev-head b{font-size:15px;}
+  .dev-wrap{flex:1;display:flex;min-height:0;}
+  .dev-nav{width:200px;border-right:1px solid var(--border);padding:12px 0;overflow:auto;flex:none;}
+  .dev-nav .nt{font-size:12px;color:var(--muted);padding:8px 16px 4px;}
+  .dev-nav ul{list-style:none;margin:0;padding:0;}
+  .dev-nav li{padding:11px 16px;cursor:pointer;font-size:14px;display:flex;align-items:center;gap:8px;border-left:3px solid transparent;}
+  .dev-nav li:hover{background:#f5f7fa;}
+  .dev-nav li.active{background:#e6f0ff;color:var(--primary);border-left-color:var(--primary);font-weight:600;}
+  .dev-main{flex:1;display:flex;flex-direction:  column;min-width:0;}
+  .dev-top{display:flex;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);flex:none;align-items:stretch;}
+  .white-img{width:150px;border:1px dashed var(--border);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);font-size:12px;background:#fafbfc;cursor:pointer;}
+  .white-img:hover{border-color:var(--primary);color:var(--primary);}
+  .white-img .ph{width:100px;height:84px;background:#fff;border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;font-size:18px;}
+  .rt-entry{flex:1;border:1px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:14px;cursor:pointer;background:#fff;}
+  .rt-entry:hover{border-color:var(--primary);}
+  .rt-entry .ic{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;background:#1677ff;}
+  .rt-entry .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);}
+  .rt-entry .l{font-size:12px;color:var(--muted);}
+  .rt-entry .arrow{margin-left:auto;color:var(--primary);font-size:13px;}
+  .dev-content{flex:1;padding:16px;overflow:auto;}
+  .dev-content h3{margin:0 0 12px;font-size:15px;}
+  .map-box{flex:1;border-radius:8px;background:linear-gradient(135deg,#e8f0ff,#f6f8fa);border:1px solid var(--border);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;min-height:200px;}
+  .map-dot{position:absolute;width:14px;height:14px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 5px rgba(22,119,255,.2);}
+  .task-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .task-card{border:1px solid var(--border);border-radius:8px;padding:14px;}
+  .task-card .earn{color:#18a058;font-weight:600;font-size:15px;}
+  .thumb{width:56px;height:56px;border:1px solid var(--border);border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;margin-right:6px;}
+  .toggle{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px dashed var(--border);}
+  .warn-box{background:#fffbe6;border:1px solid #ffe58f;border-radius:6px;padding:10px 12px;font-size:12px;color:#ad6800;margin-bottom:12px;}
+  .rt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:16px;}
+  .rt-cell{border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:4px;background:#fff;}
+  .rt-cell .ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;}
+  .rt-cell .v{font-size:18px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;}
+  .rt-cell .l{font-size:12px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sider">
+    <div class="logo">爪平台 · 管理后台</div>
+    <ul class="menu">
+      <li>工作台</li>
+      <li class="group">产品管理（A 期后端已就绪）</li>
+      <li class="active">产品中心</li>
+      <li>产品模板字段</li>
+      <li class="group">物联网 / 资产</li>
+      <li>资产大厅</li>
+      <li>项目管理（C 期）</li>
+      <li class="group">商品 / 订单</li>
+      <li>商品管理（D 期）</li>
+      <li>订单管理（E 期）</li>
+      <li class="group">系统</li>
+      <li>系统设置</li>
+    </ul>
+  </aside>
+  <main class="main">
+    <header class="header">
+      <div><b>产品中心</b> <span class="pill">B 期 v4 修正</span> <span class="note">列表/查询/新建/编辑/删除 → 点产品弹窗看设备 → 点设备行进功能菜单（左：菜单页 / 右：白底图+实时数据 / 菜单内容）</span></div>
+      <div>管理员</div>
+    </header>
+    <div class="content">
+      <section class="card">
+        <div class="toolbar">
+          <input class="search" id="q" placeholder="查询产品（名称/类别/品牌）" oninput="renderList()">
+          <button class="btn" onclick="openEdit()">+ 新建产品</button>
+        </div>
+        <div id="prodList"></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="mask" id="prodMask">
+  <div class="modal">
+    <h3 id="prodModalTitle">新建产品</h3>
+    <div class="form-row" style="margin-bottom:12px;"><label>产品名称</label><input id="pName" placeholder="如：光伏储能一体机 X1" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;"></div>
+    <div class="form-row" style="margin-bottom:12px;"><label>位置上报间隔（秒）</label><input id="pInterval" type="number" value="30" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;"></div>
+    <div class="form-row"><label>产品字段定义（类似类别管理 · 增删改查；可勾选「实时API绑定」并选数据源，绑定后该字段在详情实时数据刷新）</label>
+      <div class="field-head"><span>字段名</span><span>类型</span><span>选项(select用,逗号)</span><span>实时API绑定</span><span></span></div>
+      <div id="fieldList"></div>
+      <button class="btn ghost sm" onclick="addField()">+ 添加字段</button>
+    </div>
+    <div class="modal-foot"><button class="btn ghost" onclick="closeEdit()">取消</button><button class="btn" onclick="saveProd()">保存</button></div>
+  </div>
+</div>
+
+<div class="mask" id="devListMask">
+  <div class="modal" style="width:980px;">
+    <h3 id="devListTitle">产品设备</h3>
+    <div id="devListHead" class="note"></div>
+    <div class="toolbar" style="margin-top: 10px;"><input class="search" id="dq" placeholder="查询设备（名称/位置/所有人/项目）" oninput="renderDevList()"></div>
+    <table>
+      <thead><tr><th>设备名称</th><th>当前位置</th><th>当前所有人</th><th>当前使用人</th><th>状态</th><th>关键字段</th><th>所在项目</th><th>操作</th></tr></thead>
+      <tbody id="devListBody"></tbody>
+    </table>
+    <div class="modal-foot"><button class="btn" onclick="closeDevList()">关闭</button></div>
+  </div>
+</div>
+
+<div class="dev-mask" id="devMask">
+  <div class="dev-panel">
+    <div class="dev-head">
+      <div><b>设备详情</b> · <span id="devTitleName"></span></div>
+      <div style="display:flex;gap:8px;"><button class="btn ghost sm" onclick="openMenuMng()">菜单管理</button><button class="btn ghost sm" onclick="closeDevMenu()">关闭</button></div>
+    </div>
+    <div class="dev-wrap">
+      <aside class="dev-nav">
+        <div class="nt">功能菜单</div>
+        <ul id="devNav"></ul>
+      </aside>
+      <div class="dev-main">
+        <div class="dev-top">
+          <div class="white-img" onclick="gotoProduct()" title="点击查看商品链接">
+            <div class="ph">🖼️</div>
+            <div>白底图 · 点我看商品</div>
+          </div>
+          <div class="rt-entry" onclick="selectMenu('rt')" title="进入实时数据与位置">
+            <div class="ic">📊</div>
+            <div>
+              <div class="v" id="rt_SOC">—</div>
+              <div class="l">实时数据 → 数据与位置</div>
+            </div>
+            <div class="arrow">进入 ›</div>
+          </div>
+        </div>
+        <div class="dev-content" id="devContent"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mask" id="mngMask">
+  <div class="modal" style="width:480px;">
+    <h3>菜单管理（隐藏不用的功能）</h3>
+    <div id="mngList"></div>
+    <div class="modal-foot"><button class="btn" onclick="closeMenuMng()">完成</button></div>
+  </div>
+</div>
+<div class="mask" id="actMask">
+  <div class="modal" style="width: 480px;">
+    <h3 id="actTitle">操作</h3><div id="actBody"></div>
+    <div class="modal-foot"><button class="btn ghost" onclick="closeAct()">取消</button><button class="btn" onclick="submitAct()">确认</button></div>
+  </div>
+</div>
+<div class="mask" id="maintMask">
+  <div class="modal" style="width:520px;">
+    <h3>维修记录详情</h3><div id="maintBody"></div>
+    <div class="modal-foot"><button class="btn" onclick="closeMaint()">关闭</button></div>
+  </div>
+</div>
+
+<script>
+const ALL_API=['定位','速度','当前电量','电压','温度','湿度','风力','高度'];
+const ICONS={定位:['📍','#1677ff'],速度:['🚀','#722ed1'],当前电量:['🔋','#18a058'],电压:['⚡','#fa8c16'],温度:['🌡','#eb2f96'],湿度:['💧','#13c2c2'],风力:['🌀','#1890ff'],高度:['📏','#2f54eb'],SOC:['🔋','#18a058']};
+let products=[
+  {id:1,name:"光伏储能一体机 X1",category:"光伏",brand:"SunPower",interval:30,
+   fields:[{name:'额定功率',type:'text',opts:'',api:false,apiSource:''},{name:'电池容量',type:'text',opts:'',api:false,apiSource:''},{name:'防护等级',type:'select',opts:'IP65,IP67',api:false,apiSource:''},{name:'当前电量',type:'number',opts:'',api:true,apiSource:'当前电量'},{name:'电压',type:'number',opts:'',api:true,apiSource:'电压'},{name:'温度',type:'number',opts:'',api:true,apiSource:'温度'}],
+   attrs:{额定功率:"5kW",电池容量:"10kWh",防护等级:"IP65"},
+   devices:[
+     {id:"DEV-001",name:"设备-001",status:"运营中",loc:"金边·站点A",soc:82,owner:"平台(资产所有人)",user:"站点A运营",project:"金边光伏电站A",certNo:"CERT-Q-2026-000123",
+      maintRecords:[{id:"M-001",date:"2026-07-12",person:"维修工·李",cost:"$45",process:"逆变器模块过热保护误触发，更换温控传感器并刷新固件。",images:2}],
+      transferRecords:[{date:"2026-06-01",from:"厂家",to:"平台",type:"出厂建档"}],videoRecords:[{date:"2026-08-20",dur:"03:12",type:"巡检"}]},
+     {id:"DEV-002",name:"设备-002",status:"运营中",loc:"金边·站点A",soc:64,owner:"平台(资产所有人)",user:"站点A运营",project:"金边光伏电站A",certNo:"CERT-Q-2026-000124",maintRecords:[],transferRecords:[],videoRecords:[]},
+     {id:"DEV-003",name:"设备-003",status:"维护中",loc:"金边·站点B",soc:11,owner:"平台(资产所有人)",user:"维护组",project:"金边光伏电站B",certNo:"CERT-Q-2026-000125",
+      maintRecords:[{id:"M-002",date:"2026-08-01",person:"维修工·王",cost:"$120",process:"电池组单体电压不均衡，做均衡维护并更换 BMS 采样线。",images:3}],transferRecords:[],videoRecords:[]}
+   ]},
+  {id:2,name:"换电电池包 B2",category:"电池",brand:"CATL",interval:15,
+   fields:[{name:'标称电压',type:'text',opts:'',api:false,apiSource:''},{name:'容量',type:'text',opts:'',api:false,apiSource:''},{name:'当前电量',type:'number',opts:'',api:true,apiSource:'当前电量'},{name:'电压',type:'number',opts:'',api:true,apiSource:'电压'},{name:'温度',type:'number',opts:'',api:true,apiSource:'温度'}],
+   attrs:{标称电压:"48V",容量:"30Ah"},
+   devices:[
+     {id:"BAT-101",name:"电池-101",status:"共享中",loc:"金边·站点C",soc:90,owner:"共享池",user:"用户·陈",project:"金边换电网络C",certNo:"CERT-B-2026-000301",maintRecords:[],transferRecords:[{date:"2026-07-05",from:"平台",to:"共享池",type:"共享池托管"}],videoRecords:[]},
+     {id:"BAT-102",name:"电池-102",status:"运营中",loc:"金边·站点C",soc:47,owner:"平台(资产所有人)",user:"用户·李",project:"金边换电网络C",certNo:"CERT-B-2026-000302",maintRecords:[],transferRecords:[],videoRecords:[]}
+   ]},
+  {id:3,name:"物流无人机 D1",category:"无人机",brand:"DJI",interval:10,
+   fields:[{name:'载重',type:'text',opts:'',api:false,apiSource:''},{name:'续航',type:'text',opts:'',api:false,apiSource:''},{name:'飞行分钟',type:'number',opts:'',api:false,apiSource:''},{name:'定位',type:'text',opts:'',api:true,apiSource:'定位'},{name:'速度',type:'number',opts:'',api:true,apiSource:'速度'},{name:'当前电量',type:'number',opts:'',api:true,apiSource:'当前电量'},{name:'高度',type:'number',opts:'',api:true,apiSource:'高度'},{name:'温度',type:'number',opts:'',api:true,apiSource:'温度'},{name:'湿度',type:'number',opts:'',api:true,apiSource:'湿度'},{name:'风力',type:'number',opts:'',api:true,apiSource:'风力'}],
+   attrs:{载重:"40kg",续航:"18min",飞行分钟:"2680"},
+   devices:[
+     {id:"UAV-201",name:"无人机-201",status:"运营中",loc:"金边·空域Z1",soc:73,owner:"平台(资产所有人)",user:"飞手·张",project:"金边物流航线Z1",certNo:"CERT-U-2026-000501",
+      maintRecords:[{id:"M-003",date:"2026-08-10",person:"飞手·张",cost:"$60",process:"桨叶轻微磨损，更换一对桨叶并做重心校准。",images:2}],transferRecords:[],videoRecords:[{date:"2026-08-15",dur:"01:48",type:"货运"}]}
+   ]}
+];
+
+let cur=null,editId=null,editFields=[];
+let curProd=null,curDev=null,devRight='overview';
+let liveTimer=null;
+const MENUS=[
+  {k:'overview',n:'概况'},{k:'rt',n:'实时数据'},{k:'track',n:'历史轨迹回放'},{k:'fence',n:'电子围栏设置'},{k:'revenue',n:'收益中心'},{k:'maint',n:'维修记录'},{k:'video',n:'录像记录'},{k:'transfer',n:'转让记录'},{k:'ops',n:'设备操作设定'},{k:'cert',n:'合格证'}
+];
+let devMenuOrder=MENUS.map(m=>m.k);
+let menuVisible={};MENUS.forEach(m=>menuVisible[m.k]=true);
+
+/* 产品列表 + 查询 */
+function renderList(){
+  const q=(document.getElementById('q').value||'').trim().toLowerCase();
+  const list=products.filter(p=>!q||(p.name+p.category+p.brand).toLowerCase().includes(q));
+  document.getElementById('prodList').innerHTML=list.map(p=>`
+    <div class="prod-item" onclick="openDevList(${p.id})">
+      <div><b>${p.name}</b><div class="note">${p.category} · ${p.brand} · ${p.devices.length} 台设备 · ${p.fields.filter(f=>f.api).length} 个实时字段</div></div>
+      <div class="row-ops">
+        <button class="btn ghost sm" onclick="event.stopPropagation();openEdit(${p.id})">编辑</button>
+        <button class="btn sm danger" onclick="event.stopPropagation();delProd(${p.id})">删除</button>
+      </div>
+    </div>`).join('')||'<p class="note">无匹配产品</p>';
+}
+/* 新建/编辑产品 */
+function renderFields(){
+  document.getElementById('fieldList').innerHTML=editFields.map((f,i)=>`
+    <div class="field-row">
+      <input placeholder="字段名" value="${f.name}" oninput="editFields[${i}].name=this.value">
+      <select onchange="editFields[${i}].type=this.value"><option value="text" ${f.type==='text'?'selected':''}>文本</option><option value="number" ${f.type==='number'?'selected':''}>数字</option><option value="select" ${f.type==='select'?'selected':''}>下拉</option></select>
+      <input placeholder="选项,逗号" value="${f.opts||''}" oninput="editFields[${i}].opts=this.value">
+      <select onchange="onApiChange(${i},this.value)"><option value="">不绑定</option>${ALL_API.map(s=>`<option value="${s}" ${f.apiSource===s?'selected':''}>${s}</option>`).join('')}</select>
+      <button class="btn sm danger" onclick="editFields.splice(${i},1);renderFields()">×</button>
+    </div>`).join('');
+}
+function onApiChange(i,v){editFields[i].api=!!v;editFields[i].apiSource=v;}
+function addField(){editFields.push({name:'',type:'text',opts:'',api:false,apiSource:''});renderFields();}
+function openEdit(id){
+  editId=id||null;document.getElementById('prodModalTitle').textContent=id?'编辑产品':'新建产品';
+  if(id){const p=products.find(x=>x.id===id);document.getElementById('pName').value=p.name;document.getElementById('pInterval').value=p.interval;editFields=p.fields.map(f=>({...f}));}
+  else{document.getElementById('pName').value='';document.getElementById('pInterval').value=30;editFields=[{name:'额定功率',type:'text',opts:'',api:false,apiSource:''},{name:'当前电量',type:'number',opts:'',api:true,apiSource:'当前电量'}];}
+  renderFields();document.getElementById('prodMask').style.display='flex';
+}
+function closeEdit(){document.getElementById('prodMask').style.display='none';}
+function saveProd(){
+  const name=document.getElementById('pName').value.trim();if(!name){alert('请填写产品名称');return;}
+  const interval=+document.getElementById('pInterval').value||30;
+  const fields=editFields.filter(f=>f.name.trim()).map(f=>({name:f.name.trim(),type:f.type,opts:f.type==='select'?f.opts:'',api:f.api,apiSource:f.api?f.apiSource:''}));
+  if(editId){const p=products.find(x=>x.id===editId);p.name=name;p.interval=interval;p.fields=fields;}else{products.push({id:Date.now(),name,category:'—',brand:'—',interval,fields,attrs:{},devices:[]});}
+  renderList();closeEdit();
+}
+function delProd(id){if(confirm('删除产品将移除其全部字段定义与设备关联，确认？')){products=products.filter(p=>p.id!==id);renderList();}}
+/* 产品 → 设备弹窗 */
+function openDevList(id){
+  curProd=products.find(x=>x.id===id);document.getElementById('dq').value='';
+  document.getElementById('devListTitle').textContent='产品设备 · '+curProd.name;
+  const apiF=curProd.fields.filter(f=>f.api).map(f=>f.apiSource);
+  document.getElementById('devListHead').innerHTML='<b>产品信息：</b>'+curProd.name+'（'+curProd.category+' · '+curProd.brand+'）　<b>共同属性：</b>'+(Object.entries(curProd.attrs).map(([k,v])=>k+':'+v).join('、')||'—')+(apiF.length?'　<b>实时字段：</b>'+apiF.join('、'):'');
+  renderDevList();document.getElementById('devListMask').style.display='flex';
+}
+function closeDevList(){document.getElementById('devListMask').style.display='none';}
+function renderDevList(){
+  const q=(document.getElementById('dq').value||'').trim().toLowerCase();
+  const list=curProd.devices.filter(d=>!q||(d.name+d.loc+d.owner+d.user+d.project).toLowerCase().includes(q));
+  const keyField=curProd.fields.find(f=>f.api);
+  document.getElementById('devListBody').innerHTML=list.map(d=>`
+    <tr style="cursor:pointer" onclick="openDevMenu('${d.id}')">
+      <td><b>${d.name}</b><div class="note">${d.id}</div></td>
+      <td>${d.loc}</td><td>${d.owner}</td><td>${d.user}</td>
+      <td><span class="tag green">${d.status}</span></td>
+      <td>${keyField?keyField.apiSource+' '+liveVal(keyField.apiSource,d):'SOC '+d.soc+'%'}</td>
+      <td>${d.project}</td>
+      <td><div class="row-ops">
+        <button class="btn ghost sm" onclick="event.stopPropagation();openAct('${d.id}','transfer')">转让</button>
+        <button class="btn ghost sm" onclick="event.stopPropagation();openAct('${d.id}','share')">共享</button>
+        <button class="btn ghost sm" onclick="event.stopPropagation();openAct('${d.id}','authorize')">授权</button>
+      </div></td>
+    </tr>`).join('')||'<tr><td colspan="8" class="note">无匹配设备</td></tr>';
+}
+/* 设备功能菜单（左侧菜单页 + 右侧上：白底图/实时数据，下：菜单内容） */
+function openDevMenu(id){
+  curDev=curProd.devices.find(x=>x.id===id);devRight='overview';
+  document.getElementById('devTitleName').textContent=curDev.name+'（'+curDev.id+'）';
+  renderRtEntry();renderNav();renderContent();document.getElementById('devMask').style.display='flex';startLive();
+}
+function closeDevMenu(){stopLive();document.getElementById('devMask').style.display='none';}
+function gotoProduct(){alert('跳转到商品「'+curProd.name+'」详情（D 期商品管理）');}
+function liveVal(src,d){
+  const jit=(b,a,u,dec=0)=>{const v=(b+Math.random()*a-a/2);return (dec?v.toFixed(dec):Math.round(v))+u;};
+  switch(src){case '定位':return d.loc+' (±'+Math.round(Math.random()*5+1)+'m)';case '速度':return jit(12,6,' km/h');case '当前电量':return Math.max(0,Math.min(100,d.soc+Math.round(Math.random()*4-2)))+'%';case '电压':return jit(48,4,' V',1);case '温度':return jit(28,6,' ℃',1);case '湿度':return jit(60,20,' %',0);case '风力':return jit(3,3,' 级',0);case '高度':return jit(80,40,' m',0);default:return '—';}
+}
+function renderRtEntry(){const el=document.getElementById('rt_SOC');if(el)el.textContent=Math.max(0,Math.min(100,curDev.soc+Math.round(Math.random()*4-2)))+'%';}
+function renderNav(){
+  const items=devMenuOrder.filter(k=>menuVisible[k]);
+  document.getElementById('devNav').innerHTML=items.map(k=>`<li class="${k===devRight?'active':''}" onclick="selectMenu('${k}')">${MENUS.find(m=>m.k===k).n}</li>`).join('');
+}
+function selectMenu(k){if(!menuVisible[k])return;devRight=k;renderNav();renderContent();}
+function renderContent(){
+  const p=curProd,d=curDev;let h='';
+  if(devRight==='overview'){
+    h=`<h3>概况 · ${d.name}</h3><div class="kv">
+      <div class="k">设备ID</div><div>${d.id}</div>
+      <div class="k">所属商品</div><div><a href="javascript:void(0)" onclick="gotoProduct()" style="color:var(--primary)">${p.name}（商品链接）</a></div>
+      <div class="k">产品信息</div><div>${p.category} · ${p.brand} · 上报间隔 ${p.interval}s</div>
+      <div class="k">状态</div><div><span class="tag green">${d.status}</span></div>
+      <div class="k">当前所有人</div><div>${d.owner}</div>
+      <div class="k">当前使用人</div><div>${d.user}</div>
+      <div class="k">所在项目</div><div>${d.project}</div>
+      <div class="k">合格证号</div><div>${d.certNo}</div></div>`;
+  }else if(devRight==='rt'){
+    const items=[{k:'SOC',label:'当前电量',val:d.soc+'%'}].concat(p.fields.filter(f=>f.api).map(f=>({k:f.apiSource,label:f.apiSource,val:liveVal(f.apiSource,d)})));
+    h=`<h3>实时数据 · 数据与位置 <span style="font-size:10px;background:#e8f7ee;color:#18a058;padding:1px 6px;border-radius:4px;margin-left:6px;">LIVE</span></h3>
+      <div class="rt-grid">${items.map(it=>{const ic=ICONS[it.k]||['•','#1677ff'];return `<div class="rt-cell"><div class="ic" style="background:${ic[1]}">${ic[0]}</div><div class="v" id="rtd_${it.k}">${it.val}</div><div class="l">${it.label}</div></div>`;}).join('')}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">实时定位（地图）</div>
+      <div class="map-box"><div class="map-dot" style="left:46%;top:52%"></div>实时坐标：<span id="mapLoc">${d.loc}</span></div>
+      <p class="note">LIVE：每 2 秒刷新；接入 EMQX 位置上报 + 地图 SDK。</p>`;
+  }else if(devRight==='track'){
+    h=`<h3>历史轨迹回放</h3><div class="map-box" style="min-height:280px;"><div class="map-dot" style="left:30%;top:40%"></div><div class="map-dot" style="left:55%;top:60%"></div><div class="map-dot" style="left:70%;top:35%"></div>轨迹点占位（按时间轴回放）</div><p class="note">调用 A 期历史位置接口，支持时间轴拖拽回放。</p>`;
+  }else if(devRight==='fence'){
+    h=`<h3>电子围栏设置</h3>
+      <div style="margin-bottom:10px;"><label>围栏名称</label><input style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;" placeholder="如：站点A作业区"></div>
+      <div style="margin-bottom:10px;"><label>形状</label><select style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;"><option>圆形</option><option>多边形</option></select></div>
+      <div style="margin-bottom:10px;"><label>半径（米）</label><input style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;" value="500"></div>
+      <button class="btn" onclick="alert('保存围栏（airspace 域 V29 地理围栏）')">保存围栏</button><p class="note">越界触发告警/锁机（类比车辆断缴锁车，V30 飞行安全管控）。</p>`;
+  }else if(devRight==='revenue'){
+    const tasks=[['物流货运','$30/单'],['客运','$25/趟'],['公交','$18/趟'],['顺风车','$12/单'],['打的','$40/趟'],['广告','$200/周']];
+    h=`<h3>收益中心（与任务接口匹配创造收益）</h3><div class="task-grid">${tasks.map(t=>`<div class="task-card"><div><b>${t[0]}</b></div><div class="earn">${t[1]}</div><div class="note">按兴趣接单 / 按要求运营</div><button class="btn sm" style="margin-top:8px" onclick="alert('进入「${t[0]}」接单（TaskPublish 任务发布域）')">去接单</button></div>`).join('')}</div><p class="note">收益板块对接 TaskPublish 任务发布域，车辆/无人机按订单运营产生收益并进入分账（资产闭环）。</p>`;
+  }else if(devRight==='maint'){
+    h=`<h3>维修记录</h3>${d.maintRecords.length?d.maintRecords.map(m=>`
+      <div style="padding:10px 12px;border:1px solid var(--border);border-radius:6px;margin-bottom:8px;cursor:pointer" onclick="openMaint('${m.id}')">
+        <div style="display:flex;justify-content:space-between;"><b>${m.id}</b><span class="tag orange">${m.cost}</span></div>
+        <div class="note">${m.date} · ${m.person} · ${m.images} 张图</div></div>`).join(''):'<p class="note">暂无维修记录</p>'}<p class="note">点记录看维修过程详情与图片。</p>`;
+  }else if(devRight==='video'){
+    h=`<h3>录像记录</h3>${d.videoRecords.length?d.videoRecords.map(v=>`<div style="padding:10px 12px;border:1px solid var(--border);border-radius:6px;margin-bottom:8px;"><b>${v.type}</b> · ${v.date} · 时长 ${v.dur} <button class="btn ghost sm" onclick="alert('播放录像（对接录像存储）')">播放</button></div>`).join(''):'<p class="note">暂无录像</p>'}`;
+  }else if(devRight==='transfer'){
+    h=`<h3>转让记录</h3>${d.transferRecords.length?d.transferRecords.map(t=>`<div style="padding:10px 12px;border:1px solid var(--border);border-radius:6px;margin-bottom:8px;">${t.date} · ${t.from} → ${t.to} · <span class="tag gray">${t.type}</span></div>`).join(''):'<p class="note">暂无转让记录（C 期 TRANSFER 产权转移将记录于此）</p>'}`;
+  }else if(devRight==='ops'){
+    h=`<h3>设备操作设定</h3><div class="warn-box">⚠〗 远程控制请慎选，误操作可能影响在运资产安全。</div>
+      <div class="toggle"><span>远程锁机</span><input type="checkbox" onchange="alert(this.checked?'已下发锁机指令（类比断缴锁车）':'已解锁')"></div>
+      <div class="toggle"><span>远程重启</span><input type="checkbox" onchange="if(this.checked)alert('已下发重启指令')"></div>
+      <div class="toggle"><span>限速（km/h）</span><input style="width:90px;padding:5px;border:1px solid var(--border);border-radius:5px;" value="40" onchange="alert('限速已设为 '+this.value+' km/h')"></div>`;
+  }else if(devRight==='cert'){
+    h=`<h3>合格证</h3><div class="kv"><div class="k">合格证号</div><div>${d.certNo}</div><div class="k">所属产品</div><div>${p.name}</div><div class="k">状态</div><div><span class="tag green">已签发</span></div></div>
+      <div class="toolbar" style="margin-top:16px;"><button class="btn" onclick="exportCert('${d.certNo}')">导出合格证(PDF)</button><button class="btn ghost" onclick="printCert('${d.certNo}')">打印合格证</button></div>`;
+  }
+  document.getElementById('devContent').innerHTML=h;
+}
+function startLive(){stopLive();liveTimer=setInterval(()=>{if(curDev){const socEl=document.getElementById('rt_SOC');if(socEl)socEl.textContent=Math.max(0,Math.min(100,curDev.soc+Math.round(Math.random()*4-2)))+'%';const dEl=document.getElementById('mapLoc');if(dEl)dEl.textContent=curDev.loc;if(curDev&&devRight==='rt'){const p=curProd;p.fields.filter(f=>f.api).forEach(f=>{const el=document.getElementById('rtd_'+f.apiSource);if(el)el.textContent=liveVal(f.apiSource,curDev);});}},2000);}
+function stopLive(){if(liveTimer){clearInterval(liveTimer);liveTimer=null;}}
+/* 菜单管理 */
+function openMenuMng(){document.getElementById('mngList').innerHTML=MENUS.map(m=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--border);"><input type="checkbox" ${menuVisible[m.k]?'checked':''} onchange="menuVisible['${m.k}']=this.checked;if(!this.checked&&devRight==='${m.k}'){devRight='overview';renderNav();renderContent();}"> <span>${m.n}</span></div>`).join('');document.getElementById('mngMask').style.display='flex';}
+function closeMenuMng(){document.getElementById('mngMask').style.display='none';}
+/* 转让/共享/授权（C 期 ProjectService） */
+let actDev=null,actType=null;
+function openAct(devId,type){actDev=curProd.devices.find(x=>x.id===devId);actType=type;const map={transfer:'转让 (TRANSFER)',share:'共享 (SHARE)',authorize:'授权 (AUTHORIZE)'};document.getElementById('actTitle').textContent=map[type]+' · '+actDev.name;
+  let extra='';if(type==='transfer')extra='<div class="note">TRANSFER 仅转移产权给平台资产大厅（grantee 必须为平台），不动所有权给个人。</div>';
+  if(type==='share')extra='<div style="margin-top:10px;"><label>共享站点</label><input style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;" placeholder="站点ID（SHARE 必填 stationId）"></div>';
+  if(type==='authorize')extra='<div class="note">AUTHORIZE 仅授予使用/运营权，产权不变。</div>';
+  document.getElementById('actBody').innerHTML='<div class="kv"><div class="k">设备</div><div>'+actDev.name+'（'+actDev.id+'）</div><div class="k">当前所有人</div><div>'+actDev.owner+'</div></div>'+extra;document.getElementById('actMask').style.display='flex';}
+function closeAct(){document.getElementById('actMask').style.display='none';}
+function submitAct(){const map={transfer:'转让',share:'共享',authorize:'授权'};alert(map[actType]+'指令已提交（C 期 ProjectService.'+actType.toUpperCase()+'，落授权/项目设备表）');closeAct();}
+/* 维修详情 / 合格证 */
+function openMaint(id){const m=curDev.maintRecords.find(x=>x.id===id);if(!m)return;document.getElementById('maintBody').innerHTML=`<div class="kv"><div class="k">记录ID</div><div>${m.id}</div><div class="k">时间</div><div>${m.date}</div><div class="k">维修人</div><div>${m.person}</div><div class="k">费用</div><div><span class="tag orange">${m.cost}</span></div></div><div style="margin-top:14px;"><label>维修过程</label><div style="background:#fafbfc;border:1px solid var(--border);border-radius:6px;padding:10px;">${m.process}</div></div><div style="margin-top:10px;"><label>维修图片（${m.images} 张）</label><div>${Array.from({length:m.images}).map((_,i)=>`<div class="thumb">图${i+1}</div>`).join('')}</div></div>`;document.getElementById('maintMask').style.display='flex';}
+function closeMaint(){document.getElementById('maintMask').style.display='none';}
+function exportCert(no){alert('导出合格证 PDF：'+no);}
+function printCert(no){window.print();}
+
+renderList();
+</script>
+</body>
+</html>

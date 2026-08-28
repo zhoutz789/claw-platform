@@ -32,6 +32,22 @@ public class Device {
     @Column(unique = true)
     private String imei;
 
+    /** 设备唯一编号（= 选型书 DeviceID / 二维码内容），车辆终端对接契约身份。 */
+    @Column(unique = true)
+    private String deviceNo;
+
+    /** 下行指令 HMAC-SHA256 签名密钥（出厂烧录 / 平台注册时生成）。 */
+    @Column(length = 128)
+    private String secret;
+
+    /** 继电器/开关当前状态（0 断 / 1 通）。 */
+    @Builder.Default
+    private Integer relayState = 0;
+
+    /** 二维码载体（可为 device_no 或带平台地址的 JSON）。 */
+    @Column(columnDefinition = "text")
+    private String qrPayload;
+
     private String protocolVer;
 
     private Instant lastOnlineAt;

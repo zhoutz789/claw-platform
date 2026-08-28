@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Claw 平台 · 模块化扩展 UI 原型 v3（已落实 5 项确认决策）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+<style>
+/* ============ 设计令牌（沿用 Fresh Energy） ============ */
+:root{
+  --paper:#f7f4ec; --paper-2:#efebe0; --surface:#fffdf7;
+  --ink:#15281f; --ink-2:#46594f; --muted:#819388; --line:#e4dfd1;
+  --brand:#176a48; --brand-deep:#0d4630; --brand-soft:#e2f0e7;
+  --energy:#2fc97c; --lime:#b9f062; --amber:#efa13b; --amber-soft:#fbeeda;
+  --coral:#e2573f; --coral-soft:#fbe5de; --blue:#4a88cf; --blue-soft:#e6eefa; --violet:#7c6bd6; --violet-soft:#ece8fa;
+  --r-sm:10px; --r-md:16px; --r-lg:22px; --r-full:999px;
+  --sh-sm:0 1px 2px rgba(21,40,31,.05),0 1px 4px rgba(21,40,31,.06);
+  --sh-md:0 8px 24px rgba(21,40,31,.08),0 2px 6px rgba(21,40,31,.05);
+  --sh-lg:0 24px 60px rgba(21,40,31,.14);
+  --font-disp:"Space Grotesk","Noto Sans SC",system-ui,sans-serif;
+  --font-body:"Noto Sans SC",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  --nav-w:236px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--paper);color:var(--ink);line-height:1.6;-webkit-font-smoothing:antialiased}
+.num{font-family:var(--font-disp);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+button{font-family:var(--font-body);cursor:pointer}
+.topbar{position:sticky;top:0;z-index:60;height:60px;display:flex;align-items:center;gap:16px;padding:0 24px;background:rgba(247,244,236,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.topbar .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:16px}
+.topbar .brand .logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brand),var(--energy));display:grid;place-items:center;color:#fff;font-size:15px;box-shadow:0 4px 12px rgba(47,201,124,.35)}
+.topbar .brand small{display:block;font-size:10px;color:var(--muted);font-weight:500}
+.topbar .ctx{margin-left:8px;padding:5px 12px;border-radius:var(--r-full);background:var(--brand-soft);color:var(--brand-deep);font-size:12px;font-weight:700}
+.topbar .spacer{flex:1}
+.topbar .hint{font-size:12px;color:var(--muted)}
+.topbar .me{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink-2)}
+.topbar .me .av{width:30px;height:30px;border-radius:50%;background:var(--brand);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:800}
+.layout{display:flex;min-height:calc(100vh - 60px)}
+.proto-nav{width:var(--nav-w);flex-shrink:0;border-right:1px solid var(--line);background:var(--surface);position:sticky;top:60px;align-self:flex-start;height:calc(100vh - 60px);overflow:auto;padding:16px 12px}
+.proto-nav .grp{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:14px 12px 6px}
+.proto-nav .grp:first-child{padding-top:4px}
+.pnav{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:none;background:transparent;padding:10px 12px;border-radius:var(--r-md);font-size:13.5px;font-weight:600;color:var(--ink-2);transition:.18s}
+.pnav .ic{width:26px;height:26px;border-radius:8px;background:var(--paper-2);display:grid;place-items:center;font-size:14px;flex-shrink:0}
+.pnav:hover{background:var(--paper-2);color:var(--ink)}
+.pnav.on{background:var(--brand-soft);color:var(--brand-deep)}
+.pnav.on .ic{background:var(--brand);color:#fff}
+.proto-nav .note{margin:14px 12px 0;padding:12px;border-radius:var(--r-md);background:var(--amber-soft);font-size:11.5px;color:#8a5a10;line-height:1.5}
+.main{flex:1;min-width:0;overflow:auto}
+.view{display:none;padding:30px 36px 80px;max-width:1300px}
+.view.on{display:block;animation:fade .35s ease}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.view-head{margin-bottom:22px}
+.view-head .kicker{font-family:var(--font-disp);font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--brand)}
+.view-head h1{font-size:26px;font-weight:900;letter-spacing:-.02em;margin:6px 0 6px}
+.view-head p{color:var(--ink-2);font-size:14px;max-width:820px}
+.crumb{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);margin-bottom:14px}
+.crumb b{color:var(--ink-2);font-weight:600}.crumb .sep{opacity:.5}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:none;font-weight:700;font-size:13.5px;border-radius:var(--r-md);padding:10px 16px;transition:.2s}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:linear-gradient(135deg,var(--brand),var(--brand-deep));color:#fff;box-shadow:0 6px 16px rgba(23,106,72,.26)}
+.btn-energy{background:linear-gradient(135deg,var(--energy),var(--brand));color:#fff;box-shadow:0 6px 16px rgba(47,201,124,.3)}
+.btn-ghost{background:transparent;color:var(--brand);box-shadow:inset 0 0 0 1.5px var(--brand)}
+.btn-soft{background:var(--brand-soft);color:var(--brand-deep)}
+.btn-danger{background:var(--coral-soft);color:var(--coral)}
+.btn-sm{padding:7px 12px;font-size:12.5px}.btn-lg{padding:13px 22px;font-size:15px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:22px;box-shadow:var(--sh-sm)}
+.card.tight{padding:0;overflow:hidden}
+.card h3{font-size:16px;font-weight:800;margin-bottom:4px}
+.card .sub{font-size:12.5px;color:var(--muted);margin-bottom:16px}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:var(--r-full);font-size:12px;font-weight:700}
+.tag.g{background:var(--brand-soft);color:var(--brand-deep)}.tag.l{background:#eaf7cf;color:#3c5a0d}
+.tag.a{background:var(--amber-soft);color:#8a5a10}.tag.c{background:var(--coral-soft);color:#9c3423}
+.tag.b{background:var(--blue-soft);color:#27598f}.tag.v{background:var(--violet-soft);color:#4b3da0}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 18px}
+.stat .k{font-size:12px;color:var(--muted)}.stat .v{font-family:var(--font-disp);font-size:26px;font-weight:700;margin:4px 0 2px}
+.stat .v em{font-style:normal;font-size:12px;color:var(--muted);font-weight:500}
+.stat .t{font-size:12px;font-weight:700}.stat .t.up{color:var(--brand)}.stat .t.dn{color:var(--coral)}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl thead th{text-align:left;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:12px 14px;border-bottom:1px solid var(--line);background:var(--paper-2)}
+.tbl tbody td{padding:13px 14px;border-bottom:1px dashed var(--line);color:var(--ink-2);vertical-align:middle}
+.tbl tbody tr:hover{background:var(--paper-2)}.tbl tbody tr:last-child td{border-bottom:none}
+.tbl .strong{color:var(--ink);font-weight:700}.tbl .mono{font-family:var(--font-disp);font-weight:600}
+.tbl tbody tr.link{cursor:pointer}.tbl tbody tr.link:hover{background:var(--brand-soft)}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.form-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.field{flex:1;min-width:200px}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);margin-bottom:6px}
+.field label .req{color:var(--coral);margin-left:2px}
+.input,select.input{width:100%;font-family:var(--font-body);font-size:14px;padding:11px 13px;border-radius:var(--r-md);border:1.5px solid var(--line);background:var(--surface);color:var(--ink);transition:.18s}
+.input:focus{outline:none;border-color:var(--energy);box-shadow:0 0 0 3px rgba(47,201,124,.18)}
+textarea.input{min-height:90px;resize:vertical}
+.seg{display:inline-flex;background:var(--paper-2);border-radius:var(--r-md);padding:4px}
+.seg button{border:none;background:transparent;font-size:13px;font-weight:600;padding:8px 15px;border-radius:10px;color:var(--ink-2)}
+.seg button.on{background:var(--surface);color:var(--brand-deep);box-shadow:var(--sh-sm)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:20px;flex-wrap:wrap}
+.tab{border:none;background:transparent;font-size:13.5px;font-weight:600;color:var(--ink-2);padding:11px 14px;border-bottom:2.5px solid transparent;margin-bottom:-1px}
+.tab:hover{color:var(--ink)}.tab.on{color:var(--brand);border-bottom-color:var(--brand)}
+.panel{display:none}.panel.on{display:block;animation:fade .3s ease}
+.subnav{display:flex;flex-direction:column;gap:2px;width:200px;flex-shrink:0}
+.subnav .s{display:flex;align-items:center;gap:9px;border:none;background:transparent;text-align:left;padding:9px 12px;border-radius:var(--r-md);font-size:13px;font-weight:600;color:var(--ink-2)}
+.subnav .s .ic{font-size:14px}.subnav .s:hover{background:var(--paper-2)}.subnav .s.on{background:var(--brand-soft);color:var(--brand-deep)}
+.split{display:flex;gap:24px;align-items:flex-start}.split .body{flex:1;min-width:0}
+.tree{border:1px solid var(--line);border-radius:var(--r-md);padding:8px 6px;background:var(--surface);max-height:380px;overflow:auto}
+.tnode{padding:3px 0}.tnode .row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;cursor:pointer}
+.tnode .row:hover{background:var(--paper-2)}
+.tnode .row .tw{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--line);background:var(--surface);display:grid;place-items:center;font-size:12px;color:#fff;flex-shrink:0}
+.tnode .row.chk .tw{background:var(--brand);border-color:var(--brand)}
+.tnode .row .lbl{font-size:13px;font-weight:600;color:var(--ink-2)}.tnode .row.chk .lbl{color:var(--ink)}
+.tnode .children{margin-left:22px;border-left:1px dashed var(--line);padding-left:6px}
+.tnode .toggle{width:16px;text-align:center;color:var(--muted);cursor:pointer;user-select:none}
+.field-row{display:grid;grid-template-columns:1.4fr 1fr .9fr .7fr .6fr 38px;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);margin-bottom:8px}
+.field-row .fh{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.field-row .cell{font-size:13px}.field-row .mini{font-size:12px;padding:7px 9px;border-radius:9px;border:1.5px solid var(--line);background:var(--surface);width:100%}
+.field-row .del{border:none;background:var(--coral-soft);color:var(--coral);width:34px;height:34px;border-radius:9px;font-size:15px}
+.field-head{display:grid;grid-template-columns:1.4fr 1fr .9fr .7fr .6fr 38px;gap:10px;padding:0 12px 6px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase}
+.phone{background:var(--ink);border-radius:36px;padding:10px;box-shadow:var(--sh-lg);width:330px;flex-shrink:0}
+.phone .scr{background:var(--paper);border-radius:27px;overflow:hidden;height:640px;display:flex;flex-direction:column;position:relative}
+.p-top{padding:18px 16px 10px;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,var(--brand),var(--brand-deep));color:#fff}
+.p-top .t{font-size:16px;font-weight:900}.p-top .t small{display:block;font-size:10.5px;font-weight:500;opacity:.8}
+.p-top .x{margin-left:auto;font-size:18px;opacity:.85}
+.p-body{padding:14px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;flex:1}.p-body::-webkit-scrollbar{display:none}
+.p-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px}
+.p-sec{font-size:12px;font-weight:800;color:var(--ink-2);margin:4px 2px -2px}
+.entry-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.entry{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:12px 8px;text-align:center;transition:.18s}
+.entry:active{transform:scale(.97)}.entry .ei{width:38px;height:38px;border-radius:11px;margin:0 auto 7px;display:grid;place-items:center;font-size:19px;background:var(--brand-soft)}
+.entry .et{font-size:11px;font-weight:700;color:var(--ink-2);line-height:1.3}
+.entry.on .ei{background:linear-gradient(135deg,var(--brand),var(--energy));color:#fff}.entry.on .et{color:var(--brand-deep)}
+.role-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:var(--r-full);background:var(--brand-soft);color:var(--brand-deep);font-size:12px;font-weight:700}
+.switch-row{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);margin-bottom:8px}
+.switch-row .tx{font-size:13px;font-weight:600}.switch-row .tx small{display:block;font-size:11px;color:var(--muted);font-weight:500}
+.sw{width:44px;height:26px;border-radius:var(--r-full);background:var(--line);position:relative;flex-shrink:0;transition:.2s;border:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:var(--sh-sm)}
+.sw.on{background:var(--energy)}.sw.on::after{left:21px}
+.p-tab{position:absolute;bottom:0;left:0;right:0;background:rgba(255,253,247,.94);backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;padding:8px 6px 14px}
+.p-tab div{flex:1;text-align:center;font-size:9.5px;color:var(--muted);font-weight:600}.p-tab div i{display:block;font-style:normal;font-size:17px;margin-bottom:2px}
+.p-tab div.on{color:var(--brand);font-weight:800}
+.cert{width:360px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh-md)}
+.cert .ch{padding:16px 18px;background:linear-gradient(135deg,var(--brand),var(--brand-deep));color:#fff;display:flex;justify-content:space-between;align-items:center}
+.cert .ch .t{font-size:15px;font-weight:900}.cert .ch .s{font-size:10.5px;opacity:.85}
+.cert .cb{padding:18px}
+.cert .qr{width:108px;height:108px;border-radius:12px;background:repeating-conic-gradient(var(--ink) 0 25%,#fff 0 50%) 0/18px 18px;border:1px solid var(--line);margin:0 auto 10px}
+.cert .qr-id{text-align:center;font-family:var(--font-disp);font-size:12px;font-weight:700;color:var(--ink-2)}
+.cert .kv{display:flex;justify-content:space-between;font-size:12.5px;padding:7px 0;border-bottom:1px dashed var(--line)}
+.cert .kv:last-child{border-bottom:none}.cert .kv .k{color:var(--ink-2)}.cert .kv .v{font-weight:700;font-family:var(--font-disp)}
+.cert .cf{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px}
+.muted{color:var(--muted)}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.mt{margin-top:18px}.mb{margin-bottom:18px}.flex{display:flex;gap:10px;align-items:center}.between{justify-content:space-between}
+.wrap-flex{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+.hier{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.hier .node{padding:9px 14px;border-radius:var(--r-md);font-size:12.5px;font-weight:700;border:1px solid var(--line);background:var(--surface)}
+.hier .node.b{background:var(--brand-soft);color:var(--brand-deep);border-color:var(--brand)}
+.hier .arrow{color:var(--muted);font-size:16px;font-weight:700}
+.flow{display:flex;align-items:center;gap:0;flex-wrap:wrap}
+.flow .step{flex:1;min-width:120px;text-align:center;padding:14px 10px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.flow .step .n{width:26px;height:26px;border-radius:50%;background:var(--brand);color:#fff;font-weight:800;font-size:13px;display:grid;place-items:center;margin:0 auto 8px}
+.flow .step .t{font-size:13px;font-weight:700}.flow .step .d{font-size:11px;color:var(--muted);margin-top:2px}
+.flow .step.done .n{background:var(--energy)}.flow .arrow{color:var(--muted);padding:0 10px;font-size:18px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:13px;border:1.5px dashed var(--line);border-radius:var(--r-lg);background:var(--paper-2)}
+.mod-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.mod-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px;transition:.25s;cursor:pointer}
+.mod-card:hover{transform:translateY(-3px);box-shadow:var(--sh-md)}
+.mod-card .ic{width:42px;height:42px;border-radius:12px;background:var(--brand-soft);display:grid;place-items:center;font-size:20px;margin-bottom:14px}
+.mod-card h4{font-size:15px;font-weight:800;margin-bottom:6px}.mod-card p{font-size:12.5px;color:var(--ink-2)}
+.mod-card .meta{margin-top:12px;font-size:11.5px;color:var(--muted);font-family:var(--font-disp)}
+/* 设备详情 */
+.dtabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px;flex-wrap:wrap}
+.dtab{border:none;background:transparent;font-size:13px;font-weight:600;color:var(--ink-2);padding:10px 12px;border-bottom:2.5px solid transparent;margin-bottom:-1px}
+.dtab.on{color:var(--brand);border-bottom-color:var(--brand)}
+.dpanel{display:none}.dpanel.on{display:block;animation:fade .3s ease}
+.map{height:200px;border-radius:var(--r-md);background:linear-gradient(135deg,#dfe7e0,#eef1ea);border:1px solid var(--line);position:relative;overflow:hidden}
+.map .pin{position:absolute;width:14px;height:14px;border-radius:50% 50% 50% 0;background:var(--coral);transform:rotate(-45deg);box-shadow:0 0 0 4px rgba(226,87,63,.2)}
+.map .pin::after{content:"";position:absolute;top:4px;left:4px;width:6px;height:6px;border-radius:50%;background:#fff}
+.map .lbl{position:absolute;bottom:10px;left:12px;font-size:12px;font-weight:700;color:var(--ink-2);background:rgba(255,253,247,.85);padding:4px 10px;border-radius:var(--r-full)}
+.earn-mod{display:flex;flex-direction:column;gap:12px}
+.em{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.em .ei{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:20px;flex-shrink:0}
+.em .info{flex:1}.em .info .t{font-size:14px;font-weight:800}.em .info .d{font-size:11.5px;color:var(--muted)}
+.em .amt{font-family:var(--font-disp);font-size:18px;font-weight:700;color:var(--brand)}
+.child-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+/* 任务大厅 / 附近车辆 */
+.hall{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.hall .h{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px}
+.hall .h .top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.hall .h .top .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:18px;background:var(--brand-soft)}
+.hall .h .top .nm{font-size:14px;font-weight:800}
+.hall .h .meta{font-size:11.5px;color:var(--muted)}
+.hall .h .row{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px dashed var(--line)}
+.hall .h .row:last-of-type{border-bottom:none}
+.veh{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);margin-bottom:8px}
+.veh .av{width:46px;height:46px;border-radius:12px;background:var(--blue-soft);display:grid;place-items:center;font-size:20px;flex-shrink:0}
+.veh .nm{font-size:13.5px;font-weight:700}.veh .ds{font-size:11.5px;color:var(--muted)}
+.veh .dist{font-family:var(--font-disp);font-weight:700;color:var(--brand)}
+/* 绑定流程 */
+.bind{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.bind .stepc{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px}
+.qr-scan{height:160px;border-radius:14px;background:repeating-linear-gradient(45deg,#f1ede2,#f1ede2 10px,#f7f4ec 10px,#f7f4ec 20px);display:grid;place-items:center;position:relative;border:1px solid var(--line)}
+.qr-scan .frame{position:absolute;width:90px;height:90px;border:2.5px solid var(--energy);border-radius:14px}
+.qr-scan .frame::before,.qr-scan .frame::after{content:"";position:absolute;width:16px;height:16px;border:3px solid var(--brand)}
+.qr-scan .frame::before{top:-3px;left:-3px;border-right:none;border-bottom:none;border-radius:8px 0 0 0}
+.qr-scan .frame::after{bottom:-3px;right:-3px;border-left:none;border-top:none;border-radius:0 0 8px 0}
+.qr-scan .laser{position:absolute;left:20%;right:20%;height:2px;background:var(--energy);box-shadow:0 0 10px var(--energy);animation:lz 2.4s infinite}
+@keyframes lz{0%,100%{top:22%}50%{top:76%}}
+.qr-scan .hint{font-size:11px;color:var(--muted);z-index:2;text-align:center;margin-top:60px}
+.perm-matrix{width:100%;border-collapse:collapse;font-size:12.5px}
+.perm-matrix th,.perm-matrix td{padding:9px 10px;border-bottom:1px dashed var(--line);text-align:center}
+.perm-matrix th:first-child,.perm-matrix td:first-child{text-align:left;color:var(--ink-2)}
+.perm-matrix thead th{font-size:11px;text-transform:uppercase;color:var(--muted)}
+.note-banner{background:var(--violet-soft);border:1px solid #d9d2f0;padding:12px 14px;border-radius:var(--r-md);font-size:12.5px;color:#4b3da0;margin-bottom:16px}
+@media(max-width:1000px){.proto-nav{display:none}.view{padding:20px}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span class="logo">⚡</span><div>Claw 平台<small>模块化扩展 · UI 原型 v3</small></div></div>
+  <span class="ctx" id="ctxLabel">产品管理 / 物联网</span>
+  <div class="spacer"></div>
+  <span class="hint">左栏切换模块 · 当前为静态原型，待确认后转代码</span>
+  <div class="me"><span class="av">周</span>周老板 · 平台管理员</div>
+</div>
+
+<div class="layout">
+  <nav class="proto-nav">
+    <div class="grp">布局总览</div>
+    <button class="pnav" data-view="overview"><span class="ic">🗺️</span>模块导航总览</button>
+    <div class="grp">新增模块（本期）</div>
+    <button class="pnav on" data-view="iot"><span class="ic">🔌</span>产品管理 / 物联网</button>
+    <button class="pnav" data-view="goods"><span class="ic">📦</span>商品管理 / 品牌方</button>
+    <button class="pnav" data-view="task"><span class="ic">📋</span>任务发布</button>
+    <button class="pnav" data-view="settings"><span class="ic">⚙️</span>系统设置（权限）</button>
+    <button class="pnav" data-view="app"><span class="ic">📱</span>统一 App 角色入口</button>
+    <div class="grp">暂缓</div>
+    <button class="pnav" style="opacity:.55"><span class="ic">🌐</span>多语言（做 App 时套用）</button>
+    <div class="note">📌 <b>模型修正</b>：产品模板=平台级(无品牌)；产品=品牌方调用模板创建(统领设备)；设备=仅属一个产品+一个品牌方。新增「任务发布」菜单；合格证定制闭环；扫码绑定/产权转移/租赁权限。<br/>✅ <b>已确认</b>：三级钻取路径合适 / 客运本期 3 子模块(打的·公交·顺风车) / 产权当前价值由系统按 10% 年利率核算 / 租赁实时轨迹不隐藏·历史仅本人使用期 / 多语言暂缓。</div>
+  </nav>
+
+  <main class="main">
+
+    <!-- ========== 总览 ========== -->
+    <section class="view" id="view-overview">
+      <div class="view-head">
+        <div class="kicker">Layout Map</div>
+        <h1>模块导航总览 v3</h1>
+        <p>在原 5 大中心基础上，新增 <b>产品管理（物联网）</b>、<b>商品管理</b>、<b>任务发布</b> 三大中心，并把「系统设置」升级为傻瓜式权限。点击卡片进入对应原型。</p>
+      </div>
+      <div class="mod-grid">
+        <div class="mod-card" onclick="go('iot')"><div class="ic">🔌</div><h4>产品管理 / 物联网</h4><p>模板(类·平台)→产品(品牌实例)→设备(对象)。设备详情含定位/赋权/收益模块/维修/转让租赁；客运(打的/公交/顺风车)等任务大厅；合格证闭环；扫码绑定与产权。</p><div class="meta">Template→Product→Device</div></div>
+        <div class="mod-card" onclick="go('goods')"><div class="ic">📦</div><h4>商品管理 / 品牌方</h4><p>品牌方入驻、基于产品模板建产品、按产品类发布商品（多选）、订单。产品端闭环。</p><div class="meta">Brand · Goods · Order</div></div>
+        <div class="mod-card" onclick="go('task')"><div class="ic">📋</div><h4>任务发布</h4><p>独立菜单：发布物流任务 / 查看附近车辆(客运:公交·打的·顺风车 / 货运归物流) / 发布广告自媒体 / 查看录像 / 我要出租。</p><div class="meta">Task Hall</div></div>
+        <div class="mod-card" onclick="go('settings')"><div class="ic">⚙️</div><h4>系统设置（权限）</h4><p>RuoYi 式傻瓜配置：用户/角色(菜单树+数据范围)/菜单权限，为扩展预留边界。</p><div class="meta">User · Role · Menu</div></div>
+        <div class="mod-card" onclick="go('app')"><div class="ic">📱</div><h4>统一 App 角色入口</h4><p>工作站+用户端合一；我的按角色展示入口；资产菜单展示设备与扫码绑定/租赁受限视图。</p><div class="meta">One App · Role-based</div></div>
+      </div>
+      <div class="card mt">
+        <h3>归属层级（核心修正）</h3>
+        <div class="hier">
+          <span class="node">平台 · 产品模板<br/><small class="muted">通用结构属性，无品牌</small></span><span class="arrow">→</span>
+          <span class="node b">品牌方 · 产品<br/><small class="muted">调用模板创建，统领设备</small></span><span class="arrow">→</span>
+          <span class="node">设备<br/><small class="muted">仅属 1 产品 + 1 品牌方</small></span>
+        </div>
+        <p class="muted" style="font-size:12.5px">设备点击→详情（定位/赋权/收益模块/维修/转让租赁）；产品点击→其下所有设备+共用字段；模板点击→字段定义+派生品牌产品。各功能模块均设「任务大厅」自主接单。</p>
+      </div>
+    </section>
+
+    <!-- ========== 产品管理 / 物联网 ========== -->
+    <section class="view on" id="view-iot">
+      <div class="crumb"><b>产品管理</b><span class="sep">/</span><span id="iotCrumb">产品模板</span></div>
+      <div class="view-head">
+        <div class="kicker">IoT Management</div>
+        <h1>产品管理 / 物联网</h1>
+        <p>平台建设的设备属性体系：<b>产品模板(类·平台级)</b> → <b>产品(品牌方实例)</b> → <b>设备(对象)</b>。设备只属于一个产品与一个品牌方。发货前核对完整并生成合格证（唯一编号+二维码），用户线上可查/导出/打印；扫码绑定后赋权开关、采集数据、参与任务大厅。</p>
+      </div>
+
+      <div class="split">
+        <nav class="subnav">
+          <button class="s on" data-iot="tmpl"><span class="ic">🧬</span>产品模板</button>
+          <button class="s" data-iot="product"><span class="ic">🏷️</span>产品（品牌）</button>
+          <button class="s" data-iot="device"><span class="ic">🔋</span>设备（对象）</button>
+          <button class="s" data-iot="detail"><span class="ic">🛰️</span>设备详情</button>
+          <button class="s" data-iot="cert"><span class="ic">🪪</span>合格证</button>
+          <button class="s" data-iot="bind"><span class="ic">🔗</span>绑定 / 产权</button>
+        </nav>
+        <div class="body">
+
+          <!-- 产品模板（平台级，无品牌方） -->
+          <div class="iot-panel on" id="iot-tmpl">
+            <div class="stats">
+              <div class="stat"><div class="k">产品模板（类）</div><div class="v num">18<em> 个</em></div><div class="t up">↑ 本月 +5</div></div>
+              <div class="stat"><div class="k">派生品牌产品</div><div class="v num">42<em> 个</em></div><div class="t up">↑ 12</div></div>
+              <div class="stat"><div class="k">已注册设备</div><div class="v num">12,480<em> 台</em></div><div class="t up">↑ 8.2%</div></div>
+              <div class="stat"><div class="k">待生成合格证</div><div class="v num" style="color:var(--amber)">326</div><div class="t">发货前核对</div></div>
+            </div>
+            <div class="card tight">
+              <div class="flex between mb" style="padding:18px 18px 0">
+                <div><h3>产品模板列表（平台级 · 无品牌方）</h3><div class="sub" style="margin:0">通用结构属性定义；品牌方在「产品」中调用本模板创建自有产品</div></div>
+                <button class="btn btn-primary" onclick="iotTab('tmpl-new')">＋ 新增产品模板</button>
+              </div>
+              <table class="tbl">
+                <thead><tr><th>产品模板（类）</th><th>设备类型</th><th>字段数</th><th>派生产品</th><th>状态</th><th></th></tr></thead>
+                <tbody>
+                  <tr class="link" onclick="iotTab('tmpl-detail')"><td class="strong">CL-48V 换电电池</td><td>动力电池</td><td class="mono">14</td><td class="mono">9</td><td><span class="tag g"><i class="dot"></i>启用</span><td>›</td></tr>
+                  <tr class="link" onclick="iotTab('tmpl-detail')"><td class="strong">CL-两轮换电车</td><td>车辆</td><td class="mono">22</td><td class="mono">15</td><td><span class="tag g">启用</span><td>›</td></tr>
+                  <tr class="link" onclick="iotTab('tmpl-detail')"><td class="strong">CL-充电桩</td><td>桩端</td><td class="mono">9</td><td class="mono">6</td><td><span class="tag a">草稿</span><td>›</td></tr>
+                  <tr class="link" onclick="iotTab('tmpl-detail')"><td class="strong">CL-光伏储能柜</td><td>储能</td><td class="mono">11</td><td class="mono">12</td><td><span class="tag g">启用</span><td>›</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="card mt" id="iot-tmpl-new">
+              <div class="flex between mb"><div><h3>新增产品模板 · 字段设置</h3><div class="sub" style="margin:0">平台定义「类」的结构化属性；不含品牌方；字段可扩展并记录变动</div></div><span class="tag b">表单构建器</span></div>
+              <div class="form-row">
+                <div class="field"><label>模板名称<span class="req">*</span></label><input class="input" placeholder="如：CL-48V 换电电池"/></div>
+                <div class="field"><label>设备类型<span class="req">*</span></label><select class="input"><option>动力电池</option><option>车辆</option><option>桩端</option><option>储能</option><option>其它</option></select></div>
+              </div>
+              <div class="field-head"><div>字段名称</div><div>类型</div><div>单位/选项</div><div>必填</div><div>默认值</div><div></div></div>
+              <div id="fieldList">
+                <div class="field-row"><div class="cell strong">额定容量</div><div class="cell">数值</div><div class="cell">Ah</div><div><span class="tag g">必填</span></div><div class="cell mono">48</div><button class="del">×</button></div>
+                <div class="field-row"><div class="cell strong">标称电压</div><div class="cell">数值</div><div class="cell">V</div><div><span class="tag g">必填</span></div><div class="cell mono">48</div><button class="del">×</button></div>
+                <div class="field-row"><div class="cell strong">电芯品牌</div><div class="cell">下拉</div><div class="cell">宁德/比亚迪</div><div><span class="tag a">可选</span></div><div class="cell">—</div><button class="del">×</button></div>
+                <div class="field-row"><div class="cell strong">循环寿命</div><div class="cell">数值</div><div class="cell">次</div><div><span class="tag g">必填</span></div><div class="cell mono">2000</div><button class="del">×</button></div>
+              </div>
+              <button class="btn btn-soft btn-sm mt" onclick="addField()">＋ 添加字段</button>
+              <div class="flex between mt"><span class="muted" style="font-size:12px">字段变更历史自动记录（谁/何时/改了什么）</span><div class="flex"><button class="btn btn-ghost">存草稿</button><button class="btn btn-primary">发布模板</button></div></div>
+            </div>
+            <!-- 模板详情（点击行进入） -->
+            <div class="card mt" id="iot-tmpl-detail">
+              <div class="flex between mb"><div><h3>模板详情：CL-48V 换电电池</h3><div class="sub" style="margin:0">共用字段类型数据 · 派生品牌产品</div></div><span class="tag b">平台模板</span></div>
+              <div class="field-head"><div>字段名称</div><div>类型</div><div>单位</div><div>必填</div><div>默认值</div><div></div></div>
+              <div class="field-row"><div class="cell strong">额定容量</div><div class="cell">数值</div><div class="cell">Ah</div><div><span class="tag g">必填</span></div><div class="cell mono">48</div><div></div></div>
+              <div class="field-row"><div class="cell strong">标称电压</div><div class="cell">数值</div><div class="cell">V</div><div><span class="tag g">必填</span></div><div class="cell mono">48</div><div></div></div>
+              <div class="field-row"><div class="cell strong">循环寿命</div><div class="cell">数值</div><div class="cell">次</div><div><span class="tag g">必填</span></div><div class="cell mono">2000</div><div></div></div>
+              <h4 style="font-size:14px;font-weight:800;margin:16px 0 8px">派生品牌产品（点击进入其设备）</h4>
+              <div class="grid2">
+                <div class="p-card" style="cursor:pointer" onclick="iotTab('product-detail')"><div class="flex between"><b>金边电科 48V-A 款</b><span class="tag a">品牌产品</span></div><div class="muted" style="font-size:11.5px;margin-top:4px">品牌方：金边电科 · 设备 8,420 台</div></div>
+                <div class="p-card" style="cursor:pointer" onclick="iotTab('product-detail')"><div class="flex between"><b>湄公出行 48V-B 款</b><span class="tag a">品牌产品</span></div><div class="muted" style="font-size:11.5px;margin-top:4px">品牌方：湄公出行 · 设备 1,180 台</div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 产品（品牌实例） -->
+          <div class="iot-panel" id="iot-product">
+            <div class="card tight">
+              <div class="flex between mb" style="padding:18px 18px 0">
+                <div><h3>产品列表（品牌方实例）</h3><div class="sub" style="margin:0">品牌方调用模板创建，统领其下设备；归属唯一品牌方</div></div>
+                <button class="btn btn-primary btn-sm">＋ 基于模板建产品</button>
+              </div>
+              <table class="tbl">
+                <thead><tr><th>产品（品牌）</th><th>基于模板</th><th>品牌方</th><th>设备数</th><th>状态</th><th></th></tr></thead>
+                <tbody>
+                  <tr class="link" onclick="iotTab('product-detail')"><td class="strong">金边电科 48V-A 款</td><td>CL-48V 换电电池</td><td>金边电科</td><td class="mono">8,420</td><td><span class="tag g">在产</span><td>›</td></tr>
+                  <tr class="link" onclick="iotTab('product-detail')"><td class="strong">湄公出行 两轮换电车</td><td>CL-两轮换电车</td><td>湄公出行</td><td class="mono">3,160</td><td><span class="tag g">在产</span><td>›</td></tr>
+                  <tr class="link" onclick="iotTab('product-detail')"><td class="strong">金边电科 储能柜 S1</td><td>CL-光伏储能柜</td><td>金边电科</td><td class="mono">360</td><td><span class="tag a">调试</span><td>›</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="card mt" id="iot-product-detail">
+              <div class="flex between mb"><div><h3>产品详情：金边电科 48V-A 款</h3><div class="sub" style="margin:0">共用字段数据 + 其下所有设备</div></div><span class="tag a">金边电科</span></div>
+              <div class="kv"><span class="k">基于模板</span><span class="v">CL-48V 换电电池</span></div>
+              <div class="kv"><span class="k">额定容量 / 电压</span><span class="v">48 Ah / 48 V</span></div>
+              <div class="kv"><span class="k">循环寿命</span><span class="v">2000 次</span></div>
+              <h4 style="font-size:14px;font-weight:800;margin:16px 0 8px">该产品的所有设备（点击查看设备详情）</h4>
+              <div class="card tight" style="border:1px solid var(--line)">
+                <table class="tbl">
+                  <thead><tr><th>设备唯一编号</th><th>厂家身份</th><th>合格证</th><th>绑定</th><th></th></tr></thead>
+                  <tbody>
+                    <tr class="link" onclick="iotTab('detail')"><td class="mono strong">BT-2026-004881</td><td><span class="tag g">已填</span></td><td><span class="tag g">已生成</span></td><td><span class="tag b">已绑定</span><td>›</td></tr>
+                    <tr class="link" onclick="iotTab('detail')"><td class="mono strong">BT-2026-004882</td><td><span class="tag a">待补全</span></td><td><span class="tag c">未生成</span></td><td><span class="tag">未绑定</span><td>›</td></tr>
+                    <tr class="link" onclick="iotTab('detail')"><td class="mono strong">BT-2026-004883</td><td><span class="tag g">已填</span></td><td><span class="tag g">已生成</span></td><td><span class="tag b">已绑定</span><td>›</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- 设备列表 -->
+          <div class="iot-panel" id="iot-device">
+            <div class="card tight">
+              <div class="flex between mb" style="padding:18px 18px 0">
+                <div><h3>设备列表（对象实例）</h3><div class="sub" style="margin:0">按产品生成，厂家填写身份认证，发货前须核对完整；仅属一个产品+一个品牌方</div></div>
+                <span class="seg"><button class="on">全部</button><button>待核对</button><button>已发货</button></span>
+              </div>
+              <table class="tbl">
+                <thead><tr><th>设备唯一编号</th><th>所属产品</th><th>品牌方</th><th>厂家身份</th><th>合格证</th><th>绑定</th><th></th></tr></thead>
+                <tbody>
+                  <tr class="link" onclick="iotTab('detail')"><td class="mono strong">BT-2026-004881</td><td>金边电科 48V-A</td><td>金边电科</td><td><span class="tag g">已填</span></td><td><span class="tag g">已生成</span></td><td><span class="tag b">已绑定</span><td>›</td></tr>
+                  <tr class="link" onclick="iotTab('detail')"><td class="mono strong">BT-2026-004882</td><td>金边电科 48V-A</td><td>金边电科</td><td><span class="tag a">待补全</span></td><td><span class="tag c">未生成</span></td><td><span class="tag">未绑定</span><td>›</td></tr>
+                  <tr class="link" onclick="iotTab('detail')"><td class="mono strong">VE-2026-001203</td><td>湄公出行 换电车</td><td>湄公出行</td><td><span class="tag g">已填</span></td><td><span class="tag g">已生成</span></td><td><span class="tag b">已绑定</span><td>›</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="card mt">
+              <h3>发货前核对清单（厂家填写，平台强制校验）</h3>
+              <div class="kv"><span class="k">① 模板字段全部填写</span><span class="v" style="color:var(--brand)">✓ 14/14</span></div>
+              <div class="kv"><span class="k">② 厂家身份认证（IMEI/序列号/生产批号）</span><span class="v" style="color:var(--coral)">✗ 缺生产批号</span></div>
+              <div class="kv"><span class="k">③ 唯一编号与二维码生成</span><span class="v" style="color:var(--coral)">待生成</span></div>
+              <div class="kv"><span class="k">④ 合格证模版校验</span><span class="v" style="color:var(--coral)">未通过</span></div>
+              <button class="btn btn-energy mt" disabled style="opacity:.6">生成合格证并放行发货</button>
+            </div>
+          </div>
+
+          <!-- 设备详情（rich） -->
+          <div class="iot-panel" id="iot-detail">
+            <div class="note-banner">🛰️ 设备详情（资产数字孪生入口，优化建议 5）：该设备将出现在 App 用户端「资产」菜单，可调用展示全部信息；所有功能（收益/任务/维修/转让租赁）围绕<b>设备 ID 聚合</b>，前端仅按角色/权限过滤字段，避免各模块重复拉取。各功能模块均设「任务大厅」供设备自主接单。</div>
+            <div class="flex between mb">
+              <div><h2 style="font-size:20px;font-weight:900" class="num">BT-2026-004881</h2><div class="muted" style="font-size:12px">金边电科 48V-A 款 · 品牌方：金边电科 · 状态：运营中</div></div>
+              <div class="flex"><button class="btn btn-soft btn-sm">🪪 合格证</button><button class="btn btn-ghost btn-sm">共享赋权</button><button class="btn btn-primary btn-sm">进入任务大厅</button></div>
+            </div>
+            <div class="dtabs">
+              <button class="dtab on" data-d="overview">概览</button>
+              <button class="dtab" data-d="loc">定位信息</button>
+              <button class="dtab" data-d="auth">共享赋权</button>
+              <button class="dtab" data-d="income">收入收益</button>
+              <button class="dtab" data-d="repair">维修记录</button>
+              <button class="dtab" data-d="transfer">转让/租赁</button>
+            </div>
+            <div class="dpanel on" id="d-overview">
+              <div class="grid3">
+                <div class="p-card"><div class="muted" style="font-size:12px">当前 SOC</div><div class="num" style="font-size:28px;font-weight:800">78%</div></div>
+                <div class="p-card"><div class="muted" style="font-size:12px">今日收益</div><div class="num" style="font-size:28px;font-weight:800;color:var(--brand)">$12.4</div></div>
+                <div class="p-card"><div class="muted" style="font-size:12px">累计收益</div><div class="num" style="font-size:28px;font-weight:800">$1,208</div></div>
+              </div>
+              <div class="kv mt"><span class="k">唯一编号</span><span class="v">BT-2026-004881</span></div>
+              <div class="kv"><span class="k">所属产品 / 品牌方</span><span class="v">金边电科 48V-A / 金边电科</span></div>
+              <div class="kv"><span class="k">当前产权人</span><span class="v">阿肯（用户端资产）</span></div>
+              <div class="kv"><span class="k">绑定状态</span><span class="v" style="color:var(--brand)">已绑定 · 全功能可操作</span></div>
+              <div class="kv"><span class="k">能力标签</span><span class="v">物流 · 移动售卖 · 客运 · 广告 · 录像</span></div>
+              <div class="muted mt" style="font-size:12px">任务大厅按「能力标签 + 地理位置」匹配附近设备，降低空驶、提升接单率（优化建议 3）。</div>
+            </div>
+            <div class="dpanel" id="d-loc">
+              <div class="note-banner" style="margin-bottom:14px">📍 定位权限：<b>实时轨迹</b>承租人均可见（不隐藏）；<b>历史轨迹</b>仅显示承租人本人使用期间产生的部分，其余历史对承租人隐藏。</div>
+              <div class="map"><div class="pin" style="top:46%;left:52%"></div><div class="lbl">📍 金边 · 俄罗斯市场站 1.2km · 实时</div></div>
+              <div class="kv mt"><span class="k">实时经纬度</span><span class="v">11.5624°N, 104.9160°E</span></div>
+              <div class="kv"><span class="k">实时轨迹</span><span class="v" style="color:var(--brand)">承租人可见（不隐藏）</span></div>
+              <div class="kv"><span class="k">历史轨迹</span><span class="v">仅本人使用期间产生 · 其余历史隐藏</span></div>
+              <div class="kv"><span class="k">电子围栏</span><span class="v">越界 → 风控中心告警</span></div>
+            </div>
+            <div class="dpanel" id="d-auth">
+              <h4 style="font-size:14px;font-weight:800;margin-bottom:8px">共享赋权（产权人可授予/收回）</h4>
+              <table class="perm-matrix">
+                <thead><tr><th>功能</th><th>产权人</th><th>承租人</th><th>共享用户</th></tr></thead>
+                <tbody>
+                  <tr><td>开关 / 参数</td><td><span class="tag g">✓</span></td><td><span class="tag g">✓</span></td><td><span class="tag a">可选</span></td></tr>
+                  <tr><td>实时定位</td><td><span class="tag g">✓</span></td><td><span class="tag g">✓</span></td><td><span class="tag a">可选</span></td></tr>
+                  <tr><td>历史轨迹</td><td><span class="tag g">✓</span></td><td><span class="tag a">仅本人使用期</span></td><td><span class="tag c">✗ 隐藏</span></td></tr>
+                  <tr><td>收益数据</td><td><span class="tag g">✓</span></td><td><span class="tag c">✗ 隐藏</span></td><td><span class="tag c">✗ 隐藏</span></td></tr>
+                  <tr><td>转让/租赁</td><td><span class="tag g">✓</span></td><td><span class="tag c">✗</span></td><td><span class="tag c">✗</span></td></tr>
+                </tbody>
+              </table>
+              <p class="muted mt" style="font-size:12px">租赁场景下，承租人仅获产权人勾选的权限：实时定位可见、历史轨迹仅本人使用期可见，其余信息（收益/产权/他人历史轨迹）默认隐藏，符合最小权限。</p>
+            </div>
+            <div class="dpanel" id="d-income">
+              <div class="flex between mb"><div><h4 style="font-size:15px;font-weight:800">收入收益</h4><div class="sub" style="margin:0">收益账号 + 各功能收益任务模块（每条均连任务大厅）</div></div><span class="tag b">累计 $1,208</span></div>
+              <div class="kv"><span class="k">收益账号（收款）</span><span class="v">ABA · 阿肯 ****8821</span></div>
+              <div class="kv"><span class="k">结算周期</span><span class="v">T+1 · 三专户托管</span></div>
+              <div class="earn-mod mt">
+                <div class="em"><div class="ei" style="background:var(--blue-soft)">🚚</div><div class="info"><div class="t">物流</div><div class="d">货运接单 · 本月 18 单</div><div class="child-tags"><span class="tag">货运</span></div></div><div class="amt">$312</div><button class="btn btn-soft btn-sm" onclick="go('task')">任务大厅</button></div>
+                <div class="em"><div class="ei" style="background:var(--lime);color:#3c5a0d">🛒</div><div class="info"><div class="t">移动售卖</div><div class="d">车载零售 · 本月 9 单</div></div><div class="amt">$146</div><button class="btn btn-soft btn-sm" onclick="go('task')">任务大厅</button></div>
+                <div class="em"><div class="ei" style="background:var(--brand-soft)">🚕</div><div class="info"><div class="t">客运 · 打的</div><div class="d">短途网约车接单 · 本月 32 单</div></div><div class="amt">$312</div><button class="btn btn-soft btn-sm" onclick="go('task')">任务大厅</button></div>
+                <div class="em"><div class="ei" style="background:var(--brand-soft)">🚌</div><div class="info"><div class="t">客运 · 公交</div><div class="d">定线公交接单 · 本月 21 单</div></div><div class="amt">$180</div><button class="btn btn-soft btn-sm" onclick="go('task')">任务大厅</button></div>
+                <div class="em"><div class="ei" style="background:var(--brand-soft)">🚗</div><div class="info"><div class="t">客运 · 顺风车</div><div class="d">同路拼车接单 · 本月 27 单</div></div><div class="amt">$148</div><button class="btn btn-soft btn-sm" onclick="go('task')">任务大厅</button></div>
+                <div class="muted" style="font-size:12px">客运本期落地 <b>3 个子模块</b>：打的 / 公交 / 顺风车（货运归入「物流」）。各子模块独立任务大厅，车辆设备自主接单。</div>
+                <div class="em"><div class="ei" style="background:var(--amber-soft)">📢</div><div class="info"><div class="t">广告展示</div><div class="d">车身体媒 / 屏显 · 本月 4 单</div></div><div class="amt">$88</div><button class="btn btn-soft btn-sm" onclick="go('task')">任务大厅</button></div>
+                <div class="em"><div class="ei" style="background:var(--violet-soft)">🎥</div><div class="info"><div class="t">录像脱敏</div><div class="d">行车记录脱敏回传 · 可查录像数据</div></div><div class="amt">$22</div><button class="btn btn-soft btn-sm" onclick="go('task')">查看录像</button></div>
+              </div>
+            </div>
+            <div class="dpanel" id="d-repair">
+              <div class="card tight" style="border:1px solid var(--line)">
+                <table class="tbl">
+                  <thead><tr><th>日期</th><th>类型</th><th>服务站</th><th>费用</th><th>状态</th></tr></thead>
+                  <tbody>
+                    <tr><td class="mono">2026-07-12</td><td>电池健康检测</td><td>俄罗斯市场站</td><td class="mono">$3.0</td><td><span class="tag g">完成</span></td></tr>
+                    <tr><td class="mono">2026-05-30</td><td>外壳维修</td><td>中央市场站</td><td class="mono">$8.5</td><td><span class="tag g">完成</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="dpanel" id="d-transfer">
+              <h4 style="font-size:14px;font-weight:800;margin-bottom:8px">历史资产转让</h4>
+              <div class="kv"><span class="k">2026-06-01 产权转移</span><span class="v">占沙 → 阿肯（扫码付款 $420 获所有权）</span></div>
+              <div class="kv"><span class="k">转移方式</span><span class="v">平台托管资金 + 自动过户</span></div>
+              <h4 style="font-size:14px;font-weight:800;margin:16px 0 8px">历史租赁交易</h4>
+              <div class="card tight" style="border:1px solid var(--line)">
+                <table class="tbl">
+                  <thead><tr><th>租期</th><th>出租人</th><th>承租人</th><th>租金</th><th>状态</th></tr></thead>
+                  <tbody>
+                    <tr><td class="mono">2026-03~05</td><td>占沙</td><td>阿肯</td><td class="mono">$78</td><td><span class="tag g">已结束</span></td></tr>
+                    <tr><td class="mono">2026-08~</td><td>平台</td><td>阿肯</td><td class="mono">$26/月</td><td><span class="tag a">进行中</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- 合格证 -->
+          <div class="iot-panel" id="iot-cert">
+            <div class="stats">
+              <div class="stat"><div class="k">已生成合格证</div><div class="v num">12,154</div><div class="t up">累计</div></div>
+              <div class="stat"><div class="k">本月打印/导出</div><div class="v num">1,028</div><div class="t up">↑ 12%</div></div>
+              <div class="stat"><div class="k">线上查看（用户）</div><div class="v num" style="color:var(--brand)">3,460</div><div class="t up">↑ 21%</div></div>
+            </div>
+            <div class="wrap-flex">
+              <div>
+                <div class="cert">
+                  <div class="ch"><div><div class="t">产品合格证（定制）</div><div class="s">Claw 能源平台 · 官方认证</div></div><span style="font-size:22px">⚡</span></div>
+                  <div class="cb">
+                    <div class="qr"></div>
+                    <div class="qr-id">SN: BT-2026-004881</div>
+                    <div class="kv"><span class="k">产品类</span><span class="v">金边电科 48V-A</span></div>
+                    <div class="kv"><span class="k">品牌方</span><span class="v">金边电科</span></div>
+                    <div class="kv"><span class="k">额定容量</span><span class="v">48 Ah</span></div>
+                    <div class="kv"><span class="k">标称电压</span><span class="v">48 V</span></div>
+                    <div class="kv"><span class="k">生产日期</span><span class="v">2026-08-12</span></div>
+                    <div class="kv"><span class="k">唯一编号</span><span class="v">BT-2026-004881</span></div>
+                  </div>
+                  <div class="cf"><button class="btn btn-soft btn-sm" style="flex:1">👁 查看</button><button class="btn btn-ghost btn-sm" style="flex:1">⬇ 导出</button><button class="btn btn-primary btn-sm" style="flex:1">🖨 打印</button></div>
+                </div>
+                <p class="muted mt" style="font-size:11.5px;max-width:360px">合格证信息<b>定制</b>：自动调用商品参数个别字段 + 设备唯一编号相关信息，生成唯一编号并打印二维码，便于识别产品。<b>🔒 二维码内嵌唯一编号+平台签名，扫码即验真，杜绝套牌/假合格证</b>（优化建议 4）。查看产品时可随时查看合格证；经设备链接可进入设备详情，完成数据闭环查看。</p>
+              </div>
+              <div class="card" style="flex:1;min-width:300px">
+                <h3>合格证模版配置</h3>
+                <div class="sub">定制字段 · 自动套用商品参数 + 设备唯一信息</div>
+                <div class="kv"><span class="k">模板名称</span><span class="v">换电电池标准合格证</span></div>
+                <div class="kv"><span class="k">自动调用</span><span class="v">商品参数(容量/电压/寿命) + 唯一编号</span></div>
+                <div class="kv"><span class="k">二维码内容</span><span class="v">唯一编号 + 签名校验</span></div>
+                <div class="kv"><span class="k">用户可操作</span><span class="v" style="color:var(--brand)">查看 / 导出 / 打印</span></div>
+                <div class="kv"><span class="k">闭环</span><span class="v">产品→合格证→设备详情</span></div>
+                <button class="btn btn-ghost mt">编辑模版</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 绑定 / 产权 -->
+          <div class="iot-panel" id="iot-bind">
+            <div class="note-banner">🔗 绑定规则：扫码/输唯一编号绑定，<b>仅一次</b>；再绑需产权转移；新用户付款<b>系统核算的当前价值（按 10% 年利率）</b>即获所有权，原用户丧失一切权利；租赁仅获产权人勾选权限（实时定位可见、历史轨迹仅本人使用期）。</div>
+            <div class="bind">
+              <div class="stepc">
+                <h3>① 用户添加新设备（绑定）</h3>
+                <div class="sub">扫码设备二维码 / 输入唯一编号 → 绑定（全局唯一，仅一次）</div>
+                <div class="qr-scan"><div class="laser"></div><div class="frame"></div><div class="hint">对准设备二维码<br/>或输入唯一编号 BT-2026-004881</div></div>
+                <div class="form-row mt"><div class="field"><label>唯一编号</label><input class="input" placeholder="BT-2026-004881"/></div></div>
+                <div class="flex between"><span class="muted" style="font-size:12px">该编号已绑定 → 需产权转移</span><button class="btn btn-primary">绑定设备</button></div>
+              </div>
+              <div class="stepc">
+                <h3>② 产权转移（再绑定）</h3>
+                <div class="sub">新用户支付设备当前价值 → 扫码+付款即拥有所有权</div>
+                <div class="flow mb">
+                  <div class="step done"><div class="n">1</div><div class="t">扫码</div></div><div class="arrow">→</div>
+                  <div class="step done"><div class="n">2</div><div class="t">系统核算现值</div><div class="d">10% 年利</div></div><div class="arrow">→</div>
+                  <div class="step"><div class="n">3</div><div class="t">付款过户</div></div><div class="arrow">→</div>
+                  <div class="step"><div class="n">4</div><div class="t">原主失权</div></div>
+                </div>
+                <div class="card" style="background:var(--brand-soft);border:none;padding:14px 16px">
+                  <div class="flex between"><div><b style="font-size:14px">当前价值（系统自动核算）</b></div><span class="tag b">不可议价</span></div>
+                  <div class="kv" style="border:none;padding:4px 0"><span class="k">购入原值</span><span class="v">$380.00</span></div>
+                  <div class="kv" style="border:none;padding:4px 0"><span class="k">持有年数</span><span class="v">1.3 年</span></div>
+                  <div class="kv" style="border:none;padding:4px 0"><span class="k">核算公式</span><span class="v">380 × (1 + 10%)^1.3</span></div>
+                  <div class="kv" style="border:none;padding:6px 0 0"><span class="k strong">设备当前价值</span><span class="v" style="color:var(--brand);font-size:17px;font-weight:800">$420.00</span></div>
+                </div>
+                <div class="kv mt"><span class="k">资金来源</span><span class="v">平台托管 <span class="tag b">三专户·资金隔离</span></span></div>
+                <div class="kv"><span class="k">原用户</span><span class="v" style="color:var(--coral)">丧失该设备一切权利</span></div>
+                <p class="muted" style="font-size:12px">过户复用 ABA 三专户托管（资金隔离·风控·税务，优化建议 1）；年利率 10% 为系统参数（系统设置→资产参数，可按资产类型差异化复利/单利，优化建议 6）；当前价值由系统计算，双方不可议价，扫码+付款即获所有权。</p>
+                <button class="btn btn-energy mt" style="width:100%">支付 $420.00 获得所有权</button>
+              </div>
+            </div>
+            <div class="card mt">
+              <h3>③ 租赁（受限权限）</h3>
+              <div class="sub">承租人仅获产权人勾选的功能权限，其余信息无权查看</div>
+              <table class="perm-matrix">
+                <thead><tr><th>功能</th><th>承租人可见/可操作</th><th>说明</th></tr></thead>
+                <tbody>
+                  <tr><td>开关 / 使用</td><td><span class="tag g">✓ 授权</span></td><td>产权人勾选授予</td></tr>
+                  <tr><td>实时定位</td><td><span class="tag g">✓ 授权</span></td><td>实时可见，不隐藏</td></tr>
+                  <tr><td>历史轨迹</td><td><span class="tag a">仅本人使用期</span></td><td>其余历史隐藏</td></tr>
+                  <tr><td>收益数据</td><td><span class="tag c">✗ 隐藏</span></td><td>仅产权人可见</td></tr>
+                  <tr><td>产权/转让</td><td><span class="tag c">✗ 禁止</span></td><td>仅产权人</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 商品管理 / 品牌方 ========== -->
+    <section class="view" id="view-goods">
+      <div class="crumb"><b>商品管理</b><span class="sep">/</span><span id="goodsCrumb">品牌方入驻</span></div>
+      <div class="view-head">
+        <div class="kicker">Goods & Brand</div>
+        <h1>商品管理 / 品牌方</h1>
+        <p>「厂家」统一抽象为<b>品牌方</b>（用户组织属性）。品牌方<b>调用产品模板创建产品</b>，再按<b>产品类（多选）</b>发布商品；一类产品管理其全部设备，产品端闭环。商品订单纳入订单中心。</p>
+      </div>
+      <div class="split">
+        <nav class="subnav">
+          <button class="s on" data-goods="brand"><span class="ic">🏭</span>品牌方入驻</button>
+          <button class="s" data-goods="product"><span class="ic">🏷️</span>建产品(调模板)</button>
+          <button class="s" data-goods="publish"><span class="ic">➕</span>发布商品</button>
+          <button class="s" data-goods="list"><span class="ic">📋</span>商品列表</button>
+          <button class="s" data-goods="order"><span class="ic">🧾</span>订单管理</button>
+        </nav>
+        <div class="body">
+          <div class="goods-panel on" id="goods-brand">
+            <div class="note-banner">🏢 品牌归属：品牌挂在用户个人或<b>名下公司</b>下，自动套用公司注册资料；创建品牌须提交<b>商标注册证书</b>，平台验证通过方可使用；<b>无品牌方 / 未验证品牌的产品禁止发布</b>。公司+商标证书归档留存，以备责任落实与合法沟通。</div>
+            <div class="flow mb">
+              <div class="step done"><div class="n">1</div><div class="t">名下公司</div><div class="d">自动套注册资料</div></div><div class="arrow">→</div>
+              <div class="step"><div class="n">2</div><div class="t">创建品牌</div><div class="d">提交商标证书</div></div><div class="arrow">→</div>
+              <div class="step"><div class="n">3</div><div class="t">平台验证</div><div class="d">商标验真</div></div><div class="arrow">→</div>
+              <div class="step"><div class="n">4</div><div class="t">品牌激活</div><div class="d">方可发布</div></div>
+            </div>
+            <div class="card">
+              <h3>① 名下公司（自动套用注册资料）</h3>
+              <div class="sub">品牌挂在用户个人或名下公司下；公司资料一次录入，品牌自动继承，便于以后分组管理</div>
+              <div class="form-row">
+                <div class="field"><label>公司名称<span class="req">*</span></label><input class="input" placeholder="如：金边电科能源有限公司（用户名下）"/></div>
+                <div class="field"><label>统一社会信用代码<span class="req">*</span></label><input class="input" placeholder="自动套用公司注册资料"/></div>
+                <div class="field"><label>法人 / 注册地址</label><input class="input" placeholder="随公司自动带出"/></div>
+              </div>
+            </div>
+            <div class="card mt">
+              <h3>② 创建品牌 + 提交商标注册证书</h3>
+              <div class="sub">无商标注册证书不可创建可用品牌；验证通过前品牌为「待验证」</div>
+              <div class="form-row">
+                <div class="field"><label>品牌名称<span class="req">*</span></label><input class="input" placeholder="如：金边电科"/></div>
+                <div class="field"><label>所属公司<span class="req">*</span></label><select class="input"><option>金边电科能源有限公司</option><option>＋ 新建公司</option></select></div>
+                <div class="field"><label>商标注册证书<span class="req">*</span></label><input class="input" placeholder="上传商标证书图片/注册号"/></div>
+              </div>
+              <div class="kv"><span class="k">证书核验</span><span class="v" style="color:var(--amber)">⏳ 待平台验真（OCR + 人工复核）</span></div>
+              <div class="kv"><span class="k">验证结果</span><span class="v">通过 → 品牌「已激活」方可发布产品</span></div>
+            </div>
+            <div class="card mt">
+              <h3>③ 验证与发布闸门</h3>
+              <div class="kv"><span class="k">品牌状态</span><span class="v"><span class="tag a">待验证</span> / <span class="tag g">已激活</span></span></div>
+              <div class="kv"><span class="k">发布闸门</span><span class="v" style="color:var(--coral)">无品牌方 / 未验证 brand → 禁止发布产品与商品</span></div>
+              <div class="kv"><span class="k">资料留存</span><span class="v">公司 + 商标证书归档，责任落实、合法沟通</span></div>
+              <div class="flex between mt"><span class="muted" style="font-size:12px">验证通过后，「我的」出现品牌方/商家入口</span><div class="flex"><button class="btn btn-ghost">存草稿</button><button class="btn btn-primary">提交验证</button></div></div>
+            </div>
+          </div>
+          <div class="goods-panel" id="goods-product">
+            <div class="card">
+              <h3>基于模板建产品（品牌方操作）</h3>
+              <div class="sub">调用平台产品模板，创建品牌自有产品（统领设备，归属本品牌方）</div>
+              <div class="form-row">
+                <div class="field"><label>选择产品模板<span class="req">*</span></label><select class="input"><option>CL-48V 换电电池</option><option>CL-两轮换电车</option><option>CL-充电桩</option></select></div>
+                <div class="field"><label>产品名称<span class="req">*</span></label><input class="input" placeholder="如：金边电科 48V-A 款"/></div>
+                <div class="field"><label>品牌方</label><input class="input" value="金边电科" disabled/></div>
+              </div>
+              <div class="kv"><span class="k">继承模板字段</span><span class="v">14 项（容量/电压/寿命…）</span></div>
+              <div class="kv"><span class="k">本产品设备</span><span class="v" style="color:var(--brand)">后续在「产品」中登记</span></div>
+              <button class="btn btn-primary mt">创建产品</button>
+            </div>
+          </div>
+          <div class="goods-panel" id="goods-publish">
+            <div class="card">
+              <h3>发布商品 · 选择产品类（多选）</h3>
+              <div class="sub">一类产品管全部设备；可选多个产品类，商品聚合其下设备能力</div>
+              <div class="note-banner" style="margin-top:14px">🚫 发布闸门：仅「已激活」品牌方可选；无品牌方 / 未验证品牌 → 系统拦截，禁止发布商品。</div>
+              <div class="form-row">
+                <div class="field"><label>商品名称<span class="req">*</span></label><input class="input" placeholder="如：48V 换电电池租赁包"/></div>
+                <div class="field"><label>发布品牌方<span class="req">*</span></label><select class="input"><option>金边电科</option><option>湄公出行</option></select></div>
+              </div>
+              <label style="font-size:12.5px;font-weight:600;color:var(--ink-2)">关联产品类（可多选）</label>
+              <div class="grid3 mt" style="gap:10px">
+                <div class="entry on" style="cursor:pointer"><div class="ei">🔋</div><div class="et">金边电科<br/>48V-A 款</div></div>
+                <div class="entry on" style="cursor:pointer"><div class="ei">🚗</div><div class="et">湄公出行<br/>换电车</div></div>
+                <div class="entry" style="cursor:pointer"><div class="ei">🔌</div><div class="et">金边电科<br/>储能柜</div></div>
+              </div>
+              <div class="form-row mt">
+                <div class="field"><label>商品类型</label><span class="seg"><button class="on">实物销售</button><button>租赁</button><button>服务</button></span></div>
+                <div class="field"><label>价格（$）</label><input class="input" placeholder="0.00"/></div>
+              </div>
+              <div class="kv"><span class="k">覆盖设备（自动汇总）</span><span class="v" style="color:var(--brand)">11,580 台</span></div>
+              <div class="flex between mt"><span class="muted" style="font-size:12px">发布后进入商品列表与订单中心</span><div class="flex"><button class="btn btn-ghost">预览</button><button class="btn btn-primary">发布商品</button></div></div>
+            </div>
+          </div>
+          <div class="goods-panel" id="goods-list">
+            <div class="card tight">
+              <table class="tbl">
+                <thead><tr><th>商品</th><th>品牌方</th><th>产品类</th><th>类型</th><th>价格</th><th>状态</th></tr></thead>
+                <tbody>
+                  <tr><td class="strong">48V 换电电池租赁包</td><td>金边电科</td><td>48V-A 款</td><td><span class="tag l">租赁</span></td><td class="mono">$26/月</td><td><span class="tag g">在售</span></td></tr>
+                  <tr><td class="strong">两轮换电车整车</td><td>湄公出行</td><td>换电车</td><td><span class="tag">实物</span></td><td class="mono">$880</td><td><span class="tag g">在售</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="goods-panel" id="goods-order">
+            <div class="stats">
+              <div class="stat"><div class="k">今日订单</div><div class="v num">186</div></div>
+              <div class="stat"><div class="k">待发货</div><div class="v num" style="color:var(--amber)">42</div><div class="t">需核对合格证</div></div>
+              <div class="stat"><div class="k">GMV</div><div class="v num" style="color:var(--brand)">$7,940</div></div>
+            </div>
+            <div class="card tight">
+              <table class="tbl">
+                <thead><tr><th>订单号</th><th>商品</th><th>买家</th><th>金额</th><th>合格证</th><th>状态</th></tr></thead>
+                <tbody>
+                  <tr><td class="mono strong">SO-0042</td><td>48V 换电电池租赁包</td><td>阿肯</td><td class="mono">$26</td><td><span class="tag g">已绑定</span></td><td><span class="tag g">已付款</span></td></tr>
+                  <tr><td class="mono strong">SO-0043</td><td>两轮换电车整车</td><td>占沙</td><td class="mono">$880</td><td><span class="tag a">待生成</span></td><td><span class="tag a">待发货</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 任务发布 ========== -->
+    <section class="view" id="view-task">
+      <div class="crumb"><b>任务发布</b><span class="sep">/</span><span id="taskCrumb">发布物流任务</span></div>
+      <div class="view-head">
+        <div class="kicker">Task Publishing · 任务大厅</div>
+        <h1>任务发布</h1>
+        <p>独立菜单。各功能模块均设「任务大厅」：需求方发布任务，附近车辆/设备自主选择接单完成预定任务。涵盖物流、客运（<b>本期 3 子模块：公交 / 打的 / 顺风车</b>，货运归入物流）、广告自媒体、录像数据、资产出租。</p>
+      </div>
+      <div class="split">
+        <nav class="subnav">
+          <button class="s on" data-task="logi"><span class="ic">🚚</span>发布物流任务</button>
+          <button class="s" data-task="near"><span class="ic">📍</span>查看附近车辆</button>
+          <button class="s" data-task="ad"><span class="ic">📢</span>发布广告自媒体</button>
+          <button class="s" data-task="video"><span class="ic">🎥</span>查看录像数据</button>
+          <button class="s" data-task="rent"><span class="ic">📤</span>我要出租</button>
+        </nav>
+        <div class="body">
+          <div class="task-panel on" id="task-logi">
+            <div class="card">
+              <h3>发布物流任务</h3>
+              <div class="sub">填写货运需求 → 推送到任务大厅 → 附近车辆/设备自主接单</div>
+              <div class="form-row">
+                <div class="field"><label>取货地<span class="req">*</span></label><input class="input" placeholder="俄罗斯市场站"/></div>
+                <div class="field"><label>收货地<span class="req">*</span></label><input class="input" placeholder="金边机场"/></div>
+                <div class="field"><label>货物类型</label><select class="input"><option>小件包裹</option><option>生鲜</option><option>大件</option></select></div>
+              </div>
+              <div class="form-row">
+                <div class="field"><label>报酬（$）<span class="req">*</span></label><input class="input" placeholder="5.00"/></div>
+                <div class="field"><label>截止时间</label><input class="input" placeholder="30 分钟内"/></div>
+              </div>
+              <button class="btn btn-primary">发布到任务大厅</button>
+            </div>
+            <h4 style="font-size:14px;font-weight:800;margin:18px 0 8px">任务大厅 · 待接单</h4>
+            <div class="hall">
+              <div class="h"><div class="top"><div class="ic">📦</div><div><div class="nm">包裹 · 市场站→机场</div><div class="meta">$5.0 · 30分钟</div></div></div><div class="row"><span>已抢单</span><span class="num">2/5</span></div><div class="row"><span>最近车辆</span><span class="num">0.8km</span></div><button class="btn btn-energy btn-sm mt" style="width:100%">去接单</button></div>
+              <div class="h"><div class="top"><div class="ic">🥬</div><div><div class="nm">生鲜 · 中央市场</div><div class="meta">$8.0 · 1小时</div></div></div><div class="row"><span>已抢单</span><span class="num">1/3</span></div><div class="row"><span>最近车辆</span><span class="num">1.2km</span></div><button class="btn btn-energy btn-sm mt" style="width:100%">去接单</button></div>
+            </div>
+          </div>
+          <div class="task-panel" id="task-near">
+            <div class="card tight">
+              <div class="flex between mb" style="padding:18px 18px 0"><div><h3>查看附近车辆</h3><div class="sub" style="margin:0">公交 / 打的 / 顺风车 / 货运 — 任务大厅车辆选择</div></div><span class="seg"><button class="on">全部</button><button>公交</button><button>打的</button><button>顺风车</button><button>货运</button></span></div>
+              <div style="padding:16px 18px">
+                <div class="veh"><div class="av">🚕</div><div style="flex:1"><div class="nm">打的 · 嘟嘟车 #T-118</div><div class="ds">客运 · 可接短途 · 评分 4.8</div></div><span class="dist">0.3km</span><button class="btn btn-soft btn-sm">呼叫</button></div>
+                <div class="veh"><div class="av">🚌</div><div style="flex:1"><div class="nm">公交 · 线路 B2</div><div class="ds">客运 · 定线 · 2 分钟一班</div></div><span class="dist">0.5km</span><button class="btn btn-soft btn-sm">查看</button></div>
+                <div class="veh"><div class="av">🚗</div><div style="flex:1"><div class="nm">顺风车 · #C-204</div><div class="ds">客运 · 同路拼车 · $1.2</div></div><span class="dist">0.7km</span><button class="btn btn-soft btn-sm">预约</button></div>
+                <div class="veh"><div class="av">🚚</div><div style="flex:1"><div class="nm">货运 · #F-077</div><div class="ds">物流 · 载货 200kg · 可接单</div></div><span class="dist">0.9km</span><button class="btn btn-soft btn-sm">派单</button></div>
+              </div>
+            </div>
+          </div>
+          <div class="task-panel" id="task-ad">
+            <div class="card">
+              <h3>发布广告自媒体</h3>
+              <div class="sub">车身/屏显媒体任务 → 设备接单展示 → 脱敏录像回传核验</div>
+              <div class="form-row">
+                <div class="field"><label>广告主<span class="req">*</span></label><input class="input" placeholder="品牌/商家"/></div>
+                <div class="field"><label>投放时长</label><select class="input"><option>1 天</option><option>1 周</option><option>1 月</option></select></div>
+                <div class="field"><label>报酬（$）</label><input class="input" placeholder="20.0"/></div>
+              </div>
+              <div class="field"><label>素材</label><input class="input" placeholder="上传图片/视频"/></div>
+              <button class="btn btn-primary">发布到广告任务大厅</button>
+            </div>
+          </div>
+          <div class="task-panel" id="task-video">
+            <div class="card">
+              <h3>查看录像数据（脱敏）</h3>
+              <div class="sub">行车记录脱敏回传；仅授权设备/任务可见，符合隐私合规</div>
+              <div class="grid3">
+                <div class="p-card"><div class="num" style="font-size:26px;font-weight:800">1,204</div><div class="muted" style="font-size:12px">脱敏片段（今日）</div></div>
+                <div class="p-card"><div class="num" style="font-size:26px;font-weight:800;color:var(--brand)">98%</div><div class="muted" style="font-size:12px">已脱敏率</div></div>
+                <div class="p-card"><div class="num" style="font-size:26px;font-weight:800">342</div><div class="muted" style="font-size:12px">可调阅设备</div></div>
+              </div>
+              <div class="kv mt"><span class="k">回放</span><span class="v">按设备/时间段检索</span></div>
+              <div class="kv"><span class="k">隐私</span><span class="v">人脸/车牌自动打码</span></div>
+              <div class="empty mt">🎥 录像播放器与脱敏引擎由专项开发，UI 预留检索与预览位。</div>
+            </div>
+          </div>
+          <div class="task-panel" id="task-rent">
+            <div class="card">
+              <h3>我要出租（车辆 / 电池等资产）</h3>
+              <div class="sub">产权人将自有设备发布到租赁任务大厅，设定可授予权限与租金</div>
+              <div class="form-row">
+                <div class="field"><label>出租资产<span class="req">*</span></label><select class="input"><option>BT-2026-004881 电池</option><option>VE-2026-001203 车辆</option></select></div>
+                <div class="field"><label>租金</label><input class="input" placeholder="$26 / 月"/></div>
+                <div class="field"><label>租期</label><select class="input"><option>日</option><option>月</option><option>季</option></select></div>
+              </div>
+              <label style="font-size:12.5px;font-weight:600;color:var(--ink-2)">权限模板（最小权限 · 模板化，优化建议 2）</label>
+              <div class="seg mt" style="width:100%">
+                <button class="on">仅使用</button><button>使用+定位</button><button>全权</button>
+              </div>
+              <div class="child-tags mt"><span class="tag g">开关使用</span><span class="tag a">实时定位</span><span class="tag c">收益数据(隐藏)</span><span class="tag c">产权(禁止)</span></div>
+              <p class="muted mt" style="font-size:12px">权限模板沉淀为「仅使用 / 使用+定位 / 全权」，减少每次勾选、利于审计；实时定位承租人可见、历史轨迹仅本人使用期。</p>
+              <button class="btn btn-primary mt">发布出租任务</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 系统设置（权限） ========== -->
+    <section class="view" id="view-settings">
+      <div class="crumb"><b>系统设置</b><span class="sep">/</span><span id="setCrumb">用户管理</span></div>
+      <div class="view-head">
+        <div class="kicker">RBAC · RuoYi Style</div>
+        <h1>系统设置（权限 / 角色 / 用户）</h1>
+        <p>参考 RuoYi 傻瓜式配置：<b>用户 ↔ 角色 ↔ 菜单权限</b> 三层解耦，权限以「菜单树勾选 + 数据范围」可视化分配，为扩展预留边界。本期新增「任务发布」「设备详情」等菜单节点。</p>
+      </div>
+      <div class="split">
+        <nav class="subnav">
+          <button class="s on" data-set="user"><span class="ic">👤</span>用户管理</button>
+          <button class="s" data-set="role"><span class="ic">🛡️</span>角色管理</button>
+          <button class="s" data-set="menu"><span class="ic">🧩</span>菜单权限</button>
+          <button class="s" data-set="asset"><span class="ic">💱</span>资产参数</button>
+        </nav>
+        <div class="body">
+          <div class="set-panel on" id="set-user">
+            <div class="card tight">
+              <div class="flex between mb" style="padding:18px 18px 0"><div><h3>用户管理</h3><div class="sub" style="margin:0">用户是组织载体；品牌方/服务站/运营商均为「组织属性」</div></div><button class="btn btn-primary">＋ 新建用户</button></div>
+              <table class="tbl">
+                <thead><tr><th>账号</th><th>昵称</th><th>组织属性</th><th>角色</th><th>状态</th></tr></thead>
+                <tbody>
+                  <tr><td class="mono strong">zhou</td><td>周老板</td><td><span class="tag">平台</span></td><td><span class="tag b">超级管理员</span></td><td><span class="tag g">正常</span></td></tr>
+                  <tr><td class="mono strong">jinbian</td><td>金边电科</td><td><span class="tag a">品牌方</span></td><td><span class="tag">品牌运营</span></td><td><span class="tag g">正常</span></td></tr>
+                  <tr><td class="mono strong">akan</td><td>阿肯</td><td><span class="tag l">车主/承租人</span></td><td><span class="tag">普通用户</span></td><td><span class="tag g">正常</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="set-panel" id="set-role">
+            <div class="grid2">
+              <div class="card tight">
+                <div class="flex between mb" style="padding:16px 16px 0"><h3>角色列表</h3><button class="btn btn-primary btn-sm">＋ 新建角色</button></div>
+                <div class="kv" style="padding:12px 16px"><span class="k strong">超级管理员</span><span class="v">全部权限</span></div>
+                <div class="kv" style="padding:12px 16px"><span class="k strong">品牌运营</span><span class="v">产品/商品/订单</span></div>
+                <div class="kv" style="padding:12px 16px"><span class="k strong">车主</span><span class="v">资产/任务大厅</span></div>
+                <div class="kv" style="padding:12px 16px;border:none"><span class="k strong">财务</span><span class="v">财务中心</span></div>
+              </div>
+              <div class="card">
+                <h3>权限分配 · 菜单树勾选</h3>
+                <div class="sub">勾选即授权，支持父子联动；数据范围控制可见数据</div>
+                <div class="tree" id="permTree">
+                  <div class="tnode"><div class="row chk"><span class="toggle">▾</span><span class="tw">✓</span><span class="lbl">产品管理（物联网）</span></div>
+                    <div class="children">
+                      <div class="tnode"><div class="row chk"><span class="tw">✓</span><span class="lbl">产品模板</span></div></div>
+                      <div class="tnode"><div class="row chk"><span class="tw">✓</span><span class="lbl">产品（品牌）</span></div></div>
+                      <div class="tnode"><div class="row chk"><span class="tw">✓</span><span class="lbl">设备（对象）</span></div></div>
+                      <div class="tnode"><div class="row chk"><span class="tw">✓</span><span class="lbl">设备详情</span></div></div>
+                      <div class="tnode"><div class="row chk"><span class="tw">✓</span><span class="lbl">合格证</span></div></div>
+                    </div></div>
+                  <div class="tnode"><div class="row chk"><span class="toggle">▾</span><span class="tw">✓</span><span class="lbl">商品管理</span></div>
+                    <div class="children">
+                      <div class="tnode"><div class="row chk"><span class="tw">✓</span><span class="lbl">品牌方入驻</span></div></div>
+                      <div class="tnode"><div class="row chk"><span class="tw">✓</span><span class="lbl">发布商品</span></div></div>
+                      <div class="tnode"><div class="row chk"><span class="tw">✓</span><span class="lbl">订单管理</span></div></div>
+                    </div></div>
+                  <div class="tnode"><div class="row chk"><span class="toggle">▾</span><span class="tw">✓</span><span class="lbl">任务发布</span></div>
+                    <div class="children">
+                      <div class="tnode"><div class="row chk"><span class="tw">✓</span><span class="lbl">发布物流任务</span></div></div>
+                      <div class="tnode"><div class="row chk"><span class="tw">✓</span><span class="lbl">查看附近车辆</span></div></div>
+                      <div class="tnode"><div class="row chk"><span class="tw">✓</span><span class="lbl">发布广告/录像/出租</span></div></div>
+                    </div></div>
+                </div>
+                <div class="form-row mt"><div class="field"><label>数据范围</label><select class="input"><option>全部数据</option><option>本品牌方</option><option>本服务站</option><option>仅本人资产</option></select></div></div>
+                <button class="btn btn-primary">保存角色权限</button>
+              </div>
+            </div>
+          </div>
+          <div class="set-panel" id="set-menu">
+            <div class="card tight">
+              <div class="flex between mb" style="padding:18px 18px 0"><div><h3>菜单权限（系统菜单）</h3><div class="sub" style="margin:0">菜单即权限节点；新增功能只需登记再分配角色</div></div><button class="btn btn-primary btn-sm">＋ 新增菜单</button></div>
+              <table class="tbl">
+                <thead><tr><th>菜单名称</th><th>类型</th><th>权限标识</th><th>所属</th></tr></thead>
+                <tbody>
+                  <tr><td class="strong">产品模板</td><td><span class="tag">菜单</span></td><td class="mono">iot:template</td><td>产品管理</td></tr>
+                  <tr><td class="strong">产品（品牌）</td><td><span class="tag">菜单</span></td><td class="mono">iot:product</td><td>产品管理</td></tr>
+                  <tr><td class="strong">设备详情</td><td><span class="tag">菜单</span></td><td class="mono">iot:device:detail</td><td>产品管理</td></tr>
+                  <tr><td class="strong">合格证</td><td><span class="tag">菜单</span></td><td class="mono">iot:cert</td><td>产品管理</td></tr>
+                  <tr><td class="strong">任务发布</td><td><span class="tag">菜单</span></td><td class="mono">task:publish</td><td>任务发布</td></tr>
+                  <tr><td class="strong">发布物流任务</td><td><span class="tag">按钮</span></td><td class="mono">task:logi</td><td>任务发布</td></tr>
+                  <tr><td class="strong">我要出租</td><td><span class="tag">按钮</span></td><td class="mono">task:rent</td><td>任务发布</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="set-panel" id="set-asset">
+            <div class="card">
+              <h3>资产参数（产权现值核算，优化建议 6）</h3>
+              <div class="sub">年利率与计息方式设为系统参数，可按资产类型差异化；产权转移当前价值由系统据此自动核算（不可议价）</div>
+              <div class="form-row">
+                <div class="field"><label>默认年利率</label><input class="input" value="10%" /></div>
+                <div class="field"><label>计息方式</label><select class="input"><option>复利</option><option>单利</option></select></div>
+                <div class="field"><label>适用资产类型</label><select class="input"><option>全部</option><option>动力电池</option><option>车辆</option><option>储能</option></select></div>
+              </div>
+              <div class="kv"><span class="k">核算公式</span><span class="v">购入原值 × (1 + 利率)^持有年数（复利）</span></div>
+              <div class="kv"><span class="k">是否可议价</span><span class="v" style="color:var(--coral)">否 · 系统定值</span></div>
+              <button class="btn btn-primary mt">保存资产参数</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 统一 App 角色入口 ========== -->
+    <section class="view" id="view-app">
+      <div class="view-head">
+        <div class="kicker">One App · Role-based</div>
+        <h1>统一 App · 角色入口 & 资产</h1>
+        <p>工作站与用户端整合为同一 App。用户在「我的」按角色看到不同入口；设备出现在「资产」菜单，可扫码绑定/参与任务大厅；租赁设备仅显示授权信息。</p>
+      </div>
+      <div class="wrap-flex">
+        <div class="phone">
+          <div class="scr">
+            <div class="p-top"><div class="t">资产<small>阿肯 · 我的设备</small></div><span class="x">⚙️</span></div>
+            <div class="p-body">
+              <button class="btn btn-energy" style="width:100%">📷 扫码绑定新设备</button>
+              <div class="p-sec">我拥有的设备（全功能）</div>
+              <div class="p-card">
+                <div class="flex between"><b class="num">BT-2026-004881</b><span class="tag g">已绑定</span></div>
+                <div class="muted" style="font-size:11.5px">金边电科 48V-A · 今日 $12.4</div>
+                <div class="kv" style="margin-top:6px"><span class="k">能力</span><span class="v" style="font-size:11px">物流/客运/广告/录像</span></div>
+                <button class="btn btn-soft btn-sm mt" style="width:100%">查看设备详情</button>
+              </div>
+              <div class="p-sec">我租赁的设备（受限）</div>
+              <div class="p-card" style="border:1px dashed var(--line)">
+                <div class="flex between"><b class="num">VE-2026-001203</b><span class="tag a">租赁中</span></div>
+                <div class="muted" style="font-size:11.5px">仅授权：开关使用 / 自身定位</div>
+                <div class="kv mt" style="border:none"><span class="k">收益/产权</span><span class="v" style="color:var(--coral)">无权查看</span></div>
+              </div>
+            </div>
+            <div class="p-tab"><div><i>🏠</i>首页</div><div><i>⚡</i>换电</div><div class="on"><i>💰</i>资产</div><div><i>👤</i>我的</div></div>
+          </div>
+        </div>
+        <div class="phone">
+          <div class="scr">
+            <div class="p-top"><div class="t">我的<small>阿肯 · 金边</small></div><span class="x">⚙️</span></div>
+            <div class="p-body">
+              <div class="p-card"><div class="flex between"><div><div style="font-size:15px;font-weight:800">阿肯</div><div class="muted" style="font-size:11px">+855 12 345 678</div></div><div class="flex" style="gap:6px"><span class="role-pill">🏪 站长</span><span class="role-pill">🚗 车主</span></div></div></div>
+              <div class="p-sec">我的角色入口</div>
+              <div class="entry-grid">
+                <div class="entry on"><div class="ei">🏭</div><div class="et">入驻商家</div></div>
+                <div class="entry on"><div class="ei">🏪</div><div class="et">服务站管理</div></div>
+                <div class="entry on"><div class="ei">📋</div><div class="et">任务发布</div></div>
+                <div class="entry"><div class="ei">📦</div><div class="et">物流</div></div>
+                <div class="entry"><div class="ei">🚕</div><div class="et">打车</div></div>
+                <div class="entry"><div class="ei">📢</div><div class="et">广告</div></div>
+                <div class="entry"><div class="ei">🎥</div><div class="et">录像</div></div>
+                <div class="entry on"><div class="ei">💰</div><div class="et">资产</div></div>
+              </div>
+              <div class="p-card" style="border:1.5px dashed var(--line);text-align:center;color:var(--muted);font-size:12px">切换角色 → 对应入口高亮并显示专属首页</div>
+            </div>
+            <div class="p-tab"><div><i>🏠</i>首页</div><div><i>⚡</i>换电</div><div><i>💰</i>资产</div><div class="on"><i>👤</i>我的</div></div>
+          </div>
+        </div>
+        <div class="card" style="flex:1;min-width:280px">
+          <h3>角色 → 入口映射（设计建议）</h3>
+          <div class="kv"><span class="k strong">🏭 入驻商家</span><span class="v">发商品/管产品设备/订单</span></div>
+          <div class="kv"><span class="k strong">📋 任务发布</span><span class="v">物流/附近车辆/广告/录像/出租</span></div>
+          <div class="kv"><span class="k strong">💰 资产</span><span class="v">设备展示/扫码绑定/任务大厅</span></div>
+          <div class="kv"><span class="k strong">🏪 服务站</span><span class="v">电池收发/对账/赋权</span></div>
+          <div class="kv"><span class="k strong">🚕 打车 / 📦 物流</span><span class="v">客运/货运接单</span></div>
+          <div class="kv" style="border:none"><span class="k strong">⚡ 换电（默认）</span><span class="v">所有用户通用</span></div>
+          <div class="empty mt">📱 多语言与皮肤：前端自动套用，做 App 时一并接入。</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+function show(view){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.querySelectorAll('.pnav').forEach(n=>n.classList.remove('on'));
+  const el=document.getElementById('view-'+view); if(el) el.classList.add('on');
+  const nav=document.querySelector('.pnav[data-view="'+view+'"]'); if(nav) nav.classList.add('on');
+  const labels={overview:'模块导航总览',iot:'产品管理 / 物联网',goods:'商品管理 / 品牌方',task:'任务发布',settings:'系统设置（权限）',app:'统一 App 角色入口'};
+  document.getElementById('ctxLabel').textContent=labels[view]||'';
+  window.scrollTo({top:0});
+}
+function go(v){show(v);}
+document.querySelectorAll('.pnav[data-view]').forEach(n=>n.addEventListener('click',()=>show(n.dataset.view)));
+
+const iotCrumb={tmpl:'产品模板',product:'产品（品牌）',device:'设备（对象）',detail:'设备详情',cert:'合格证',bind:'绑定 / 产权'};
+function iotTab(t){
+  document.querySelectorAll('.iot-panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.subnav .s[data-iot]').forEach(s=>s.classList.remove('on'));
+  const el=document.getElementById('iot-'+t); if(el) el.classList.add('on');
+  const s=document.querySelector('.subnav .s[data-iot="'+t+'"]'); if(s) s.classList.add('on');
+  if(iotCrumb[t]) document.getElementById('iotCrumb').textContent=iotCrumb[t];
+  window.scrollTo({top:0});
+}
+document.querySelectorAll('.subnav .s[data-iot]').forEach(s=>s.addEventListener('click',()=>iotTab(s.dataset.iot)));
+
+const gCrumb={brand:'品牌方入驻',product:'建产品(调模板)',publish:'发布商品',list:'商品列表',order:'订单管理'};
+function goodsTab(t){
+  document.querySelectorAll('.goods-panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.subnav .s[data-goods]').forEach(s=>s.classList.remove('on'));
+  const el=document.getElementById('goods-'+t); if(el) el.classList.add('on');
+  const s=document.querySelector('.subnav .s[data-goods="'+t+'"]'); if(s) s.classList.add('on');
+  if(gCrumb[t]) document.getElementById('goodsCrumb').textContent=gCrumb[t];
+  window.scrollTo({top:0});
+}
+document.querySelectorAll('.subnav .s[data-goods]').forEach(s=>s.addEventListener('click',()=>goodsTab(s.dataset.goods)));
+
+const setCrumb={user:'用户管理',role:'角色管理',menu:'菜单权限'};
+function setTab(t){
+  document.querySelectorAll('.set-panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.subnav .s[data-set]').forEach(s=>s.classList.remove('on'));
+  const el=document.getElementById('set-'+t); if(el) el.classList.add('on');
+  const s=document.querySelector('.subnav .s[data-set="'+t+'"]'); if(s) s.classList.add('on');
+  if(setCrumb[t]) document.getElementById('setCrumb').textContent=setCrumb[t];
+  window.scrollTo({top:0});
+}
+document.querySelectorAll('.subnav .s[data-set]').forEach(s=>s.addEventListener('click',()=>setTab(s.dataset.set)));
+
+const taskCrumb={logi:'发布物流任务',near:'查看附近车辆',ad:'发布广告自媒体',video:'查看录像数据',rent:'我要出租'};
+function taskTab(t){
+  document.querySelectorAll('.task-panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.subnav .s[data-task]').forEach(s=>s.classList.remove('on'));
+  const el=document.getElementById('task-'+t); if(el) el.classList.add('on');
+  const s=document.querySelector('.subnav .s[data-task="'+t+'"]'); if(s) s.classList.add('on');
+  if(taskCrumb[t]) document.getElementById('taskCrumb').textContent=taskCrumb[t];
+  window.scrollTo({top:0});
+}
+document.querySelectorAll('.subnav .s[data-task]').forEach(s=>s.addEventListener('click',()=>taskTab(s.dataset.task)));
+
+/* 设备详情 tabs */
+document.querySelectorAll('.dtab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.dpanel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.dtab').forEach(x=>x.classList.remove('on'));
+  document.getElementById('d-'+t.dataset.d).classList.add('on');
+  t.classList.add('on');
+}));
+
+/* 权限树 */
+document.querySelectorAll('#permTree .row').forEach(r=>r.addEventListener('click',e=>{
+  if(e.target.classList.contains('toggle')) return;
+  r.classList.toggle('chk');
+  const tw=r.querySelector('.tw'); tw.textContent=r.classList.contains('chk')?'✓':'';
+}));
+document.querySelectorAll('.entry').forEach(en=>en.addEventListener('click',()=>en.classList.toggle('on')));
+
+function addField(){
+  const list=document.getElementById('fieldList');
+  const row=document.createElement('div'); row.className='field-row';
+  row.innerHTML='<div class="cell strong"><input class="mini" placeholder="新字段名"/></div>'+
+    '<div class="cell"><select class="mini"><option>文本</option><option>数值</option><option>下拉</option><option>日期</option><option>布尔</option></select></div>'+
+    '<div class="cell"><input class="mini" placeholder="单位/选项"/></div><div><span class="tag a">可选</span></div><div class="cell mono">—</div><button class="del">×</button>';
+  row.querySelector('.del').addEventListener('click',()=>row.remove());
+  list.appendChild(row);
+}
+document.querySelectorAll('#fieldList .del').forEach(b=>b.addEventListener('click',()=>b.closest('.field-row').remove()));
+</script>
+</body>
+</html>

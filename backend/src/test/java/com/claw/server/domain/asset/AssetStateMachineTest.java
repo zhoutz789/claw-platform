@@ -47,4 +47,36 @@ class AssetStateMachineTest {
     void repair_can_go_scrapped() {
         assertTrue(AssetStateMachine.canTransition(AssetStatus.REPAIR, AssetStatus.SCRAPPED));
     }
+
+    @Test
+    void inUse_can_go_retired() {
+        assertDoesNotThrow(() -> AssetStateMachine.assertTransition(AssetStatus.IN_USE, AssetStatus.RETIRED));
+    }
+
+    @Test
+    void disabled_can_go_retired() {
+        assertTrue(AssetStateMachine.canTransition(AssetStatus.DISABLED, AssetStatus.RETIRED));
+    }
+
+    @Test
+    void retired_can_go_recycled() {
+        assertDoesNotThrow(() -> AssetStateMachine.assertTransition(AssetStatus.RETIRED, AssetStatus.RECYCLED));
+    }
+
+    @Test
+    void retired_can_go_scrapped() {
+        assertTrue(AssetStateMachine.canTransition(AssetStatus.RETIRED, AssetStatus.SCRAPPED));
+    }
+
+    @Test
+    void recycled_is_terminal() {
+        assertThrows(BizException.class,
+                () -> AssetStateMachine.assertTransition(AssetStatus.RECYCLED, AssetStatus.IN_USE));
+    }
+
+    @Test
+    void stock_cannot_skip_to_recycled() {
+        assertThrows(BizException.class,
+                () -> AssetStateMachine.assertTransition(AssetStatus.IN_STOCK, AssetStatus.RECYCLED));
+    }
 }

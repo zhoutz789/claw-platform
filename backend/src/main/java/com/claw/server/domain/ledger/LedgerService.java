@@ -3,6 +3,7 @@ package com.claw.server.domain.ledger;
 import com.claw.server.common.api.BizException;
 import com.claw.server.common.dto.LedgerRequests;
 import com.claw.server.common.dto.LedgerViews;
+import com.claw.server.common.enums.AccountType;
 import com.claw.server.common.enums.BizType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -77,7 +78,11 @@ public class LedgerService {
             Account account = accountRepository.findByIdForUpdate(e.accountId())
                     .orElseThrow(() -> BizException.notFound("error.account.not.found"));
             if (e.direction() == LedgerRequests.Direction.D) {
-                if (account.getBalance().compareTo(e.amount()) < 0) {
+                // 平台 MASTER 清算/汇总户作为内部记账对冲侧（如 PROJECT_LEDGER）时豁免余额不足校验：
+                // 它不是真实资金账户，余额允许零/负（项目维度记账：项目户 + / 平台汇总户 -），
+                // 对应 V37 迁移已放宽 accounts.balance 的 CHECK 约束（仅 MASTER 允许为负）。
+                boolean isPlatformOffset = account.getAccountType() == AccountType.MASTER;
+                if (!isPlatformOffset && account.getBalance().compareTo(e.amount()) < 0) {
                     throw BizException.of(42251, "error.ledger.insufficient");
                 }
                 account.setBalance(account.getBalance().subtract(e.amount()));
@@ -103,6 +108,56 @@ public class LedgerService {
                 entries.size(), debit);
         return new LedgerViews.TxnResult(txnId, bizType, bizRef, entries.size(),
                 debit, touched.stream().map(this::toAccountView).toList());
+    }
+
+    /**
+     * 开立账户（V36 项目管理域复用）：创建并持久化一个 {@link AccountType#PROJECT} 等类型的账户。
+     * 供 ProjectService 为每个项目建专属核算账户——跨域经服务接口，不直持 AccountRepository。
+     *
+     * @param accountType 账户类型（如 PROJECT）
+     * @param userId      关联用户（平台内部户为 null）
+     * @param assetId     关联资产（资产子账户用，其余为 null）
+     * @return 新账户
+     */
+    @Transactional
+    public Account createAccount(AccountType accountType, Long userId, Long assetId) {
+        Account account = Account.builder()
+                .userId(userId)
+                .assetId(assetId)
+                .accountType(accountType)
+                .currency("USD")
+                .balance(BigDecimal.ZERO)
+                .frozen(BigDecimal.ZERO)
+                .tenantId(1L)
+                .deleted(false)
+                .build();
+        return accountRepository.save(account);
+    }
+
+    /**
+     * 取平台对冲账户 id（项目核算的双记账对侧）。优先复用已有 MASTER 平台户，缺失则创建。
+     */
+    @Transactional
+    public Long getPlatformAccountId() {
+        // 取第一条平台 MASTER 户（按 id 升序），容忍集成测试库累积的重复行，避免 NonUniqueResultException
+        return accountRepository.findFirstByUserIdIsNullAndAccountTypeAndCurrencyOrderByIdAsc(AccountType.MASTER, "USD")
+                .orElseGet(() -> accountRepository.save(Account.builder()
+                        .accountType(AccountType.MASTER)
+                        .currency("USD")
+                        .balance(BigDecimal.ZERO)
+                        .frozen(BigDecimal.ZERO)
+                        .tenantId(1L)
+                        .deleted(false)
+                        .build()))
+                .getId();
+    }
+
+    /** 查询账户余额（项目核算账户概览用）。 */
+    @Transactional(readOnly = true)
+    public BigDecimal getBalance(Long accountId) {
+        return accountRepository.findById(accountId)
+                .map(Account::getBalance)
+                .orElse(BigDecimal.ZERO);
     }
 
     /** 按 txnId 查询一笔交易的完整分录。 */

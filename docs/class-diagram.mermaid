@@ -1,29 +1,55 @@
 classDiagram
-    class Product { +Long id +Long manufacturerId +String name +AssetType assetType }
-    class ProductSku { +Long id +Long productId +String skuCode +BigDecimal price }
-    class ProductLink { +Long id +Long productId +Long skuId +String linkToken +String status +Long qualificationCertId }
-    class Certificate { +Long id +String certType +String certNo +Long productLinkId +Long assetId +String dataJson }
-    class Asset { +Long id +String assetNo +Long ownerId }
-    class Device { +Long id +Long assetId +String deviceToken }
-    class Track { +Long id +Long deviceId +Long assetId +Instant ts +BigDecimal lat +BigDecimal lng +BigDecimal alt +BigDecimal heading }
-    class DeviceLink { +Long id +Long assetId +String linkToken +Long ownerUserId +String status }
-    class ModuleCatalog { +Long id +String moduleCode +String status }
-    class AssetModule { +Long id +Long assetId +String moduleCode +Long subAccountId }
-    class Account { +Long id +Long assetId +AccountType accountType }
-    class AssetVehicleOps { +Long id +Long assetId +String moduleCode +BigDecimal revenue }
-    class PurchaseOrder { +Long id +Long buyerId }
+    class CustomerOrder {
+      +Long id
+      +String orderNo
+      +Long buyerUserId
+      +Long assetId
+      +String assetType
+      +UsageMode usageMode
+      +OrderStatus status
+      +BigDecimal totalAmount
+      +BigDecimal depositAmount
+      +String depositNo
+      +Long stationId
+      +Long poolEntryId
+      +Long splitRuleId
+      +Long certificateId
+    }
+    class CustomerOrderItem {
+      +Long id
+      +Long orderId
+      +Long assetId
+      +Integer quantity
+      +BigDecimal unitPrice
+      +BigDecimal subtotal
+    }
+    class DepositRule {
+      +Long id
+      +String assetType
+      +Integer yearIndex
+      +BigDecimal depositRate
+    }
+    class OrderStatus
+    class UsageMode
+    class CertificateType
+    class SharedPoolService {
+      +poolAsset(...) SharedPoolEntry
+      +createSplitRule(assetId, poolEntryId, ownerRate, stationRate) RevenueSplitRule
+      +createSettlement(poolEntryId, start, end) RevenueSettlement
+    }
+    class AssetOwnership
+    class SharedPoolEntry
+    class RevenueSplitRule
+    class RevenueSettlement
+    class Deposit
+    class Certificate
 
-    Product "1" --> "0..*" ProductLink
-    ProductSku "1" --> "0..*" ProductLink
-    ProductLink "1" --> "0..*" Certificate : qualification/consistency
-    Certificate "0..1" --> "1" Asset : per-asset(optional)
-    Asset "1" --> "1" DeviceLink : one link per asset
-    Asset "1" --> "0..*" Device
-    Device "1" --> "0..*" Track
-    Asset "1" --> "0..*" Track
-    Asset "1" --> "0..*" AssetModule
-    ModuleCatalog "1" --> "0..*" AssetModule
-    AssetModule "1" --> "1" Account : SUB
-    Asset "1" --> "0..*" AssetVehicleOps
-    AssetModule "0..1" --> AssetVehicleOps : moduleCode
-    PurchaseOrder "1" --> "0..*" DeviceLink : via asset birth
+    CustomerOrder "1" --> "0..*" CustomerOrderItem
+    CustomerOrder "1" --> "0..1" SharedPoolEntry : poolEntryId
+    CustomerOrder "1" --> "0..1" RevenueSplitRule : splitRuleId
+    CustomerOrder "1" --> "0..1" Certificate : certificateId
+    CustomerOrder "1" --> "0..1" Deposit : depositNo
+    CustomerOrder "1" --> "1" AssetOwnership : buyer=owner
+    DepositRule ".." CustomerOrder : computeDepositAmount
+    SharedPoolService "..>" RevenueSplitRule : createSplitRule
+    SharedPoolService "..>" RevenueSettlement : createSettlement

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>爪平台 · 商品向导原型 (D 期 v3)</title>
+<script src="https://cdn.jsdelivr.net/npm/tinymce@6.8.3/tinymce.min.js" referrerpolicy="origin"></script>
+<style>
+  :root{--primary:#1677ff;--border:#e5e7eb;--bg:#f5f6f8;--text:#1f2329;--muted:#8a9099;}
+  *{box-sizing:border-box;font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;}
+  body{margin:0;background:var(--bg);color:var(--text);}
+  .layout{display:flex;min-height:100vh;}
+  .sider{width:220px;background:#001529;color:#fff;padding:16px 0;}
+  .logo{padding:0 20px 16px;font-size:18px;font-weight:700;color:#fff;}
+  .menu{padding:0;list-style:none;margin:0;}
+  .menu .group{font-size:12px;color:#7a8390;padding:12px 20px 4px;}
+  .menu li{padding:10px 20px;cursor:pointer;font-size:14px;}
+  .menu li.active{background:var(--primary);}
+  .main{flex:1;display:flex;flex-direction:column;}
+  .header{height:56px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;}
+  .content{padding:20px;}
+  .card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:16px;}
+  .btn{background:var(--primary);color:#fff;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:13px;}
+  .btn.ghost{background:#fff;color:var(--primary);border:1px solid var(--primary);}
+  .btn.sm{padding:3px 10px;font-size:12px;}
+  .btn:disabled{background:#c9cdd4;cursor:not-allowed;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);}
+  th{background:#fafafa;color:var(--muted);font-weight:600;}
+  .tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;background:#e6f0ff;color:var(--primary);}
+  .tag.green{background:#e8f7ee;color:#18a058;}
+  .note{font-size:12px;color:var(--muted);}
+  .pill{font-size:11px;background:#fff3e0;color:#d46b08;padding:1px 6px;border-radius:4px;}
+  .row-ops{display:flex;gap:6px;}
+
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;padding:30px 0;z-index:50;overflow:auto;}
+  .wizard{background:#fff;width:760px;border-radius:8px;padding:24px;}
+  .wizard h3{margin:0 0 16px;}
+  .steps{display:flex;margin-bottom:20px;}
+  .step{flex:1;text-align:center;position:relative;}
+  .step .num{width:28px;height:28px;border-radius:50%;background:#e5e7eb;color:#8a9099;line-height:28px;margin:0 auto 6px;font-size:13px;}
+  .step.active .num{background:var(--primary);color:#fff;}
+  .step.done .num{background:#18a058;color:#fff;}
+  .step .label{font-size:12px;color:var(--muted);}
+  .step.active .label{color:var(--primary);font-weight:600;}
+  .step:not(:last-child)::after{content:'';position:absolute;top:14px;left:50%;width:100%;height:2px;background:#e5e7eb;z-index:-1;}
+  .form-row{margin-bottom:14px;}
+  .form-row label{display:block;font-size:13px;margin-bottom:6px;}
+  .form-row input,.form-row select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;}
+  .auto-fill{background:#f6f8fa;border:1px dashed var(--border);border-radius:6px;padding:12px;font-size:13px;color:var(--muted);}
+  .auto-fill b{color:var(--text);}
+  .upload{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+  .up-box{width:74px;height:74px;border:1px dashed var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;text-align:center;cursor:pointer;}
+  .up-box.sm{width:48px;height:48px;}
+  .up-box.filled{background:#e6f0ff;border-color:var(--primary);color:var(--primary);}
+  .counter{font-size:12px;color:var(--muted);float:right;}
+  .counter.over{color:#ff4d4f;}
+  .sku-row{display:flex;gap:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap;}
+  .sku-row input{padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;}
+  .khr{font-size:11px;color:#d46b08;}
+  .cat-attr{border:1px dashed var(--primary);border-radius:6px;padding:12px;background:#fafbff;margin-top:6px;}
+  .cat-attr h5{margin:0 0 10px;font-size:13px;color:var(--primary);}
+  .wizard-foot{display:flex;justify-content:space-between;margin-top:20px;border-top:1px solid var(--border);padding-top:16px;}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sider">
+    <div class="logo">爪平台 · 管理后台</div>
+    <ul class="menu">
+      <li>工作台</li>
+      <li class="group">产品管理</li>
+      <li>产品中心</li>
+      <li>产品模板字段</li>
+      <li class="group">商品 / 类目</li>
+      <li class="active">商品管理</li>
+      <li onclick="alert('见 docs/prototypes/increment3-category-admin.html')">类别管理</li>
+      <li class="group">资产 / 订单</li>
+      <li>资产大厅</li>
+      <li>项目管理（C 期）</li>
+      <li>订单管理（E 期）</li>
+      <li class="group">系统</li>
+      <li>系统设置</li>
+    </ul>
+  </aside>
+  <main class="main">
+    <header class="header">
+      <div><b>商品管理</b> <span class="pill">D 期 v3</span> <span class="note">SKU 含数量/图片、美元计价自动换算本币；类别属性在标题下；详情用 TinyMCE</span></div>
+      <div>厂家 / 商家</div>
+    </header>
+    <div class="content">
+      <section class="card">
+        <div class="toolbar" style="display:flex;justify-content:space-between;align-items:center;">
+          <b>商品列表</b>
+          <button class="btn" onclick="openWizard()">+ 发布商品</button>
+        </div>
+        <table>
+          <thead><tr><th>商品ID</th><th>标题</th><th>产品</th><th>类别</th><th>品牌</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody id="goodsBody"></tbody>
+        </table>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="overlay" id="wizOverlay">
+  <div class="wizard">
+    <h3 id="wizTitle">发布商品 <span class="note">（引导式 · 第 1–4 步）</span></h3>
+    <div class="steps" id="stepBar"></div>
+    <div id="stepBody"></div>
+    <div class="wizard-foot">
+      <button class="btn ghost" onclick="closeWizard()">取消</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn ghost" id="btnPrev" onclick="prev()">上一步</button>
+        <button class="btn" id="btnNext" onclick="next()">下一步</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const RATE=4100; // 1 USD ≈ 4100 KHR（柬埔寨本币，汇率可配置）
+const categories=[
+  {id:'C1',name:'光伏设备',props:[{name:'额定功率',type:'text',req:true},{name:'电池容量',type:'text',req:true},{name:'防护等级',type:'select',opts:['IP65','IP67'],req:false}]},
+  {id:'C2',name:'电池',props:[{name:'标称电压',type:'text',req:true},{name:'容量',type:'text',req:true},{name:'循环次数',type:'number',req:false}]},
+  {id:'C3',name:'无人机',props:[{name:'载重',type:'text',req:true},{name:'续航',type:'text',req:true},{name:'飞行分钟',type:'number',req:false}]}
+];
+const products=['光伏储能一体机 X1','换电电池包 B2','物流无人机 D1'];
+let goods=[
+  {id:'G-1001',title:'光伏储能一体机 X1 标准版',product:'光伏储能一体机 X1',cat:'光伏设备',brand:'SunPower',status:'在售'},
+  {id:'G-1002',title:'换电电池包 B2 高容版',product:'换电电池包 B2',cat:'电池',brand:'CATL',status:'在售'}
+];
+const stepDefs=[{n:'选产品/类别'},{n:'选品牌'},{n:'标题/主图/属性/SKU/详情'},{n:'直播/分享'}];
+let step=0,editId=null;
+const form={product:'',category:'',brand:'',title:'',skus:[{name:'',price:'',qty:'',img:false}],mainImgs:0,whiteImg:false,live:false,share:false,review:false,desc:'',catVals:{}};
+
+function renderGoods(){
+  document.getElementById('goodsBody').innerHTML=goods.map(g=>`
+    <tr><td>${g.id}</td><td>${g.title}</td><td>${g.product}</td><td>${g.cat}</td><td>${g.brand}</td>
+      <td><span class="tag green">${g.status}</span></td>
+      <td><div class="row-ops"><button class="btn ghost sm" onclick="openWizard('${g.id}')">编辑</button>
+      <button class="btn sm" style="background:#ff4d4f" onclick="delGoods('${g.id}')">删除</button></div></td></tr>`).join('');
+}
+function delGoods(id){if(confirm('确认删除该商品？')){goods=goods.filter(x=>x.id!==id);renderGoods();}}
+function openWizard(id){
+  editId=id||null;step=0;
+  if(id){const g=goods.find(x=>x.id===id);Object.assign(form,{product:g.product,category:g.cat,brand:g.brand,title:g.title,skus:[{name:'标准版',price:'1200',qty:'10',img:true}],mainImgs:3,whiteImg:true,desc:'<p>'+g.title+' 的详细介绍…</p>',catVals:{}});}
+  else{Object.assign(form,{product:'',category:'',brand:'',title:'',skus:[{name:'',price:'',qty:'',img:false}],mainImgs:0,whiteImg:false,desc:'',catVals:{}});}
+  document.getElementById('wizTitle').firstChild.textContent=(id?'编辑商品 ':'发布商品 ');
+  render();document.getElementById('wizOverlay').style.display='flex';
+}
+function closeWizard(){if(typeof tinymce!=='undefined')tinymce.remove('#fDesc');document.getElementById('wizOverlay').style.display='none';}
+function render(){renderSteps();renderBody();document.getElementById('btnPrev').disabled=(step===0);document.getElementById('btnNext').textContent=(step===3)?'提交':'下一步';}
+function renderSteps(){document.getElementById('stepBar').innerHTML=stepDefs.map((s,i)=>`<div class="step ${i===step?'active':(i<step?'done':'')}"><div class="num">${i<step?'✓':i+1}</div><div class="label">${s.n}</div></div>`).join('');}
+function curCat(){return categories.find(c=>c.name===form.category);}
+function renderBody(){
+  let h='';
+  if(step===0){
+    h=`<div class="form-row"><label>选择产品（A 期 products 表）</label>
+      <select onchange="form.product=this.value"><option value="">-- 请选择 --</option>${products.map(p=>`<option ${form.product===p?'selected':''}>${p}</option>`).join('')}</select></div>
+      <div class="form-row"><label>商品类别（系统单独设定，任何人不可更改；在「类别管理」统一维护，此处仅引用）</label>
+      <select onchange="form.category=this.value;form.catVals={};"><option value="">-- 请选择 --</option>${categories.map(c=>`<option ${form.category===c.name?'selected':''}>${c.name}</option>`).join('')}</select></div>
+      <div class="auto-fill">${form.product?'<b>产品基本属性已自动带出</b>（product_template_fields）：额定功率 / 电池容量 / 防护等级 等。':'选择产品后，基本属性将自动带出。'}${form.category?'<br><b>类别【'+form.category+'】已关联</b>，下一步「标题/属性」中将在标题下一览填写其 '+curCat().props.length+' 项基本属性。':''}</div>`;
+  }else if(step===1){
+    h=`<div class="form-row"><label>品牌</label>
+      <select onchange="form.brand=this.value"><option value="">-- 请选择 --</option>${['SunPower','CATL','DJI','比亚迪','宁德时代'].map(b=>`<option ${form.brand===b?'selected':''}>${b}</option>`).join('')}</select></div>
+      <p class="note">品牌来自「品牌方入驻」模块。</p>`;
+  }else if(step===2){
+    const cat=curCat();
+    h=`<div class="form-row"><label>商品标题（≤30 字）</label>
+      <input id="fTitle" maxlength="30" value="${form.title}" oninput="form.title=this.value;document.getElementById('titleCounter').textContent=this.value.length+'/30';">
+      <span class="counter" id="titleCounter">${form.title.length}/30</span></div>
+      <div class="form-row"><label>主图（最多 10 张，非必填，用于列表/详情展示）</label><div class="upload" id="mainImgs">${renderImgs(form.mainImgs)}<div class="up-box" onclick="addImg()">+ 上传</div></div></div>
+      <div class="form-row"><label>白底图（1 张，非必填，用于透明底展示）</label><div class="upload"><div class="up-box ${form.whiteImg?'filled':''}" onclick="form.whiteImg=!form.whiteImg;this.classList.toggle('filled')">${form.whiteImg?'已上传':'+ 白底图'}</div></div></div>
+      ${cat?`<div class="form-row"><label>类别基本属性（淘宝式 · 「${cat.name}」系统设定不可更改，仅填写值）</label>
+        <div class="cat-attr"><h5>${cat.name} · 共 ${cat.props.length} 项（标 * 必填）</h5>
+        ${cat.props.map((p,i)=>`<div class="form-row" style="margin-bottom:10px;">
+          <label>${p.name}${p.req?' <span style="color:#ff4d4f">*</span>':''} ${p.type==='select'?'(下拉)':''}</label>
+          ${p.type==='select'?`<select onchange="form.catVals['${p.name}']=this.value">${['<option value="">--请选择--</option>'].concat(p.opts.map(o=>`<option ${form.catVals[p.name]===o?'selected':''}>${o}</option>`)).join('')}</select>`
+          :`<input oninput="form.catVals['${p.name}']=this.value" value="${form.catVals[p.name]||''}" placeholder="请输入${p.name}">`}
+        </div>`).join('')}
+        </div></div>`:`<div class="auto-fill">第一步选择类别后，此处显示该类别基本属性供填写。</div>`}
+      <div class="form-row"><label>销售属性 / SKU（每个 SKU 可传图便于识别，非必填；价格以美元计价并自动换算本币）</label>
+        <div id="skuZone"></div>
+        <button class="btn ghost" onclick="addSku()">+ 添加 SKU</button></div>
+      <div class="form-row"><label>商品详情（TinyMCE 富文本，开源免费，便于编辑产品信息）</label>
+        <textarea id="fDesc">${form.desc||''}</textarea></div>`;
+    document.getElementById('stepBody').innerHTML=h;
+    renderSkuZone();initTiny();
+  }else{
+    h=`<div class="switch" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><input type="checkbox" ${form.live?'checked':''} onchange="form.live=this.checked"> 开启直播挂载</div>
+      <div class="switch" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><input type="checkbox" ${form.share?'checked':''} onchange="form.share=this.checked"> 允许分享 / 分销</div>
+      <div class="switch" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><input type="checkbox" ${form.review?'checked':''} onchange="form.review=this.checked"> 开启评价</div>
+      <div class="reserved" style="background:#fffbe6;border:1px solid #ffe58f;border-radius:6px;padding:10px 12px;font-size:12px;color:#ad6800;margin-top:8px;">评论 / 评价组件本期为<b>预留位</b>（设计文档⑥）。</div>
+      <div class="auto-fill" style="margin-top:12px;"><b>发布摘要</b><br>产品：${form.product||'—'}　类别：${form.category||'—'}　品牌：${form.brand||'—'}<br>标题：${form.title||'—'}　SKU：${form.skus.filter(s=>s.name).length}（含数量/图片）　详情：已编辑 ${form.desc&&form.desc.length>20?'是':'否'}　类别属性已填：${Object.keys(form.catVals).filter(k=>form.catVals[k]).length} 项</div>`;
+  }
+  document.getElementById('stepBody').innerHTML=h;
+}
+function renderSkuZone(){
+  document.getElementById('skuZone').innerHTML=form.skus.map((s,i)=>`
+    <div class="sku-row">
+      <input placeholder="规格名" style="width:140px" value="${s.name}" oninput="form.skus[${i}].name=this.value">
+      <div style="display:flex;flex-direction:column;">
+        <input placeholder="价格 USD" style="width:110px" value="${s.price}" oninput="form.skus[${i}].price=this.value;updKhr(${i})">
+        <span class="khr" id="khr${i}">${s.price?('≈ '+(s.price*RATE).toLocaleString()+' KHR'):''}</span>
+      </div>
+      <input placeholder="数量" style="width:70px" value="${s.qty||''}" oninput="form.skus[${i}].qty=this.value">
+      <div class="up-box sm ${s.img?'filled':''}" onclick="form.skus[${i}].img=!form.skus[${i}].img;this.classList.toggle('filled')" title="SKU 图片(非必填)">${s.img?'图':'+图'}</div>
+      <button class="btn ghost sm" onclick="delSku(${i})">删</button>
+    </div>`).join('');
+}
+function updKhr(i){document.getElementById('khr'+i).textContent=form.skus[i].price?('≈ '+(form.skus[i].price*RATE).toLocaleString()+' KHR'):'';}
+function addSku(){form.skus.push({name:'',price:'',qty:'',img:false});renderSkuZone();}
+function delSku(i){form.skus.splice(i,1);renderSkuZone();}
+function renderImgs(n){let s='';for(let i=0;i<n;i++)s+=`<div class="up-box filled">图${i+1}</div>`;return s;}
+function addImg(){if(form.mainImgs<10){form.mainImgs++;document.getElementById('mainImgs').innerHTML=renderImgs(form.mainImgs)+'<div class="up-box" onclick="addImg()">+ 上传</div>';}}
+function initTiny(){
+  if(typeof tinymce==='undefined')return;
+  tinymce.remove('#fDesc');
+  tinymce.init({
+    selector:'#fDesc', height:280, menubar:false,
+    plugins:'lists link image table code',
+    toolbar:'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist | link image table | code',
+    setup:function(ed){ed.on('input',function(){form.desc=ed.getContent();});},
+    init_instance_callback:function(ed){if(form.desc)ed.setContent(form.desc);}
+  });
+}
+function prev(){if(step>0){step--;render();}}
+function next(){
+  if(step<3){step++;render();}
+  else{
+    const cat=curCat();
+    const missing=cat?cat.props.filter(p=>p.req&&!form.catVals[p.name]).map(p=>p.name):[];
+    if(missing.length){alert('类别必填属性未填：'+missing.join('、'));return;}
+    if(editId){const g=goods.find(x=>x.id===editId);Object.assign(g,{title:form.title,product:form.product,cat:form.category,brand:form.brand});}
+    else{goods.push({id:'G-'+Date.now().toString().slice(-4),title:form.title,product:form.product,cat:form.category,brand:form.brand,status:'在售'});}
+    renderGoods();closeWizard();
+  }
+}
+renderGoods();
+</script>
+</body>
+</html>

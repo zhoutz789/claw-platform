@@ -51,6 +51,7 @@ services:
       - "1883:1883"
       - "8083:8083"
       - "18083:18083"   # 管理台 http://localhost:18083 (admin/public)
+      - "8883:8883"     # MQTT over TLS（双向 TLS 联调）
     volumes:
       - emqx_data:/opt/emqx/data
 
