@@ -253,9 +253,12 @@ public class FulfillmentService {
         return orderRepository.findAll();
     }
 
+    /** 订单详情：连同 items 明细一并返回（取货扫码页据此挑选待取设备，无需手填 deviceIds）。 */
     @Transactional(readOnly = true)
     public FulfillmentOrder getOrder(Long id) {
-        return load(id);
+        FulfillmentOrder o = load(id);
+        o.setItems(orderItemRepository.findByFulfillmentOrderId(id));
+        return o;
     }
 
     private FulfillmentOrder load(Long id) {

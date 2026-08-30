@@ -33,6 +33,22 @@ public class StationService {
     private final StationStockRepository stockRepository;
     private final StationBatteryRepository batteryRepository;
 
+    /**
+     * 后台站点全量列表（管理端下拉选项数据源）。
+     *
+     * <p>与 {@link #nearby} 的区别：nearby 按 CountryContext 过滤当前国家且只返回 ACTIVE 站点，
+     * 管理端需要跨国家、含停用站点地全量列出，否则「调拨/履约」等页面选不到目标站。
+     * 不传坐标，distKm 为 null（管理端不需要距离）。
+     */
+    @Transactional(readOnly = true)
+    public List<StationViews.StationView> listAll() {
+        return stationRepository.findAll().stream()
+                .filter(s -> !Boolean.TRUE.equals(s.getDeleted()))
+                .map(s -> toView(s, null, null))
+                .sorted(Comparator.comparingLong(v -> v.id() == null ? Long.MAX_VALUE : v.id()))
+                .toList();
+    }
+
     /** 附近站点（按距离由近到远，最多 limit 个），含现货摘要。 */
     @Transactional(readOnly = true)
     public List<StationViews.StationView> nearby(String countryCode, BigDecimal lat, BigDecimal lng, Integer limit) {

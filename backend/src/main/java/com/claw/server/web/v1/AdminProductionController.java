@@ -23,11 +23,13 @@ public class AdminProductionController {
     private final CertificateService certificateService;
 
     @GetMapping("/tasks")
+    @RequirePermission("mfg:production:view")
     public ApiResult<List<ProductionTask>> listTasks(@RequestParam(required = false) Long manufacturerId) {
         return ApiResult.ok(productionService.listTasks(manufacturerId));
     }
 
     @GetMapping("/tasks/{id}")
+    @RequirePermission("mfg:production:view")
     public ApiResult<ProductionTask> getTask(@PathVariable Long id) {
         return ApiResult.ok(productionService.getTask(id));
     }
@@ -49,6 +51,7 @@ public class AdminProductionController {
     }
 
     @GetMapping("/certificates/device/{deviceId}")
+    @RequirePermission("mfg:certificate:view")
     public ApiResult<Certificate> getCertificate(@PathVariable Long deviceId) {
         Optional<Certificate> c = certificateService.getByDevice(deviceId);
         return c.<ApiResult<Certificate>>map(ApiResult::ok)

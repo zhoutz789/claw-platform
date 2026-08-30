@@ -24,9 +24,7 @@ public class AdminCommissionController {
 
     @GetMapping("/rules/{id}")
     public ApiResult<CommissionRule> get(@PathVariable Long id) {
-        return ApiResult.ok(ruleService.listRules(null).stream()
-                .filter(r -> r.getId().equals(id)).findFirst()
-                .orElseThrow(() -> new com.claw.server.common.api.BizException(40401, "commission.rule.not.found")));
+        return ApiResult.ok(ruleService.getRule(id));
     }
 
     @PostMapping("/rules")

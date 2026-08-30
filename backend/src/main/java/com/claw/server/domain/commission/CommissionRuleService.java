@@ -36,6 +36,19 @@ public class CommissionRuleService {
         return list;
     }
 
+    /**
+     * 按主键直查单条规则。
+     *
+     * <p>不能拿 {@link #listRules(Long)} 做 findFirst：列表是「厂家规则 + 平台默认规则」的并集，
+     * 传入 manufacturerId 时只含该厂家与平台默认两类，其它厂家的规则 id 永远匹配不到，
+     * 会误报 404。
+     */
+    @Transactional(readOnly = true)
+    public CommissionRule getRule(Long id) {
+        return ruleRepository.findById(id)
+                .orElseThrow(() -> BizException.of(40401, "commission.rule.not.found"));
+    }
+
     @Transactional
     public CommissionRule createRule(CommissionRule rule) {
         rule.setCreatedAt(Instant.now());

@@ -1,10 +1,12 @@
 package com.claw.server.domain.fulfillment;
 
 import com.claw.server.common.enums.FulfillmentStatus;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 /**
  * 待履约订单（对应 V50 claw.fulfillment_orders，R6）。
@@ -85,4 +87,14 @@ public class FulfillmentOrder {
     @Column(nullable = false)
     @Builder.Default
     private Instant updatedAt = Instant.now();
+
+    /**
+     * 订单明细（非持久化，仅详情接口填充）。
+     *
+     * <p>列表接口不填充以避免 N+1；{@code @JsonInclude(NON_NULL)} 保证列表响应里不出现 {@code "items": null}。
+     * 取货扫码页据此直接挑选待取设备，无需手填 deviceIds。
+     */
+    @Transient
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private List<FulfillmentOrderItem> items;
 }

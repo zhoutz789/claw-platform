@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 /** 角色模板管理（增量 A）。模板展开为权限集合，授予时回写 roles.grants。 */
 @RestController
@@ -52,9 +53,26 @@ public class AdminRoleTemplateController {
         return ApiResult.ok();
     }
 
+    /**
+     * 一键授予（PRD A2 / 设计 §4.3）：把模板展开的权限集合回写同名角色，并授予目标账号该角色包。
+     * 幂等：重复授予不会重复建包，仅刷新角色 grants 与权限缓存。
+     */
+    @PostMapping("/grant")
+    @RequirePermission("role:template:manage")
+    public ApiResult<GrantResp> grant(@RequestBody GrantReq req) {
+        Set<String> codes = templateService.grantTemplate(req.userId(), req.templateCode());
+        return ApiResult.ok(new GrantResp(req.userId(), req.templateCode(), codes));
+    }
+
     public record UpsertTemplate(String code, String name, String principalType, String description) {
     }
 
     public record SetPermissions(List<String> permissionCodes) {
+    }
+
+    public record GrantReq(Long userId, String templateCode) {
+    }
+
+    public record GrantResp(Long userId, String templateCode, Set<String> permissionCodes) {
     }
 }

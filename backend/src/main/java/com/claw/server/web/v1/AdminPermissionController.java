@@ -6,6 +6,7 @@ import com.claw.server.common.dto.PermissionDtos.*;
 import com.claw.server.common.security.AuthContext;
 import com.claw.server.domain.role.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,6 +29,7 @@ import com.claw.server.common.security.RequirePermission;
 @RestController
 @RequestMapping("/api/v1/admin/permissions")
 @RequiredArgsConstructor
+@Slf4j
 public class AdminPermissionController {
 
     private final PermissionRepository permissionRepository;
@@ -36,10 +38,18 @@ public class AdminPermissionController {
     private final PermissionService permissionService;
     private final RoleGrantService roleGrantService;
 
+    /** 菜单权限码前缀：menu:{navKey} —— navKey 与前端 web/src/nav.js 的菜单 key 一一对应。 */
+    private static final String MENU_CODE_PREFIX = "menu:";
+    /** 权限目录里「菜单」节点的 ptype（另一个取值是 BUTTON，不进导航树）。 */
+    private static final String PTYPE_MENU = "MENU";
+
     /**
      * 当前登录用户的权限快照：userId + 生效角色 + 有效权限位集合 + 后端权威菜单树。
      * 仅需登录即可访问（不要求特定 admin 权限，否则无权限用户永远拿不到自己的权限集合）。
      * 前端 permStore 登录后调用此方法加载权限；menuStore 用其中的 menu 作为权威菜单源。
+     *
+     * <p>menu <b>按当前用户实际持有的权限位过滤</b>：只有用户拥有 {@code menu:{key}} 的节点才会下发，
+     * 父分组在其下仍有可见子项时保留。持有通配符 {@code "*"} 的平台超管下发全量菜单。
      */
     @GetMapping("/mine")
     public ApiResult<MineResp> mine() {
@@ -49,8 +59,80 @@ public class AdminPermissionController {
         }
         Set<String> permissions = permissionService.effectivePermissions(uid);
         List<String> roles = roleGrantService.listActive(uid).stream().map(RoleView::roleCode).toList();
-        List<PermissionNode> menu = catalog().data();
+        List<MenuNode> menu = myMenu(permissions);
         return ApiResult.ok(new MineResp(uid, roles, permissions, menu));
+    }
+
+    /**
+     * 按用户权限位过滤权限目录中的 MENU 节点，并映射为前端导航树（key/label/path/icon/children）。
+     *
+     * <p>为何不直接返回 {@link #catalog()}：权限目录里既有 MENU 也有 BUTTON，且是全量目录；
+     * 前端 menuStore 以 node.key 为索引（无 key 的节点会被 sanitizeNav 丢弃），
+     * 因此这里既要做权限过滤，也要把 code 转译成 nav 结构的 key/label。
+     */
+    private List<MenuNode> myMenu(Set<String> permissions) {
+        boolean allGranted = permissions.contains(PermissionService.WILDCARD);
+        List<Permission> all = permissionRepository.findAll();
+        Map<String, Permission> byCode = all.stream().collect(Collectors.toMap(Permission::getCode, p -> p));
+        Map<String, List<Permission>> childrenMap = new HashMap<>();
+        List<Permission> roots = new ArrayList<>();
+        for (Permission p : all) {
+            if (!PTYPE_MENU.equalsIgnoreCase(p.getPtype())) {
+                continue;
+            }
+            if (p.getParentCode() == null || !byCode.containsKey(p.getParentCode())) {
+                roots.add(p);
+            } else {
+                childrenMap.computeIfAbsent(p.getParentCode(), k -> new ArrayList<>()).add(p);
+            }
+        }
+        List<MenuNode> nodes = new ArrayList<>();
+        for (Permission root : roots) {
+            MenuNode node = toMenuNode(root, permissions, allGranted, childrenMap, new HashSet<>());
+            if (node != null) {
+                nodes.add(node);
+            }
+        }
+        nodes.sort(Comparator.comparingInt(n -> n.sortNo() == null ? 0 : n.sortNo()));
+        return nodes;
+    }
+
+    /**
+     * 递归构造导航节点：自身有权限 → 保留（并按权限裁剪子树）；自身无权限但子树有可见项 → 保留为分组。
+     *
+     * @param visiting 当前递归路径上的权限码，防止 parent_code 配成环时把请求打挂
+     * @return 该节点对用户不可见时返回 null（连同其整棵子树一并剔除）
+     */
+    private MenuNode toMenuNode(Permission p, Set<String> permissions, boolean allGranted,
+                                Map<String, List<Permission>> childrenMap, Set<String> visiting) {
+        if (!visiting.add(p.getCode())) {
+            // 目录数据成环（A 的 parent 是 B、B 的 parent 是 A）：就地截断，避免栈溢出。
+            log.warn("权限目录存在环，已截断：code={}", p.getCode());
+            return null;
+        }
+        List<MenuNode> kids = new ArrayList<>();
+        for (Permission child : childrenMap.getOrDefault(p.getCode(), List.of())) {
+            MenuNode kid = toMenuNode(child, permissions, allGranted, childrenMap, visiting);
+            if (kid != null) {
+                kids.add(kid);
+            }
+        }
+        visiting.remove(p.getCode());
+        kids.sort(Comparator.comparingInt(k -> k.sortNo() == null ? 0 : k.sortNo()));
+        boolean visible = allGranted || permissions.contains(p.getCode());
+        if (!visible && kids.isEmpty()) {
+            return null;
+        }
+        return new MenuNode(navKeyOf(p.getCode()), p.getCode(), p.getName(), p.getPath(), p.getIcon(),
+                p.getSortNo(), kids.isEmpty() ? null : kids);
+    }
+
+    /** 权限码 → 前端菜单 key：menu:production → production；非 menu: 前缀原样返回。 */
+    private String navKeyOf(String permissionCode) {
+        if (permissionCode != null && permissionCode.startsWith(MENU_CODE_PREFIX)) {
+            return permissionCode.substring(MENU_CODE_PREFIX.length());
+        }
+        return permissionCode;
     }
 
     @GetMapping("/catalog")

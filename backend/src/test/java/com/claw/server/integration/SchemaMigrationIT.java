@@ -2,9 +2,13 @@ package com.claw.server.integration;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import javax.sql.DataSource;
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,16 +27,29 @@ class SchemaMigrationIT extends AbstractIntegrationTest {
     DataSource dataSource;
 
     @Test
-    void allMigrationsAppliedOnRealPostgres() {
+    void allMigrationsAppliedOnRealPostgres() throws IOException {
+        int expected = countMigrationScripts();
         Integer applied = jdbc.queryForObject(
                 "SELECT count(*) FROM claw.flyway_schema_history WHERE version IS NOT NULL", Integer.class);
-        // V1-V38 共 38 个迁移脚本（不含 Flyway 自身的 SCHEMA 标记行），全部应在真实库中成功应用。
-        // V32 新增 vehicle_iot_contract；V33 为 products 增加富文本元信息 + 分享能力；
-        // V34 为订单闭环（customer_order_closure）；V35 为产品模板字段 EAV + 产品表扩展 + 通用电子围栏；
-        // V36 为项目管理域（projects / project_devices / device_authorizations）；
-        // V37 放宽 accounts.balance 的 CHECK，允许平台 MASTER 清算户为零/负（PROJECT_LEDGER 对冲侧）；
-        // V38 为订单→资产生成与流转（customer_order_unit_registrations + assets 溯源/快照 + 维修更换留痕）。
-        assertEquals(38, applied, "Flyway 应在真实 PostgreSQL 上应用全部迁移（当前 V1-V38：V38 订单逐台登记与资产生成）");
+        Integer failed = jdbc.queryForObject(
+                "SELECT count(*) FROM claw.flyway_schema_history WHERE success = false", Integer.class);
+
+        // 期望值不再硬编码（历史上此处写死 38，新增迁移后必然误报）：
+        // 直接扫 classpath 下 db/migration/V*.sql 的脚本数，增删迁移无需改测试。
+        // version IS NULL 的行是 Flyway 自身的 SCHEMA 标记行，不计入。
+        assertEquals(0, failed, "Flyway 不应存在失败的迁移");
+        assertTrue(applied != null && applied > 0, "真实库上应至少应用 1 个迁移（Flyway 未生效？）");
+        assertEquals(expected, applied,
+                "Flyway 应在真实 PostgreSQL 上应用 db/migration 下的全部迁移脚本（当前共 " + expected + " 个）");
+    }
+
+    /** 统计 classpath 下的版本化迁移脚本数（V*.sql，不含可重复迁移 R__*.sql）。 */
+    private static int countMigrationScripts() throws IOException {
+        Resource[] scripts = new PathMatchingResourcePatternResolver()
+                .getResources("classpath*:db/migration/V*.sql");
+        long count = Arrays.stream(scripts).filter(Resource::isReadable).count();
+        assertTrue(count > 0, "classpath 下应能扫到 db/migration/V*.sql 迁移脚本");
+        return (int) count;
     }
 
     @Test

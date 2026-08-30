@@ -21,12 +21,15 @@ public class AdminFulfillmentController {
     private final FulfillmentService fulfillmentService;
 
     @GetMapping("/orders")
+    @RequirePermission("order:view")
     public ApiResult<List<FulfillmentOrder>> list(@RequestParam(required = false) Long stationId,
                                                  @RequestParam(required = false) Long customerUserId) {
         return ApiResult.ok(fulfillmentService.listOrders(stationId, customerUserId));
     }
 
+    /** 订单详情（含 items 明细，供取货扫码页直接挑选待取设备，无需手填 deviceIds）。 */
     @GetMapping("/orders/{id}")
+    @RequirePermission("order:view")
     public ApiResult<FulfillmentOrder> get(@PathVariable Long id) {
         return ApiResult.ok(fulfillmentService.getOrder(id));
     }

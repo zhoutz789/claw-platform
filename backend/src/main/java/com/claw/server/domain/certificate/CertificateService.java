@@ -18,7 +18,7 @@ import java.util.UUID;
  * 合格证服务（增量 B · R4/Q8）。
  *
  * <p>合格证在「生产完成」时即生成写库（不可补证）。补打（reprint）仅重新输出已存在的合格证，
- * 不会生成新的 cert_no（Q8 铁律）。合格证与设备 1:1（certificates.device_id UNIQUE）。
+ * 不会生成新的 cert_no（Q8 铁律）。合格证与设备 1:1（device_certificates.device_id UNIQUE）。
  */
 @Service
 @RequiredArgsConstructor
@@ -38,6 +38,8 @@ public class CertificateService {
         Certificate c = Certificate.builder()
                 .deviceId(deviceId)
                 .certNo(certNo)
+                .manufacturerId(manufacturerId)
+                .productId(product == null ? null : product.getId())
                 .issuedAt(Instant.now())
                 .issuedBy(operatorId)
                 .specJson(buildSpec(product, manufacturerId))

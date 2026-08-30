@@ -19,7 +19,9 @@ public class AdminInventoryController {
 
     private final InventoryService inventoryService;
 
+    // 读接口同样鉴权（本轮确认需要）：厂家看自有/寄售、服务站看寄售，三者命中其一即放行。
     @GetMapping
+    @RequirePermission({"mfg:inventory:own", "mfg:inventory:consignment:view", "station:consignment:view"})
     public ApiResult<List<Inventory>> list(@RequestParam(required = false) Long manufacturerId,
                                           @RequestParam(required = false) Long stationId,
                                           @RequestParam(required = false) String ownershipType) {
@@ -38,6 +40,7 @@ public class AdminInventoryController {
     }
 
     @GetMapping("/device/{deviceId}")
+    @RequirePermission({"mfg:inventory:own", "mfg:inventory:consignment:view", "station:consignment:view"})
     public ApiResult<Inventory> getByDevice(@PathVariable Long deviceId) {
         return ApiResult.ok(inventoryService.getByDevice(deviceId));
     }

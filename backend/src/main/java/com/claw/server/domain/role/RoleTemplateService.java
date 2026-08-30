@@ -30,6 +30,7 @@ public class RoleTemplateService {
     private final PermissionRepository permissionRepository;
     private final RoleRepository roleRepository;
     private final PermissionService permissionService;
+    private final RoleGrantService roleGrantService;
 
     @Transactional(readOnly = true)
     public List<RoleTemplate> listTemplates() {
@@ -111,5 +112,33 @@ public class RoleTemplateService {
     @Transactional(readOnly = true)
     public Set<String> expandPermissions(String code) {
         return new HashSet<>(getPermissions(code));
+    }
+
+    /**
+     * 一键授予（PRD A2 / 设计 §4.3：POST /api/role-templates/grant）。
+     *
+     * <p>两步且幂等：
+     * <ol>
+     *   <li>把模板当前展开的权限集合回写同名角色（roles.code == template.code）的 grants（权限真源），
+     *       使后续「授予该角色的账号」都拿到这套权限，并清掉相关用户的权限缓存；</li>
+     *   <li>给目标账号授予该角色包（已生效则幂等返回，见 {@link RoleGrantService#grantByEvent}）。</li>
+     * </ol>
+     *
+     * @param userId       被授予的账号 id（登录用户）
+     * @param templateCode 模板码，同时是角色码：MANUFACTURER / STATION / CUSTOMER / PLATFORM_ADMIN
+     * @return 实际展开并授予的权限码集合
+     */
+    @Transactional
+    public Set<String> grantTemplate(Long userId, String templateCode) {
+        getTemplate(templateCode);
+        Set<String> codes = expandPermissions(templateCode);
+        roleRepository.findByCode(templateCode).ifPresent(role -> {
+            role.setGrants(permissionService.toGrantsJson(codes));
+            roleRepository.save(role);
+            permissionService.evictByRole(role.getId());
+        });
+        roleGrantService.grantByEvent(userId, templateCode);
+        log.info("角色模板 {} 一键授予 userId={}，展开 {} 项权限", templateCode, userId, codes.size());
+        return codes;
     }
 }
