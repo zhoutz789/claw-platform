@@ -5,9 +5,11 @@ import com.claw.server.common.enums.AccountType;
 import com.claw.server.common.enums.CustodyStatus;
 import com.claw.server.common.enums.FulfillmentStatus;
 import com.claw.server.common.enums.LifecycleStatus;
+import com.claw.server.common.enums.PrincipalType;
 import com.claw.server.common.event.OutboxPublisher;
 import com.claw.server.domain.consignment.ConsignmentCustody;
 import com.claw.server.domain.consignment.ConsignmentCustodyRepository;
+import com.claw.server.domain.credit.CreditLimitService;
 import com.claw.server.domain.inventory.Inventory;
 import com.claw.server.domain.inventory.InventoryRepository;
 import com.claw.server.domain.iot.Device;
@@ -16,6 +18,8 @@ import com.claw.server.domain.ledger.Account;
 import com.claw.server.domain.ledger.AccountService;
 import com.claw.server.domain.lifecycle.LifecycleEvent;
 import com.claw.server.domain.lifecycle.LifecycleEventRepository;
+import com.claw.server.domain.onboarding.OnboardingCreditBlock;
+import com.claw.server.domain.org.OrgWritableGuard;
 import com.claw.server.domain.project.DeviceAuthorization;
 import com.claw.server.domain.project.DeviceAuthorizationRepository;
 import com.claw.server.domain.role.PrincipalBinding;
@@ -60,11 +64,22 @@ public class FulfillmentService {
     private final SystemConfigRepository systemConfigRepository;
     private final OutboxPublisher outboxPublisher;
     private final ObjectMapper objectMapper;
+    /** 增量 C：入驻禁用守卫 + 授信额度校验（C3 硬阻断）。 */
+    private final OrgWritableGuard orgWritableGuard;
+    private final CreditLimitService creditLimitService;
 
+    /**
+     * 新建履约订单。
+     *
+     * <p>增量 C：挂 <b>禁用守卫</b> —— 服务站被平台禁用后禁止在该站下新单（Q7：只切新增）。
+     * 履约推进动作（{@link #payOrder} / {@link #confirm} / {@link #ship} / {@link #receive} /
+     * {@link #pickupScan}）除 ship 的额度校验外<b>一律不挂守卫</b>，保证在途订单履约到底。
+     */
     @Transactional
     public FulfillmentOrder createOrder(Long customerUserId, Long manufacturerId, Long stationId,
                                        boolean remoteOrder, List<FulfillmentOrderItem> items,
                                        BigDecimal totalAmount) {
+        orgWritableGuard.assertWritable(PrincipalType.STATION, stationId);
         FulfillmentOrder o = FulfillmentOrder.builder()
                 .orderNo("FO" + UUID.randomUUID().toString().replace("-", "").toUpperCase().substring(0, 16))
                 .customerUserId(customerUserId)
@@ -118,11 +133,26 @@ public class FulfillmentService {
         return orderRepository.save(o);
     }
 
+    /**
+     * 履约发货入站（缺货远程单）。
+     *
+     * <p>增量 C 新增 <b>C3 硬阻断</b>：远程单发货会在目标服务站形成寄售占用，
+     * 故按订单明细的 deviceId 整批校验该站授信额度。
+     * 未绑定具体设备（明细尚无 deviceId）时跳过校验，不阻断既有流程。
+     */
     @Transactional
     public FulfillmentOrder ship(Long orderId) {
         FulfillmentOrder o = load(orderId);
         if (o.getStatus() != FulfillmentStatus.CONFIRMED) {
             throw BizException.of(40915, "order.not.shippable");
+        }
+        List<Long> deviceIds = orderItemRepository.findByFulfillmentOrderId(orderId).stream()
+                .map(FulfillmentOrderItem::getDeviceId)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        if (!deviceIds.isEmpty()) {
+            creditLimitService.assertWithinLimit(o.getStationId(), deviceIds,
+                    OnboardingCreditBlock.Scene.FULFILL_SHIP, "FULFILLMENT", orderId);
         }
         o.setStatus(FulfillmentStatus.SHIPPED);
         o.setShippedAt(Instant.now());
@@ -155,7 +185,8 @@ public class FulfillmentService {
         List<FulfillmentOrderItem> items = orderItemRepository.findByFulfillmentOrderId(orderId);
         int idx = 0;
         for (Long deviceId : deviceIds) {
-            ConsignmentCustody custody = custodyRepository.findByDeviceId(deviceId)
+            // 取「当前」占有权：调拨过的设备会有历史行，无条件按 device_id 查会命中多行
+            ConsignmentCustody custody = custodyRepository.findByDeviceIdAndEndedAtIsNull(deviceId)
                     .orElseThrow(() -> BizException.of(40401, "custody.not.found"));
             if (custody.getStatus() != CustodyStatus.ACTIVE) {
                 throw BizException.of(40917, "custody.not.active");

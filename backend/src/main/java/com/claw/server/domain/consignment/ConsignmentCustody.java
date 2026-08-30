@@ -22,7 +22,15 @@ public class ConsignmentCustody {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "device_id", nullable = false, unique = true)
+    /**
+     * 占有主体设备。
+     *
+     * <p>不做「全表唯一」：占有权流转（站间调拨收货）会为同一设备留下历史行——旧行写
+     * {@code ended_at/ended_reason} 关闭、新行接管。全局唯一会让调拨收货插不进去。
+     * 由 V63 的部分唯一索引 {@code uq_cc_device_active (device_id) WHERE ended_at IS NULL}
+     * 守住「一台设备同时只有一个有效占有权」这条核心不变式。
+     */
+    @Column(name = "device_id", nullable = false)
     private Long deviceId;
 
     @Column(name = "manufacturer_id", nullable = false)

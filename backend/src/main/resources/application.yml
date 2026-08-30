@@ -60,6 +60,9 @@ claw:
     jwt-ttl-minutes: 1440            # 登录态有效期 24h
     # dev 环境短信验证码 stub：直接把验证码回显给客户端，便于联调（生产关闭）
     sms-dev-echo: true
+    # 身份证号加密密钥（AES-256-GCM，入驻申请单 id_card_no）。
+    # 生产必须通过环境变量 CLAW_ID_CARD_KEY 注入；未配置时回退开发默认密钥并打 WARN（见 IdCardCipher）。
+    id-card-key: ${CLAW_ID_CARD_KEY:}
 
   iot:
     emqx:

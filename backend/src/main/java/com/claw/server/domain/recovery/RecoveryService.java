@@ -82,7 +82,8 @@ public class RecoveryService {
             });
             device.setLifecycleStatus(LifecycleStatus.RECALLED.name());
             deviceRepository.save(device);
-            custodyRepository.findByDeviceId(device.getId()).ifPresent(c -> {
+            // 只回收「当前」占有权：已结束的历史行不重复关闭（设备经历过调拨时有多行）
+            custodyRepository.findByDeviceIdAndEndedAtIsNull(device.getId()).ifPresent(c -> {
                 c.setStatus(CustodyStatus.RETURNED);
                 c.setEndedAt(Instant.now());
                 c.setEndedReason("RECOVERED");

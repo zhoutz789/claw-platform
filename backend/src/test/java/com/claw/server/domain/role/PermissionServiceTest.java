@@ -1,6 +1,9 @@
 package com.claw.server.domain.role;
 
 import com.claw.server.domain.asset.UserAssetsAclRepository;
+import com.claw.server.domain.subaccount.SubAccountGrantItemRepository;
+import com.claw.server.domain.subaccount.SubAccountGrantRepository;
+import com.claw.server.domain.subaccount.SubAccountRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +48,15 @@ class PermissionServiceTest {
     private UserAssetsAclRepository aclRepository;
     @Mock
     private RoleRepository roleRepository;
+    /** 增量 C：子账号授权相关仓储（本测试不涉及子账号，故不 stub，返回空即合并为空集）。 */
+    @Mock
+    private SubAccountRepository subAccountRepository;
+    @Mock
+    private SubAccountGrantRepository subAccountGrantRepository;
+    @Mock
+    private SubAccountGrantItemRepository subAccountGrantItemRepository;
+    @Mock
+    private RoleTemplatePermissionRepository templatePermissionRepository;
     @Mock
     private StringRedisTemplate redisTemplate;
     @Mock
@@ -52,7 +64,9 @@ class PermissionServiceTest {
 
     private PermissionService newService() {
         return new PermissionService(userRoleRepository, packageRepository, aclRepository,
-                roleRepository, redisTemplate, new ObjectMapper());
+                roleRepository, subAccountRepository, subAccountGrantRepository,
+                subAccountGrantItemRepository, templatePermissionRepository,
+                redisTemplate, new ObjectMapper());
     }
 
     private Role role(Long id, String grants) {

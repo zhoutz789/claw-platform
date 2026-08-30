@@ -30,6 +30,16 @@ import java.util.Set;
  *   <li>角色 / 权限 / 用户角色变更时主动 {@link #evictUser(Long)} / {@link #evictByRole(Long)} 清缓存，
  *       保证「改权限后 5s 内生效」。</li>
  * </ul>
+ *
+ * <p><b>增量 C 扩展（O30）</b>：第四层并入<b>子账号授权集合</b> ——
+ * <pre>
+ * effective(user) = RBAC角色 ∪ 角色包 ∪ subAccountGrants(user)
+ * subAccountGrants(user):
+ *     ALL     → 主账号角色模板全量（未来新功能自动继承）
+ *     PARTIAL → grant_items ∩ 主账号模板集合（交集防越权）
+ * </pre>
+ * 子账号在 {@code principal_bindings} 里没有行，故此处按 {@code sub_accounts.user_id} 回溯。
+ * 依赖只取仓储（不引 SubAccountGrantService），避免 role ↔ subaccount 的 bean 循环依赖。
  */
 @Service
 @RequiredArgsConstructor
@@ -40,6 +50,11 @@ public class PermissionService {
     private final UserRolePackageRepository packageRepository;
     private final UserAssetsAclRepository aclRepository;
     private final RoleRepository roleRepository;
+    /** 增量 C：子账号授权相关仓储（只读，用于第四层权限合并）。 */
+    private final com.claw.server.domain.subaccount.SubAccountRepository subAccountRepository;
+    private final com.claw.server.domain.subaccount.SubAccountGrantRepository subAccountGrantRepository;
+    private final com.claw.server.domain.subaccount.SubAccountGrantItemRepository subAccountGrantItemRepository;
+    private final RoleTemplatePermissionRepository templatePermissionRepository;
     /** Redis 可选：本地未配置 / 不可达时保持 null，全程降级直查 DB。 */
     private final StringRedisTemplate redisTemplate;
     /** Spring Boot 自动装配的 ObjectMapper 实例。 */
@@ -64,7 +79,7 @@ public class PermissionService {
         return computed;
     }
 
-    /** 三层合并：RBAC 角色 grants + 生效角色包 grants，去重。 */
+    /** 四层合并：RBAC 角色 grants + 生效角色包 grants + 子账号授权，去重。 */
     private Set<String> computeEffective(Long userId) {
         Set<String> granted = new HashSet<>();
         // 收集「直接授予」的角色 id（RBAC + 生效中的角色包），再去重沿 parent_id 向上合并祖先 grants。
@@ -79,7 +94,53 @@ public class PermissionService {
         for (Long roleId : directRoleIds) {
             mergeAncestorGrants(roleId, granted, visited, 0);
         }
+        // 第四层：子账号授权（O30）
+        granted.addAll(computeSubAccountGrants(userId));
         return granted;
+    }
+
+    /**
+     * 子账号授权集合（增量 C · O30）。
+     *
+     * @param userId 登录用户 ID（可能是子账号）
+     * @return 授权权限码集合；非子账号或无授权时返回空集合
+     */
+    private Set<String> computeSubAccountGrants(Long userId) {
+        if (userId == null || subAccountRepository == null) {
+            return Set.of();
+        }
+        try {
+            var sa = subAccountRepository.findTopByUserIdAndStatus(userId, "ACTIVE");
+            if (sa.isEmpty() || !sa.get().isActive()) {
+                return Set.of();
+            }
+            var grant = subAccountGrantRepository.findBySubAccountIdAndStatus(sa.get().getId(), "ACTIVE");
+            if (grant.isEmpty()) {
+                return Set.of();
+            }
+            // 主账号模板集合（越权判定的上界）
+            Set<String> ownerPerms = new HashSet<>();
+            for (RoleTemplatePermission tp
+                    : templatePermissionRepository.findByTemplateCode(sa.get().getOwnerPrincipalType())) {
+                ownerPerms.add(tp.getPermissionCode());
+            }
+            if (grant.get().isAll()) {
+                // ALL：跟随模板，不落明细 —— 平台新增功能自动继承
+                return ownerPerms;
+            }
+            // PARTIAL：明细 ∩ 主账号模板（交集防越权）
+            Set<String> out = new HashSet<>();
+            for (var item : subAccountGrantItemRepository.findByGrantId(grant.get().getId())) {
+                if (ownerPerms.contains(item.getPermissionCode())) {
+                    out.add(item.getPermissionCode());
+                }
+            }
+            return out;
+        } catch (Exception e) {
+            // 子账号授权解析失败不应吃掉主体已有的 RBAC 权限，降级为空集合
+            log.warn("子账号授权集合计算失败，按无授权降级：userId={}", userId, e);
+            return Set.of();
+        }
     }
 
     /**
