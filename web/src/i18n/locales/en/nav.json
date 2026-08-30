@@ -10,6 +10,7 @@
     "ops": "Operations",
     "fin": "Finance",
     "risk-center": "Risk Control",
+    "onboarding": "Onboarding",
     "sys": "System"
   },
   "item": {
@@ -70,6 +71,13 @@
     "role-templates": "Role Templates",
     "role-groups": "Role Groups",
     "principal-bindings": "Principal Binding",
-    "merchants": "Merchant Onboarding"
+    "merchants": "Merchant Onboarding",
+    "onboarding-apply": "My Onboarding",
+    "onboarding-review": "Onboarding Applications",
+    "onboarding-content": "Terms & Contract",
+    "onboarding-deposit-tiers": "Deposit Tiers",
+    "onboarding-deposit-confirm": "Deposit Confirmation",
+    "org-manage": "Organization Governance",
+    "sub-accounts": "Sub Accounts"
   }
 }

@@ -10,6 +10,7 @@
     "ops": "运营中心",
     "fin": "财务中心",
     "risk-center": "风控中心",
+    "onboarding": "入驻管理",
     "sys": "系统中心"
   },
   "item": {
@@ -70,6 +71,13 @@
     "role-templates": "角色模板",
     "role-groups": "角色组",
     "principal-bindings": "主体绑定",
-    "merchants": "商家入驻"
+    "merchants": "商家入驻",
+    "onboarding-apply": "我的入驻",
+    "onboarding-review": "入驻申请管理",
+    "onboarding-content": "入驻说明与合同",
+    "onboarding-deposit-tiers": "保证金档位",
+    "onboarding-deposit-confirm": "保证金缴纳确认",
+    "org-manage": "组织管理",
+    "sub-accounts": "子账号管理"
   }
 }

@@ -25,6 +25,7 @@ import { tv } from './i18n';
 import {
   DashboardOutlined, AppstoreOutlined, ShoppingOutlined, ProjectOutlined, RocketOutlined,
   DeploymentUnitOutlined, AccountBookOutlined, SafetyOutlined, SettingOutlined, InboxOutlined,
+  IdcardOutlined,
 } from '@ant-design/icons';
 
 // 九大模块（工作台 + A/B/C/D 期新设计 + 四大中心）；children 为各模块下的页面。
@@ -118,6 +119,19 @@ export const NAV = [
       { key: 'complaints', label: 'nav:item.complaints', path: '/complaints' },
     ],
   },
+  // 入驻管理（增量 C：入驻说明 / 申请 / 审核 / 保证金 / 组织治理 / 子账号）
+  {
+    key: 'onboarding', label: 'nav:group.onboarding', icon: IdcardOutlined,
+    children: [
+      { key: 'onboarding-apply', label: 'nav:item.onboarding-apply', path: '/onboarding-apply' },
+      { key: 'onboarding-review', label: 'nav:item.onboarding-review', path: '/onboarding-review' },
+      { key: 'onboarding-content', label: 'nav:item.onboarding-content', path: '/onboarding-content' },
+      { key: 'onboarding-deposit-tiers', label: 'nav:item.onboarding-deposit-tiers', path: '/onboarding-deposit-tiers' },
+      { key: 'onboarding-deposit-confirm', label: 'nav:item.onboarding-deposit-confirm', path: '/onboarding-deposit-confirm' },
+      { key: 'org-manage', label: 'nav:item.org-manage', path: '/org-manage' },
+      { key: 'sub-accounts', label: 'nav:item.sub-accounts', path: '/sub-accounts' },
+    ],
+  },
   {
     key: 'sys', label: 'nav:group.sys', icon: SettingOutlined,
     children: [
@@ -205,6 +219,9 @@ export const ROUTES = [
   '/role-templates', '/role-groups', '/principal-bindings',
   // Phase 2 骨架
   '/merchants',
+  // 增量 C · 入驻管理（7 个新页面，menu:* 权限码见 V62 迁移）
+  '/onboarding-apply', '/onboarding-review', '/onboarding-content', '/onboarding-deposit-tiers',
+  '/onboarding-deposit-confirm', '/org-manage', '/sub-accounts',
 ];
 
 // 拍平为「带父级标签」的搜索索引：[{ key,label,path,group,groupKey }]，递归展开所有叶子。

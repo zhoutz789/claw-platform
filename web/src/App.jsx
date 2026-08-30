@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { getToken } from './auth';
 import { loadPermissions } from './permStore';
-import { ForbiddenPage } from './components/Perm';
+import { ForbiddenPage, RequirePermRoute } from './components/Perm';
 import Login from './pages/Login';
 import AdminLayout from './layout/AdminLayout';
 import Dashboard from './pages/Dashboard';
@@ -71,6 +71,14 @@ import RoleTemplates from './pages/RoleTemplates';
 import RoleGroups from './pages/RoleGroups';
 import PrincipalBindings from './pages/PrincipalBindings';
 import Merchants from './pages/Merchants';
+// —— 增量 C · 入驻管理 ——
+import OnboardingApply from './pages/OnboardingApply';
+import OnboardingReview from './pages/OnboardingReview';
+import OnboardingContent from './pages/OnboardingContent';
+import OnboardingDepositTiers from './pages/OnboardingDepositTiers';
+import OnboardingDepositConfirm from './pages/OnboardingDepositConfirm';
+import OrgManage from './pages/OrgManage';
+import SubAccounts from './pages/SubAccounts';
 import ErrorBoundary from './ErrorBoundary';
 
 // 登录态下启动权限内核：拉取「我的权限」并下发后端权威菜单。
@@ -166,6 +174,15 @@ export default function App() {
           <Route path="principal-bindings" element={<PrincipalBindings />} />
           {/* Phase 2 骨架：商家入驻 */}
           <Route path="merchants" element={<Merchants />} />
+
+          {/* 增量 C · 入驻管理（菜单可见性由 menu:{navKey} 权限码控制，见 V62） */}
+          <Route path="onboarding-apply" element={<RequirePermRoute menuKey="onboarding-apply"><OnboardingApply /></RequirePermRoute>} />
+          <Route path="onboarding-review" element={<RequirePermRoute menuKey="onboarding-review"><OnboardingReview /></RequirePermRoute>} />
+          <Route path="onboarding-content" element={<RequirePermRoute menuKey="onboarding-content"><OnboardingContent /></RequirePermRoute>} />
+          <Route path="onboarding-deposit-tiers" element={<RequirePermRoute menuKey="onboarding-deposit-tiers"><OnboardingDepositTiers /></RequirePermRoute>} />
+          <Route path="onboarding-deposit-confirm" element={<RequirePermRoute menuKey="onboarding-deposit-confirm"><OnboardingDepositConfirm /></RequirePermRoute>} />
+          <Route path="org-manage" element={<RequirePermRoute menuKey="org-manage"><OrgManage /></RequirePermRoute>} />
+          <Route path="sub-accounts" element={<RequirePermRoute menuKey="sub-accounts"><SubAccounts /></RequirePermRoute>} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

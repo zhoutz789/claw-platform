@@ -10,6 +10,7 @@
     "ops": "មជ្ឈមណ្ឌលប្រតិបត្តិការ",
     "fin": "",
     "risk-center": "",
+    "onboarding": "ការគ្រប់គ្រងការចូលរួម",
     "sys": "មជ្ឈមណ្ឌលប្រព័ន្ធ"
   },
   "item": {
@@ -70,6 +71,13 @@
     "role-templates": "",
     "role-groups": "",
     "principal-bindings": "",
-    "merchants": ""
+    "merchants": "",
+    "onboarding-apply": "ការចូលរួមរបស់ខ្ញុំ",
+    "onboarding-review": "ពាក្យស្នើសុំចូលរួម",
+    "onboarding-content": "លក្ខខណ្ឌ និងកិច្ចសន្យា",
+    "onboarding-deposit-tiers": "កម្រិតប្រាក់បញ្ចាំ",
+    "onboarding-deposit-confirm": "ការបញ្ជាក់ប្រាក់បញ្ចាំ",
+    "org-manage": "ការគ្រប់គ្រងអង្គភាព",
+    "sub-accounts": "គណនីរង"
   }
 }
