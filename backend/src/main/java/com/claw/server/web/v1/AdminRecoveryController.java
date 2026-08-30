@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import com.claw.server.common.security.RequirePermission;
 
 /**
  * 后台残值回收模块（Phase2 接线）：估价三方流程 + 回收/以旧换新 + 信用分 + 黑名单。
@@ -28,50 +29,59 @@ public class AdminRecoveryController {
     private final StationBlacklistRepository blacklistRepository;
 
     @PostMapping("/valuations")
+    @RequirePermission("recovery:create")
     public ApiResult<ResidualValuation> createValuation(@RequestBody ValuationReq req) {
         return ApiResult.ok(recoveryService.createValuation(req.assetId(), req.ownerUserId(),
                 req.soh(), req.usageYears(), req.brand(), req.model(), req.cycleCount()));
     }
 
     @PostMapping("/valuations/system-estimate")
+    @RequirePermission("recovery:create")
     public ApiResult<ResidualValuation> systemEstimate(@RequestParam Long valuationId, @RequestParam BigDecimal estimate) {
         return ApiResult.ok(recoveryService.submitSystemEstimate(valuationId, estimate));
     }
 
     @PostMapping("/valuations/station-estimate")
+    @RequirePermission("recovery:create")
     public ApiResult<ResidualValuation> stationEstimate(@RequestParam Long valuationId, @RequestParam BigDecimal estimate) {
         return ApiResult.ok(recoveryService.submitStationEstimate(valuationId, estimate));
     }
 
     @PostMapping("/valuations/third-party-estimate")
+    @RequirePermission("recovery:create")
     public ApiResult<ResidualValuation> thirdPartyEstimate(@RequestParam Long valuationId, @RequestParam BigDecimal estimate,
                                                           @RequestParam String thirdPartyName, @RequestParam(required = false) String reportUrl) {
         return ApiResult.ok(recoveryService.submitThirdPartyEstimate(valuationId, estimate, thirdPartyName, reportUrl));
     }
 
     @PostMapping("/valuations/{valuationId}/finalize")
+    @RequirePermission("recovery:create")
     public ApiResult<ResidualValuation> finalize(@PathVariable Long valuationId) {
         return ApiResult.ok(recoveryService.finalizeValuation(valuationId));
     }
 
     @PostMapping("/cash")
+    @RequirePermission("recovery:create")
     public ApiResult<RecoveryOrder> createCash(@RequestBody CashReq req) {
         return ApiResult.ok(recoveryService.createCashRecovery(req.assetId(), req.ownerUserId(),
                 req.valuationId(), req.ownershipId(), req.recoveryPrice(), req.processingFee()));
     }
 
     @PostMapping("/trade-in")
+    @RequirePermission("recovery:create")
     public ApiResult<RecoveryOrder> createTradeIn(@RequestBody TradeInReq req) {
         return ApiResult.ok(recoveryService.createTradeIn(req.assetId(), req.ownerUserId(), req.valuationId(),
                 req.ownershipId(), req.oldValuation(), req.newAssetId(), req.newAssetPrice()));
     }
 
     @PostMapping("/orders/{orderId}/confirm")
+    @RequirePermission("recovery:create")
     public ApiResult<RecoveryOrder> confirm(@PathVariable Long orderId) {
         return ApiResult.ok(recoveryService.confirmRecovery(orderId));
     }
 
     @PostMapping("/orders/{orderId}/complete")
+    @RequirePermission("recovery:create")
     public ApiResult<RecoveryOrder> complete(@PathVariable Long orderId, @RequestParam String ledgerTxnId) {
         return ApiResult.ok(recoveryService.completeRecovery(orderId, ledgerTxnId));
     }
@@ -82,6 +92,7 @@ public class AdminRecoveryController {
     }
 
     @PostMapping("/scores/{userId}")
+    @RequirePermission("recovery:create")
     public ApiResult<ClawScore> updateScore(@PathVariable Long userId, @RequestParam int delta,
                                             @RequestParam String eventType, @RequestParam(required = false) String detail) {
         return ApiResult.ok(recoveryService.updateScore(userId, delta, eventType, detail));
@@ -99,12 +110,14 @@ public class AdminRecoveryController {
     }
 
     @PostMapping("/blacklist")
+    @RequirePermission("recovery:create")
     public ApiResult<StationBlacklist> blacklist(@RequestBody BlacklistReq req) {
         return ApiResult.ok(recoveryService.blacklist(BlacklistType.valueOf(req.type()), req.targetId(),
                 req.reason(), req.description(), req.blacklistedBy(), req.expiresAt()));
     }
 
     @PostMapping("/blacklist/{id}/resolve")
+    @RequirePermission("recovery:create")
     public ApiResult<StationBlacklist> resolveBlacklist(@PathVariable Long id,
                                                         @RequestParam Long resolvedBy, @RequestParam(required = false) String note) {
         return ApiResult.ok(recoveryService.resolveBlacklist(id, resolvedBy, note));

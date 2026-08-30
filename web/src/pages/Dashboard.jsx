@@ -1,7 +1,7 @@
 import { Row, Col, Card, Statistic, Table, Tag, Spin, Typography, Divider } from 'antd';
 import { useFetch } from '../hooks';
 import api from '../api';
-import { ASSET_STATUS_LABEL } from '../enums';
+import { ASSET_STATUS_LABEL, enumLabel } from '../enums';
 
 const { Text } = Typography;
 
@@ -18,7 +18,7 @@ export default function Dashboard() {
     { title: '口径', dataIndex: 'note' },
   ];
   const stageCols = [
-    { title: '状态', dataIndex: 'k', render: (v) => ASSET_STATUS_LABEL[v] || v },
+    { title: '状态', dataIndex: 'k', render: (v) => enumLabel(ASSET_STATUS_LABEL, v) },
     { title: '数量', dataIndex: 'v' },
   ];
   const stageData = data?.assetByStage ? Object.entries(data.assetByStage).map(([k, v]) => ({ k, v })) : [];

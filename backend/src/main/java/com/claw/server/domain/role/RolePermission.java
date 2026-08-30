@@ -40,6 +40,11 @@ public class RolePermission {
     @Builder.Default
     private String buttonsJson = "{}";
 
+    /** 绑定的数据权限规则 id 集合（逗号分隔，对应 permission_data_rules.id），V44 新增。 */
+    @Column(columnDefinition = "text")
+    @Builder.Default
+    private String dataRuleIds = "";
+
     @Column(nullable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();

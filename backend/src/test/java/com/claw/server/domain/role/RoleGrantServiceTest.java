@@ -25,6 +25,8 @@ class RoleGrantServiceTest {
     private RoleRepository roleRepository;
     @Mock
     private UserRolePackageRepository packageRepository;
+    @Mock
+    private PermissionService permissionService;
     @InjectMocks
     private RoleGrantService service;
 

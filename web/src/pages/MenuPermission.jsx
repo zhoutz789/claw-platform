@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Tree, Card, Select, Button, Space, message, Typography, Spin } from 'antd';
+import { useTranslation } from 'react-i18next';
 import PageCard from '../components/PageCard';
+import { Perm } from '../components/Perm';
 import api from '../api';
 
 const { Paragraph, Text } = Typography;
@@ -25,6 +27,7 @@ const flattenCodes = (nodes, acc = []) => {
 // 菜单权限：角色下拉接 /v1/admin/roles；权限树接 /v1/admin/permissions/catalog（真实目录，修正旧 MENU_TREE 与导航不一致）；
 // 进入角色时拉取真实权限矩阵回填勾选；保存接 PUT /v1/admin/permissions/role/{roleId}。
 export default function MenuPermission() {
+  const { t } = useTranslation();
   const [roles, setRoles] = useState([]);
   const [roleId, setRoleId] = useState(null);
   const [catalog, setCatalog] = useState([]);
@@ -47,7 +50,7 @@ export default function MenuPermission() {
       setTree(toTree(cat));
       if (rs && rs.length) setRoleId(rs[0].id);
     }).catch((e) => {
-      if (alive) message.error('加载角色/权限目录失败：' + e.message);
+      if (alive) message.error(t('system:menuPermission.msg.loadFailed', { msg: e.message }));
     }).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, []);
@@ -62,7 +65,7 @@ export default function MenuPermission() {
       const keys = (rows || []).filter((r) => r.canRead).map((r) => r.permissionCode);
       setChecked(keys);
     }).catch((e) => {
-      if (alive) { message.error('加载角色权限失败：' + e.message); setChecked([]); }
+      if (alive) { message.error(t('system:menuPermission.msg.loadRoleFailed', { msg: e.message })); setChecked([]); }
     }).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [roleId]);
@@ -81,9 +84,9 @@ export default function MenuPermission() {
     try {
       await api.put(`/v1/admin/permissions/role/${roleId}`, { items });
       const roleName = roles.find((r) => r.id === roleId)?.nameI18n || roleId;
-      message.success(`已保存「${roleName}」菜单权限（真实写入后端）`);
+      message.success(t('system:menuPermission.msg.saved', { name: roleName }));
     } catch (e) {
-      message.error('保存失败：' + e.message);
+      message.error(t('system:menuPermission.msg.saveFailed', { msg: e.message }));
     } finally {
       setSaving(false);
     }
@@ -93,26 +96,28 @@ export default function MenuPermission() {
 
   return (
     <PageCard
-      title="菜单权限（RuoYi 式傻瓜配置）"
+      title={t('system:menuPermission.title')}
       extra={
         <Select value={roleId} style={{ width: 260 }} onChange={setRoleId}
-          placeholder="选择角色"
+          placeholder={t('system:menuPermission.selectRole')}
           options={roles.map((r) => ({ label: `${r.roleCode} · ${r.nameI18n}`, value: r.id }))} />
       }
     >
       <Paragraph type="secondary">
-        勾选菜单即授予角色对应权限；新增功能只需在系统登记菜单，再分配给角色，便于庞大系统扩展。当前目录来自后端真实权限目录（permission 表）。
+        {t('system:menuPermission.desc')}
       </Paragraph>
-      <Card title="菜单权限树">
+      <Card title={t('system:menuPermission.cardTitle')}>
         {loading ? <Spin /> : tree.length === 0 ? (
-          <Text type="secondary">暂无权限目录（后端待接入）</Text>
+          <Text type="secondary">{t('system:menuPermission.empty')}</Text>
         ) : (
           <Tree checkable checkedKeys={checked} onCheck={(ks) => setChecked(ks)}
             treeData={tree} defaultExpandAll />
         )}
         <Space style={{ marginTop: 12 }}>
-          <Button type="primary" loading={saving} disabled={!roleId} onClick={save}>保存权限</Button>
-          {roleId && <Text type="secondary">角色：{roleName}</Text>}
+          <Perm code="permission:update">
+            <Button type="primary" loading={saving} disabled={!roleId} onClick={save}>{t('system:menuPermission.save')}</Button>
+          </Perm>
+          {roleId && <Text type="secondary">{t('system:menuPermission.roleLabel')}：{roleName}</Text>}
         </Space>
       </Card>
     </PageCard>

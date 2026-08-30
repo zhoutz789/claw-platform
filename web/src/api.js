@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { resolveMock } from './mock/api';
+import { ACCEPT_LANGUAGE, getLang } from './i18n';
 
 // 演示模式：未登录时直接赋予 dev-mock-token，绕过登录网关即可进入后台体验（与 Login 演示分支一致）。
 if (!localStorage.getItem('claw_token')) {
@@ -12,9 +13,13 @@ if (!localStorage.getItem('claw_token')) {
 // 内置演示数据作为安全网，避免页面白屏。不再用演示数据冒充真实结果。
 const api = axios.create({ baseURL: '/api', timeout: 15000 });
 
+// 语言随每次请求实时读取（不缓存），切换语言后无需刷新即对新请求生效。
+// 后端 GlobalExceptionHandler 已按 Accept-Language 走 MessageSource 本地化，
+// 因此业务异常文案可自动跟随前端语言，后端零改动。
 api.interceptors.request.use((cfg) => {
   const t = localStorage.getItem('claw_token');
   if (t) cfg.headers.Authorization = `Bearer ${t}`;
+  cfg.headers['Accept-Language'] = ACCEPT_LANGUAGE[getLang()] || 'zh-CN';
   return cfg;
 });
 

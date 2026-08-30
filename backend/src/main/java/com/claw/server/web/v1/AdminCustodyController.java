@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import com.claw.server.common.security.RequirePermission;
 
 /**
  * 后台产权与争议模块（S5 补齐）：产权链追溯 + 争议仲裁。
@@ -50,6 +51,7 @@ public class AdminCustodyController {
      * 实际业务（换电/租赁/回收/以旧换新/共享池）应在各自完成后调用本端点，形成不可篡改产权链。
      */
     @PostMapping("/transfers")
+    @RequirePermission("custody:create")
     public ApiResult<CustodyTransferView> createTransfer(@RequestBody CustodyTransferReq req) {
         CustodyTransfer t = custodyService.recordTransfer(req.assetId(), req.assetType(), req.fromUserId(),
                 req.toUserId(), TransferType.valueOf(req.transferType()), req.stationId(), req.swapOrderId(),
@@ -74,6 +76,7 @@ public class AdminCustodyController {
     }
 
     @PostMapping("/disputes")
+    @RequirePermission("custody:create")
     public ApiResult<CustodyDisputeView> createDispute(@RequestBody CustodyDisputeReq req) {
         CustodyDispute d = CustodyDispute.builder()
                 .transferId(req.transferId())
@@ -101,6 +104,7 @@ public class AdminCustodyController {
     }
 
     @PostMapping("/disputes/{id}/arbitrate")
+    @RequirePermission("custody:create")
     public ApiResult<CustodyDisputeView> arbitrate(@PathVariable Long id,
                                                    @RequestBody CustodyArbitrateReq req) {
         CustodyDispute d = disputeRepository.findById(id)
@@ -115,6 +119,7 @@ public class AdminCustodyController {
     }
 
     @DeleteMapping("/disputes/{id}")
+    @RequirePermission("custody:delete")
     public ApiResult<Void> deleteDispute(@PathVariable Long id) {
         CustodyDispute d = disputeRepository.findById(id)
                 .orElseThrow(() -> new BizException(40401, "custody.dispute.not.found"));

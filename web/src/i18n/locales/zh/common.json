@@ -1,0 +1,129 @@
+{
+  "app": {
+    "brand": "Claw",
+    "brandSub": "新能源资产管理平台",
+    "loginTitle": "Claw 管理后台",
+    "loginSlogan": "新能源资产全生命周期运营管理平台"
+  },
+  "lang": {
+    "label": "语言",
+    "switch": "切换语言",
+    "zh": "中文",
+    "en": "English",
+    "km": "ខ្មែរ"
+  },
+  "action": {
+    "add": "新增",
+    "addItem": "新增菜单项",
+    "addGroup": "新增分组",
+    "create": "创建",
+    "edit": "编辑",
+    "delete": "删除",
+    "deleteGroup": "删除该分组",
+    "refresh": "刷新",
+    "exportConfig": "导出配置",
+    "importConfig": "导入配置",
+    "cancel": "取消",
+    "ok": "确定",
+    "confirm": "确认",
+    "save": "保存",
+    "saveLayout": "保存布局",
+    "search": "搜索",
+    "resetDefault": "恢复默认",
+    "detail": "详情",
+    "moveUp": "上移",
+    "moveDown": "下移",
+    "logout": "退出",
+    "yes": "是",
+    "no": "否",
+    "selectRole": "选择角色",
+    "selectDepartment": "选择部门",
+    "selectParentGroup": "选择父级分组，或作为一级菜单",
+    "hideInMenu": "在菜单中隐藏（仍可通过链接访问）"
+  },
+  "msg": {
+    "loadFailed": "加载失败：{{msg}}",
+    "opFailed": "操作失败：{{msg}}",
+    "deleteFailed": "删除失败：{{msg}}",
+    "detailLoadFailed": "详情加载失败：{{msg}}",
+    "created": "已创建",
+    "saved": "已保存",
+    "deleted": "已删除",
+    "networkError": "网络错误",
+    "loading": "加载中…"
+  },
+  "confirm": {
+    "delete": "确认删除？",
+    "deleteOk": "删除",
+    "resetMenu": "恢复默认菜单？",
+    "resetMenuDesc": "将清除所有自定义显示 / 排序 / 改名 / 新增项设置，恢复到系统内置默认菜单，此操作不可撤销。",
+    "resetOk": "确认恢复"
+  },
+  "form": {
+    "required": "请输入{{label}}",
+    "placeholderSelect": "请选择",
+    "datePlaceholder": "YYYY-MM-DD"
+  },
+  "table": {
+    "detailTitle": "详情",
+    "actions": "操作"
+  },
+  "enum": {
+    "dataScope": {
+      "SELF": "仅本人数据",
+      "DEPARTMENT": "本部门",
+      "DEPARTMENT_AND_BELOW": "本部门及下属部门",
+      "CUSTOM": "自定义（指定部门/规则）",
+      "ALL": "全部数据",
+      "TYPE": "特殊授权类型"
+    },
+    "lifecycle": {
+      "PRODUCED": "生产出厂",
+      "IN_TRANSIT": "流通在途",
+      "IN_USE": "使用中",
+      "MAINTENANCE": "维修保养",
+      "RECYCLED": "回收",
+      "DESTROYED": "销毁"
+    },
+    "opType": {
+      "PASSENGER": "客运",
+      "LOGISTICS": "物流",
+      "MOBILE_SELL": "流动售卖",
+      "ADVERTISING": "广告",
+      "RECORDING": "录像数据"
+    },
+    "assetStatus": {
+      "IN_STOCK": "在库",
+      "IN_USE": "使用中",
+      "SHARED": "共享中",
+      "REPAIR": "维修中",
+      "DISABLED": "停用",
+      "SCRAPPED": "报废"
+    }
+  },
+  "login": {
+    "otpTip": "OTP 登录：输入手机号 → 获取验证码（开发模式会直接显示验证码）→ 登录",
+    "phone": "手机号",
+    "phonePlaceholder": "如 13800000001",
+    "code": "验证码",
+    "codePlaceholder": "点击左侧按钮获取",
+    "getCode": "获取验证码",
+    "submit": "登录",
+    "codeSent": "验证码已发送（开发模式回显）：{{code}}",
+    "backendDownCode": "后端未连接，已使用演示验证码：123456",
+    "success": "登录成功",
+    "backendDownLogin": "后端未连接，已进入演示模式"
+  },
+  "layout": {
+    "searchPlaceholder": "搜索模块（如：对账、保险、站点）",
+    "adminName": "管理员",
+    "superAdmin": "SUPER_ADMIN",
+    "logout": "退出",
+    "workbench": "工作台",
+    "mockBanner": "⚠️ 演示数据模式：后端当前不可达 / 鉴权未通过，页面展示的是内置演示数据（闭环可见，但非真实库数据）。接入真实后端并登录后将自动切换为实时数据。"
+  },
+  "perm": {
+    "forbiddenDesc": "抱歉，您当前账号没有访问该页面的权限。如需开通，请联系系统管理员。",
+    "backWorkbench": "返回工作台"
+  }
+}

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Tabs, Card, InputNumber, Button, Input, Space, Table, Descriptions, Tag, message, Spin, Form, Select } from 'antd';
 import { useSearchParams } from 'react-router-dom';
 import api from '../api';
-import { LIFECYCLE_LABEL, OP_LABEL, ASSET_STATUS_LABEL, ASSET_TYPE } from '../enums';
+import { LIFECYCLE_LABEL, OP_LABEL, ASSET_STATUS_LABEL, ASSET_TYPE, enumLabel } from '../enums';
 
 export default function AssetTrace() {
   const [params] = useSearchParams();
@@ -20,7 +20,7 @@ export default function AssetTrace() {
   };
 
   const lifecycleCols = [
-    { title: '阶段', dataIndex: 'stage', render: (v) => <Tag color="blue">{LIFECYCLE_LABEL[v] || v}</Tag> },
+    { title: '阶段', dataIndex: 'stage', render: (v) => <Tag color="blue">{enumLabel(LIFECYCLE_LABEL, v)}</Tag> },
     { title: '地点', dataIndex: 'location' },
     { title: '操作人', dataIndex: 'operatorId' },
     { title: '备注', dataIndex: 'note' },
@@ -36,7 +36,7 @@ export default function AssetTrace() {
     { title: '能耗(kWh)', dataIndex: 'energyKwh' }, { title: '备注', dataIndex: 'note' },
   ];
   const vopsCols = [
-    { title: '运营类型', dataIndex: 'opType', render: (v) => OP_LABEL[v] || v },
+    { title: '运营类型', dataIndex: 'opType', render: (v) => enumLabel(OP_LABEL, v) },
     { title: '开始', dataIndex: 'startedAt' }, { title: '结束', dataIndex: 'endedAt' },
     { title: '收益', dataIndex: 'revenue' }, { title: '备注', dataIndex: 'note' },
   ];
@@ -56,7 +56,7 @@ export default function AssetTrace() {
               <Descriptions.Item label="资产编号">{trace.asset?.assetNo}</Descriptions.Item>
               <Descriptions.Item label="类型">{ASSET_TYPE.find((x) => x.value === trace.assetType)?.label || trace.assetType}</Descriptions.Item>
               <Descriptions.Item label="序列号">{trace.asset?.serialNumber || '-'}</Descriptions.Item>
-              <Descriptions.Item label="状态">{ASSET_STATUS_LABEL[trace.status] || trace.status}</Descriptions.Item>
+              <Descriptions.Item label="状态">{enumLabel(ASSET_STATUS_LABEL, trace.status)}</Descriptions.Item>
               <Descriptions.Item label="厂家ID">{trace.asset?.manufacturerId || '-'}</Descriptions.Item>
               <Descriptions.Item label="商品ID">{trace.asset?.productId || '-'}</Descriptions.Item>
               <Descriptions.Item label="SKU ID">{trace.asset?.skuId || '-'}</Descriptions.Item>

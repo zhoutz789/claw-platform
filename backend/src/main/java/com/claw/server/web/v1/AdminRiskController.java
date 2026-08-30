@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.List;
+import com.claw.server.common.security.RequirePermission;
 
 /**
  * 后台风控模块（S5 补齐）：风控监控 + 异常告警 + 保险基金。
@@ -47,6 +48,7 @@ public class AdminRiskController {
     }
 
     @PostMapping("/monitors")
+    @RequirePermission("risk:create")
     public ApiResult<StationRiskMonitorView> createMonitor(@RequestBody StationRiskMonitorReq req) {
         // 走 RiskMonitorService，触发 V16 触发器真实评分/熔断（此前直接用 repository 绕过业务逻辑）
         StationRiskMonitor m = riskMonitorService.recordMetric(req.stationId(), req.operatorId(),
@@ -57,6 +59,7 @@ public class AdminRiskController {
     }
 
     @PutMapping("/monitors/{id}")
+    @RequirePermission("risk:update")
     public ApiResult<StationRiskMonitorView> updateMonitor(@PathVariable Long id,
                                                            @RequestBody StationRiskMonitorReq req) {
         StationRiskMonitor m = monitorRepository.findById(id)
@@ -77,6 +80,7 @@ public class AdminRiskController {
     }
 
     @DeleteMapping("/monitors/{id}")
+    @RequirePermission("risk:delete")
     public ApiResult<Void> deleteMonitor(@PathVariable Long id) {
         StationRiskMonitor m = monitorRepository.findById(id)
                 .orElseThrow(() -> new com.claw.server.common.api.BizException(40401, "risk.monitor.not.found"));
@@ -97,6 +101,7 @@ public class AdminRiskController {
     }
 
     @PostMapping("/events/{id}/resolve")
+    @RequirePermission("risk:create")
     public ApiResult<OperatorRiskEventView> resolveEvent(@PathVariable Long id,
                                                          @RequestBody OperatorRiskEventResolveReq req) {
         OperatorRiskEvent e = eventRepository.findById(id)
@@ -117,6 +122,7 @@ public class AdminRiskController {
     }
 
     @PutMapping("/insurance-fund/{id}")
+    @RequirePermission("risk:update")
     public ApiResult<InsuranceFundView> updateFund(@PathVariable Long id,
                                                    @RequestBody InsuranceFundUpdateReq req) {
         InsuranceFund f = fundRepository.findById(id)

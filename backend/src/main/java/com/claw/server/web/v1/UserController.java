@@ -12,6 +12,7 @@ import com.claw.server.domain.user.AuthService;
 import com.claw.server.domain.user.KycService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,6 +34,17 @@ public class UserController {
     @GetMapping("/me")
     public ApiResult<ApiViews.UserProfile> profile() {
         return ApiResult.ok(authService.profile(requireUserId()));
+    }
+
+    /** 更新我的语言偏好（登录后同步回写账号，便于跨端一致）。 */
+    @Transactional
+    @PutMapping("/me/locale")
+    public ApiResult<Void> updateLocale(@RequestBody LocaleReq req) {
+        authService.updateLocale(requireUserId(), req.locale());
+        return ApiResult.ok();
+    }
+
+    public record LocaleReq(String locale) {
     }
 
     /** 平台实名认证（MANUAL）。 */

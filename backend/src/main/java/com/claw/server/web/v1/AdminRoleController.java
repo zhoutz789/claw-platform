@@ -4,6 +4,7 @@ import com.claw.server.common.api.ApiResult;
 import com.claw.server.common.api.BizException;
 import com.claw.server.common.dto.AdminDtos.*;
 import com.claw.server.common.enums.RoleSource;
+import com.claw.server.domain.role.PermissionService;
 import com.claw.server.domain.role.Role;
 import com.claw.server.domain.role.RoleRepository;
 import com.claw.server.domain.role.RoleView;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import com.claw.server.common.security.RequirePermission;
 
 /**
  * 后台角色权限模块（S5 补齐）：角色目录维护 + 用户角色包授予/回收。
@@ -39,11 +41,13 @@ public class AdminRoleController {
     private final RoleRepository roleRepository;
     private final UserRolePackageRepository packageRepository;
     private final UserRepository userRepository;
+    private final PermissionService permissionService;
 
     @GetMapping
     public ApiResult<List<RoleView>> listRoles() {
         return ApiResult.ok(roleRepository.findAll().stream()
-                .map(r -> RoleView.of(r.getId(), r.getCode(), r.getNameI18n(), null, null, r.getDataScope()))
+                .map(r -> RoleView.of(r.getId(), r.getCode(), r.getNameI18n(), null, null, r.getDataScope(),
+                        r.getParentId(), r.getDataScopeTypes(), r.getDataRuleIds()))
                 .toList());
     }
 
@@ -61,12 +65,16 @@ public class AdminRoleController {
                 .status(req.status() == null ? "ACTIVE" : req.status())
                 .dataScope(req.dataScope() == null ? "SELF" : req.dataScope())
                 .dataScopeTypes(req.dataScopeTypes() == null ? "[]" : req.dataScopeTypes())
+                .dataRuleIds(req.dataRuleIds() == null ? "" : req.dataRuleIds())
+                .parentId(req.parentId())
                 .build();
         r = roleRepository.save(r);
-        return ApiResult.ok(RoleView.of(r.getId(), r.getCode(), r.getNameI18n(), null, null, r.getDataScope()));
+        return ApiResult.ok(RoleView.of(r.getId(), r.getCode(), r.getNameI18n(), null, null, r.getDataScope(),
+                r.getParentId(), r.getDataScopeTypes(), r.getDataRuleIds()));
     }
 
     @PutMapping("/{id}")
+    @RequirePermission("role:update")
     public ApiResult<RoleView> updateRole(@PathVariable Long id, @RequestBody RoleReq req) {
         Role r = roleRepository.findById(id)
                 .orElseThrow(() -> new BizException(40401, "role.not.found"));
@@ -77,11 +85,35 @@ public class AdminRoleController {
         if (req.status() != null) r.setStatus(req.status());
         if (req.dataScope() != null) r.setDataScope(req.dataScope());
         if (req.dataScopeTypes() != null) r.setDataScopeTypes(req.dataScopeTypes());
+        if (req.dataRuleIds() != null) r.setDataRuleIds(req.dataRuleIds());
+        if (req.parentId() != null) r.setParentId(req.parentId());
         r = roleRepository.save(r);
-        return ApiResult.ok(RoleView.of(r.getId(), r.getCode(), r.getNameI18n(), null, null, r.getDataScope()));
+        // 角色 grants 变更：清除所有持有该角色用户的权限缓存，保证「改权限后 5s 内生效」。
+        permissionService.evictByRole(r.getId());
+        return ApiResult.ok(RoleView.of(r.getId(), r.getCode(), r.getNameI18n(), null, null, r.getDataScope(),
+                r.getParentId(), r.getDataScopeTypes(), r.getDataRuleIds()));
+    }
+
+    /**
+     * 更新角色数据范围（可配置化数据权限的写入口）。
+     * 仅改 data_scope / data_scope_types / data_rule_ids 三个字段，其余不变。
+     */
+    @PutMapping("/{id}/datascope")
+    @RequirePermission("role:update")
+    public ApiResult<RoleView> updateRoleDataScope(@PathVariable Long id, @RequestBody RoleDataScopeReq req) {
+        Role r = roleRepository.findById(id)
+                .orElseThrow(() -> new BizException(40401, "role.not.found"));
+        if (req.dataScope() != null) r.setDataScope(req.dataScope());
+        if (req.dataScopeTypes() != null) r.setDataScopeTypes(req.dataScopeTypes());
+        if (req.dataRuleIds() != null) r.setDataRuleIds(req.dataRuleIds());
+        r = roleRepository.save(r);
+        permissionService.evictByRole(r.getId());
+        return ApiResult.ok(RoleView.of(r.getId(), r.getCode(), r.getNameI18n(), null, null, r.getDataScope(),
+                r.getParentId(), r.getDataScopeTypes(), r.getDataRuleIds()));
     }
 
     @DeleteMapping("/{id}")
+    @RequirePermission("role:delete")
     public ApiResult<Void> deleteRole(@PathVariable Long id) {
         Role r = roleRepository.findById(id)
                 .orElseThrow(() -> new BizException(40401, "role.not.found"));
@@ -109,6 +141,7 @@ public class AdminRoleController {
     }
 
     @PostMapping("/user-roles")
+    @RequirePermission("role:create")
     public ApiResult<UserRoleAssignmentView> assignRole(@RequestBody UserRoleAssignReq req) {
         Role role = roleRepository.findByCode(req.roleCode())
                 .orElseThrow(() -> new BizException(40401, "role.not.found"));
@@ -132,6 +165,7 @@ public class AdminRoleController {
     }
 
     @DeleteMapping("/user-roles/{id}")
+    @RequirePermission("role:delete")
     public ApiResult<Void> revokeRole(@PathVariable Long id) {
         UserRolePackage pkg = packageRepository.findById(id)
                 .orElseThrow(() -> new BizException(40401, "role.package.not.found"));

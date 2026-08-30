@@ -31,6 +31,11 @@ public class Role {
     @Column(name = "name_i18n", nullable = false)
     private String nameI18n;
 
+    /** 父角色 id（角色继承，周老板默认决策 #9）：逻辑父级，无 DB 外键；成环由应用层防御。 */
+    @Column(name = "parent_id")
+    @Builder.Default
+    private Long parentId = null;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     @Builder.Default
@@ -55,6 +60,11 @@ public class Role {
     @Column(columnDefinition = "text")
     @Builder.Default
     private String dataScopeTypes = "[]";
+
+    /** 角色级自定义部门集合（逗号分隔部门 id），dataScope=CUSTOM 时生效（V44 新增）。 */
+    @Column(columnDefinition = "text")
+    @Builder.Default
+    private String dataRuleIds = "";
 
     @Column(nullable = false)
     @Builder.Default

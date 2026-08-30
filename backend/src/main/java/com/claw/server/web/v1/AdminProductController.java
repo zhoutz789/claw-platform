@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.claw.server.common.security.RequirePermission;
 
 /**
  * 后台产品目录（Increment 3 A 期）。
@@ -58,12 +59,14 @@ public class AdminProductController {
     }
 
     @PutMapping("/{id}")
+    @RequirePermission("product:update")
     public ApiResult<ProductView> update(@PathVariable Long id, @RequestBody UpdateProductReq req) {
         requireAdmin();
         return ApiResult.ok(productService.update(id, req));
     }
 
     @DeleteMapping("/{id}")
+    @RequirePermission("product:delete")
     public ApiResult<Void> delete(@PathVariable Long id) {
         requireAdmin();
         productService.delete(id);
@@ -76,6 +79,7 @@ public class AdminProductController {
     }
 
     @PostMapping("/{id}/fields")
+    @RequirePermission("product:create")
     public ApiResult<ProductTemplateFieldView> createField(@PathVariable Long id,
                                                            @RequestBody CreateProductTemplateFieldReq req) {
         requireAdmin();
@@ -86,6 +90,7 @@ public class AdminProductController {
     }
 
     @PutMapping("/{id}/fields/{fieldId}")
+    @RequirePermission("product:update")
     public ApiResult<ProductTemplateFieldView> updateField(@PathVariable Long id, @PathVariable Long fieldId,
                                                            @RequestBody UpdateProductTemplateFieldReq req) {
         requireAdmin();
@@ -93,6 +98,7 @@ public class AdminProductController {
     }
 
     @DeleteMapping("/{id}/fields/{fieldId}")
+    @RequirePermission("product:delete")
     public ApiResult<Void> deleteField(@PathVariable Long id, @PathVariable Long fieldId) {
         requireAdmin();
         fieldService.delete(fieldId);

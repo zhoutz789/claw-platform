@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.List;
+import com.claw.server.common.security.RequirePermission;
 
 /**
  * 后台系统配置模块（S5 补齐）：平台级键值参数维护（system_config）。
@@ -34,6 +35,7 @@ public class AdminSettingsController {
     }
 
     @PostMapping("/config")
+    @RequirePermission("setting:create")
     public ApiResult<SystemConfigView> createConfig(@RequestBody SystemConfigReq req) {
         if (req.configKey() == null || req.configKey().isBlank()) {
             throw new BizException(40001, "config.key.required");
@@ -57,6 +59,7 @@ public class AdminSettingsController {
     }
 
     @PutMapping("/config/{key}")
+    @RequirePermission("setting:update")
     public ApiResult<SystemConfigView> updateConfig(@PathVariable String key,
                                                     @RequestBody SystemConfigReq req) {
         SystemConfig c = configRepository.findByConfigKeyAndDeletedFalse(key)
@@ -71,6 +74,7 @@ public class AdminSettingsController {
     }
 
     @DeleteMapping("/config/{key}")
+    @RequirePermission("setting:delete")
     public ApiResult<Void> deleteConfig(@PathVariable String key) {
         SystemConfig c = configRepository.findByConfigKeyAndDeletedFalse(key)
                 .orElseThrow(() -> new BizException(40401, "config.not.found"));

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import com.claw.server.common.security.RequirePermission;
 
 /**
  * 后台分账模块（S5 补齐）：分账结算报告 + 分成规则维护。
@@ -49,6 +50,7 @@ public class AdminProfitController {
     }
 
     @PostMapping("/settlements/{id}/settle")
+    @RequirePermission("profit:create")
     public ApiResult<RevenueSettlementView> settle(@PathVariable Long id) {
         RevenueSettlement s = settlementRepository.findById(id)
                 .orElseThrow(() -> new BizException(40401, "profit.settlement.not.found"));
@@ -66,6 +68,7 @@ public class AdminProfitController {
     }
 
     @PostMapping("/split-rules")
+    @RequirePermission("profit:create")
     public ApiResult<RevenueSplitRuleView> createSplitRule(@RequestBody RevenueSplitRuleReq req) {
         RevenueSplitRule r = RevenueSplitRule.builder()
                 .assetId(req.assetId())
@@ -88,6 +91,7 @@ public class AdminProfitController {
     }
 
     @PutMapping("/split-rules/{id}")
+    @RequirePermission("profit:update")
     public ApiResult<RevenueSplitRuleView> updateSplitRule(@PathVariable Long id,
                                                            @RequestBody RevenueSplitRuleReq req) {
         RevenueSplitRule r = splitRuleRepository.findById(id)
@@ -108,6 +112,7 @@ public class AdminProfitController {
     }
 
     @DeleteMapping("/split-rules/{id}")
+    @RequirePermission("profit:delete")
     public ApiResult<Void> deleteSplitRule(@PathVariable Long id) {
         RevenueSplitRule r = splitRuleRepository.findById(id)
                 .orElseThrow(() -> new BizException(40401, "profit.split.rule.not.found"));

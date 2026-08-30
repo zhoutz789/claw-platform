@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import com.claw.server.common.security.RequirePermission;
 
 /**
  * 后台共享池模块（Phase2 接线）：入池 + 租赁 + 完成分账 + 出池 + 列表。
@@ -22,23 +23,27 @@ public class AdminSharedPoolController {
     private final SharedPoolService sharedPoolService;
 
     @PostMapping("/entries")
+    @RequirePermission("shared-pool:create")
     public ApiResult<SharedPoolEntry> poolAsset(@RequestBody PoolReq req) {
         return ApiResult.ok(sharedPoolService.poolAsset(req.assetId(), req.ownerUserId(), req.stationId(),
                 req.ownerSplitRate(), req.stationSplitRate(), req.dailyUsageFee(), req.perSwapFee()));
     }
 
     @PostMapping("/rentals")
+    @RequirePermission("shared-pool:create")
     public ApiResult<RentalOrder> createRental(@RequestBody RentalReq req) {
         return ApiResult.ok(sharedPoolService.createRental(req.assetId(), req.renterUserId(),
                 req.stationId(), req.rentalType(), req.poolEntryId()));
     }
 
     @PostMapping("/rentals/{id}/complete")
+    @RequirePermission("shared-pool:create")
     public ApiResult<RentalOrder> completeRental(@PathVariable Long id, @RequestParam BigDecimal totalFee) {
         return ApiResult.ok(sharedPoolService.completeRental(id, totalFee));
     }
 
     @PostMapping("/entries/{id}/remove")
+    @RequirePermission("shared-pool:create")
     public ApiResult<SharedPoolEntry> removeFromPool(@PathVariable Long id) {
         return ApiResult.ok(sharedPoolService.removeFromPool(id));
     }

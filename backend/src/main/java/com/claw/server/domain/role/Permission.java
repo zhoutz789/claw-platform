@@ -36,6 +36,10 @@ public class Permission {
     private Integer sortNo = 0;
     private String icon;
 
+    /** 说明文案（多语 key 或纯文本），用于菜单/按钮 tooltip 与后台展示。V39 新增。 */
+    @Column(columnDefinition = "text")
+    private String description;
+
     @Column(nullable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();

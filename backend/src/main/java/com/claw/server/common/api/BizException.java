@@ -22,6 +22,8 @@ public class BizException extends RuntimeException {
     public static final int ILLEGAL_ASSET_STATUS = 30001;
     /** 资源不存在（角色/资产/用户等通用） */
     public static final int NOT_FOUND = 40400;
+    /** 权限不足（无所需权限位，HTTP 403） */
+    public static final int FORBIDDEN = 40301;
 
     private final int code;
     private final String messageCode;
@@ -50,6 +52,11 @@ public class BizException extends RuntimeException {
         return new BizException(NOT_FOUND, messageCode, args);
     }
 
+    /** 权限不足：HTTP 403。 */
+    public static BizException forbidden(String messageCode, Object... args) {
+        return new BizException(FORBIDDEN, messageCode, args);
+    }
+
     public int getCode() {
         return code;
     }
@@ -62,8 +69,11 @@ public class BizException extends RuntimeException {
         return args;
     }
 
-    /** HTTP 状态映射：资金类（2xxxx）返回 422，其余 400，未知走 500 */
+    /** HTTP 状态映射：资金类（2xxxx）返回 422，权限类（40301）返回 403，其余 400，未知走 500 */
     public HttpStatus httpStatus() {
+        if (code == FORBIDDEN) {
+            return HttpStatus.FORBIDDEN;
+        }
         if (code >= 20000 && code < 30000) {
             return HttpStatus.UNPROCESSABLE_ENTITY;
         }

@@ -1,0 +1,290 @@
+{
+  "users": {
+    "title": "Platform Users (with role packages / data scope)",
+    "newDeptPlaceholder": "New department name",
+    "addDept": "New department",
+    "col": {
+      "id": "User ID",
+      "phone": "Phone",
+      "fullName": "Full name",
+      "kyc": "KYC",
+      "status": "Status",
+      "locale": "Language",
+      "department": "Department",
+      "roles": "Role package",
+      "actions": "Actions"
+    },
+    "act": {
+      "assignRoles": "Assign roles",
+      "setDept": "Set department"
+    },
+    "modal": {
+      "assignTitle": "Assign / adjust roles",
+      "assignHint": "Add, remove or change roles for this user (saved as a full overwrite).",
+      "assignPlaceholder": "Select roles",
+      "deptTitle": "Set department (data scope dimension)",
+      "deptHint": "Once assigned to a department, a user holding a DEPARTMENT-scoped role will only see data of that department.",
+      "deptPlaceholder": "Select department"
+    },
+    "msg": {
+      "rolesUpdated": "User roles updated",
+      "deptUpdated": "User department updated (data scope now applies)",
+      "deptCreated": "Department created"
+    }
+  },
+  "roles": {
+    "tab": {
+      "roles": "Role templates",
+      "userRoles": "User role assignment"
+    },
+    "roles": {
+      "title": "Role templates",
+      "subtitle": "Create and maintain platform roles (permission packages)"
+    },
+    "userRoles": {
+      "title": "User role assignment",
+      "subtitle": "Grant roles to specific users"
+    },
+    "col": {
+      "roleCode": "Role code",
+      "nameI18n": "Name (i18n key)",
+      "grants": "Granted permissions",
+      "autoGrant": "Auto-granted",
+      "grantRule": "Grant rule",
+      "dataScope": "Data scope",
+      "status": "Status",
+      "parent": "Parent role",
+      "id": "ID",
+      "userId": "User ID",
+      "userName": "Username",
+      "roleName": "Role name",
+      "source": "Source",
+      "grantedAt": "Granted at"
+    },
+    "field": {
+      "code": "Role code",
+      "nameI18n": "Name (i18n key)",
+      "grants": "Permissions (JSON)",
+      "autoGrant": "Auto-granted",
+      "grantRule": "Grant rule",
+      "dataScope": "Data scope",
+      "dataScopeTypes": "Authorised types",
+      "dataRuleIds": "Custom rules (departments)",
+      "status": "Status",
+      "userId": "User ID",
+      "roleCode": "Role code",
+      "parentId": "Parent role"
+    },
+    "ph": {
+      "code": "e.g. STATION_MANAGER",
+      "nameI18n": "role.station_manager.name",
+      "grants": "[\"station:read\",\"station:write\"]",
+      "grantRule": "e.g. granted on registration",
+      "parentId": "Pick a parent role to inherit its permissions (optional)",
+      "dataScopeTypes": "Pick the business types this role can see",
+      "dataRuleIds": "Pick the departments this role can see"
+    }
+  },
+  "departments": {
+    "title": "Departments (hierarchy / data-scope dimension)",
+    "subtitle": "Maintain the department hierarchy as a tree; child departments inherit the parent's organisational scope.",
+    "add": "Add department",
+    "addRoot": "Add root department",
+    "field": {
+      "name": "Department name",
+      "parent": "Parent department"
+    },
+    "ph": {
+      "name": "e.g. South China Region",
+      "parent": "Leave empty for a top-level department"
+    }
+  },
+  "permission": {
+    "title": "Role permission matrix (menu + CRUD + buttons)",
+    "tab": {
+      "catalog": "Permission catalogue",
+      "matrix": "Role permission matrix"
+    },
+    "hint": "Tick a box to grant that role the corresponding read / create / update / delete / export permission on the menu; data scope controls which records it can see (own / own department / all / specially authorised type).",
+    "selectRole": "Select role",
+    "save": "Save",
+    "col": {
+      "point": "Permission point",
+      "read": "Read",
+      "create": "Create",
+      "update": "Update",
+      "delete": "Delete",
+      "export": "Export",
+      "buttonEnabled": "Button enabled"
+    },
+    "tag": {
+      "button": "Button",
+      "menu": "Menu"
+    },
+    "msg": {
+      "saved": "Permission matrix and data scope saved"
+    },
+    "catalog": {
+      "title": "Permission catalogue (menu / button)",
+      "hint": "Maintain the backend permission catalogue: add menus / buttons, rename, change parent, or delete. Changes are written to the backend catalogue (GET /catalog) and propagate to the menu manager and the frontend permission gate.",
+      "add": "Add catalogue item",
+      "col": {
+        "code": "Code",
+        "name": "Name",
+        "ptype": "Type",
+        "path": "Route",
+        "parent": "Parent",
+        "sort": "Sort"
+      },
+      "modal": {
+        "titleAdd": "Add catalogue item",
+        "titleEdit": "Edit catalogue item",
+        "code": "Code (e.g. menu:report / btn:report:export)",
+        "parentPlaceholder": "Select parent (leave empty for top level)"
+      },
+      "msg": {
+        "created": "Catalogue item created",
+        "updated": "Catalogue item updated",
+        "deleted": "Catalogue item deleted",
+        "loadFailed": "Failed to load permission catalogue: {{msg}}"
+      }
+    }
+  },
+  "menuPermission": {
+    "title": "Menu permissions (RuoYi-style one-click configuration)",
+    "desc": "Ticking a menu grants the role the matching permission; when you add a feature you only need to register its menu here and then assign it to roles, which keeps a large system easy to extend. The current catalogue comes from the backend permission catalogue (permission table).",
+    "cardTitle": "Menu permission tree",
+    "empty": "No permission catalogue available (backend not connected yet)",
+    "save": "Save permissions",
+    "roleLabel": "Role",
+    "selectRole": "Select role",
+    "msg": {
+      "loadFailed": "Failed to load roles / permission catalogue: {{msg}}",
+      "loadRoleFailed": "Failed to load role permissions: {{msg}}",
+      "saved": "Menu permissions saved for \"{{name}}\" (written to the backend)",
+      "saveFailed": "Save failed: {{msg}}"
+    }
+  },
+  "menuManager": {
+    "title": "Menu Manager (custom navigation)",
+    "rootOption": "(as a top-level menu / root group)",
+    "card": {
+      "structure": "Navigation structure (drag to sort / regroup across centres)",
+      "props": "Selected node properties",
+      "preview": "Live preview (the sidebar you will get)"
+    },
+    "alert": {
+      "title": "Change your menus here — no code needed",
+      "descPrefix": "The sidebar's",
+      "descEmph": "show / hide / sort / rename / regroup",
+      "descMid": "is all done on this page: select a node on the left to edit its properties, use the \"Move up / Move down\" buttons on the right of a node or simply drag it, and use the plus buttons to add menu items and groups; when you are done click",
+      "descEmph2": "\"Save layout\" at the top right to apply it immediately",
+      "descSuffix": "It survives a refresh and a browser restart. If you mess things up, click \"Restore defaults\" to go back to the built-in menu with one click."
+    },
+    "hint": {
+      "drag": "Tip: use the \"Move up / Move down\" buttons on the right of a node to reorder within the same group; drag a node onto another group's title to regroup it across centres (e.g. move a page from \"Operations\" to \"System\")."
+    },
+    "prop": {
+      "displayName": "Display name",
+      "path": "Route path",
+      "icon": "Icon (optional)"
+    },
+    "ph": {
+      "displayName": "Name shown in the sidebar",
+      "path": "A page route such as /orders; leave empty for a group",
+      "icon": "Leave unset to keep the default icon"
+    },
+    "tag": {
+      "hidden": "Hidden",
+      "custom": "Custom"
+    },
+    "empty": {
+      "selectNode": "Select a node on the left to edit it."
+    },
+    "warn": {
+      "unregistered": "This route is not registered in App.jsx — clicking the menu will open a blank page",
+      "dirty": "You have unsaved changes. Click \"Save layout\" at the top right to apply them to the sidebar."
+    },
+    "modal": {
+      "addTitle": "Add menu item",
+      "addOk": "Add"
+    },
+    "form": {
+      "kind": "Type",
+      "kindPage": "Menu page (has a route)",
+      "kindGroup": "Group (no page)",
+      "name": "Name",
+      "namePlaceholder": "e.g. Reconciliation Centre",
+      "parent": "Mount under",
+      "path": "Route path",
+      "pathExtra": "Must be a route already registered in App.jsx, e.g. /orders; pick an existing route from the dropdown below",
+      "icon": "Icon (optional)",
+      "iconPlaceholder": "Leave unset to use the default icon"
+    },
+    "validate": {
+      "nameRequired": "Please enter a menu name",
+      "nameMax": "Keep the name under 30 characters",
+      "pathRequired": "Please enter a route path",
+      "pathSlash": "The path must start with /",
+      "pathUsed": "That path is already taken by another menu item",
+      "keyExists": "Menu key \"{{key}}\" already exists",
+      "pathUnregistered": "This route is not registered in App.jsx — clicking it will open a blank page"
+    },
+    "msg": {
+      "saved": "Menu layout saved — the sidebar is updated",
+      "reset": "Default menu layout restored",
+      "groupAdded": "Group \"{{label}}\" added — remember to click \"Save layout\" at the top right",
+      "itemAdded": "Menu item \"{{label}}\" added — remember to click \"Save layout\" at the top right",
+      "keyExists": "Menu key \"{{key}}\" already exists (the same path cannot be mounted twice)",
+      "pathUsed": "Path {{path}} is already taken by another menu item",
+      "cannotDeletePage": "This is a menu item with a page and cannot be deleted; if you do not want it visible use the \"Hide\" switch above",
+      "hasChildren": "\"{{label}}\" still has {{count}} menu item(s) — move them away first, deleting will remove them too",
+      "builtinGroup": "This is a built-in group; deleting it only lasts until the next reload, it will be added back. If you do not want it visible use the \"Hide\" switch above",
+      "deleted": "Group deleted — click \"Save layout\" at the top right to apply",
+      "exportEmpty": "The menu is empty, nothing to export",
+      "exported": "Menu configuration exported as a JSON file",
+      "importBadJson": "Import failed: the file content is not a valid menu configuration JSON",
+      "importEmpty": "Import failed: no usable menu node in the file (every entry needs a key)",
+      "imported": "Imported {{count}} top-level menu item(s) — the sidebar is updated",
+      "importReadError": "Import failed: could not read the file",
+      "synced": "Synced {{count}} menu item(s) to the backend catalogue",
+      "syncPartial": "Saved locally; {{count}} menu item(s) synced to the backend, {{failed}} failed",
+      "syncSkipped": "Saved locally; backend catalogue sync skipped ({{msg}})"
+    },
+    "hintDelete": {
+      "hasChildren": "This group still has {{count}} menu item(s) — move them away before deleting"
+    }
+  },
+  "settings": {
+    "title": "System settings",
+    "platform": {
+      "title": "Platform base info",
+      "desc": "Platform identity and default language. Configure regular menus, permissions and data scope in \"Menu Manager / Role Permissions\"; the section below maintains platform-level parameters.",
+      "brand": "Platform name",
+      "language": "Current language",
+      "configCount": "Config items",
+      "category": "Config categories"
+    },
+    "subtitle": "Maintain platform-level parameters (site title, risk-control threshold switches, etc.)",
+    "col": {
+      "configKey": "Config key",
+      "configValue": "Config value",
+      "category": "Category",
+      "description": "Description",
+      "dataType": "Data type",
+      "editable": "Editable"
+    },
+    "field": {
+      "configKey": "Config key",
+      "configValue": "Config value",
+      "category": "Category",
+      "description": "Description",
+      "dataType": "Data type",
+      "editable": "Editable"
+    },
+    "ph": {
+      "configKey": "e.g. site.title",
+      "category": "UI / BIZ / RISK"
+    }
+  }
+}

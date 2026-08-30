@@ -3,6 +3,7 @@ package com.claw.server.web.v1;
 import com.claw.server.common.api.ApiResult;
 import com.claw.server.common.api.BizException;
 import com.claw.server.common.dto.PermissionDtos.*;
+import com.claw.server.common.security.AuthContext;
 import com.claw.server.domain.role.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,11 +12,13 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
+import com.claw.server.common.security.RequirePermission;
 
 /**
  * 后台权限矩阵（RBAC 重构）：菜单/按钮目录树 + 角色权限矩阵设置。
  *
- * <p>GET    /permissions/catalog              权限目录树
+ * <p>GET    /permissions/mine               当前登录用户的权限快照（前端 permStore 加载入口，仅需登录）
+ * GET    /permissions/catalog              权限目录树
  * POST   /permissions/catalog              新增目录项
  * PUT    /permissions/catalog/{code}       修改目录项
  * DELETE /permissions/catalog/{code}       删除目录项
@@ -30,6 +33,25 @@ public class AdminPermissionController {
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
     private final RoleRepository roleRepository;
+    private final PermissionService permissionService;
+    private final RoleGrantService roleGrantService;
+
+    /**
+     * 当前登录用户的权限快照：userId + 生效角色 + 有效权限位集合 + 后端权威菜单树。
+     * 仅需登录即可访问（不要求特定 admin 权限，否则无权限用户永远拿不到自己的权限集合）。
+     * 前端 permStore 登录后调用此方法加载权限；menuStore 用其中的 menu 作为权威菜单源。
+     */
+    @GetMapping("/mine")
+    public ApiResult<MineResp> mine() {
+        Long uid = AuthContext.currentUserId();
+        if (uid == null) {
+            throw BizException.of(40301, "error.permission.denied");
+        }
+        Set<String> permissions = permissionService.effectivePermissions(uid);
+        List<String> roles = roleGrantService.listActive(uid).stream().map(RoleView::roleCode).toList();
+        List<PermissionNode> menu = catalog().data();
+        return ApiResult.ok(new MineResp(uid, roles, permissions, menu));
+    }
 
     @GetMapping("/catalog")
     public ApiResult<List<PermissionNode>> catalog() {
@@ -68,6 +90,7 @@ public class AdminPermissionController {
     }
 
     @PostMapping("/catalog")
+    @RequirePermission("permission:create")
     public ApiResult<PermissionNode> createCatalog(@RequestBody UpsertPermission req) {
         if (permissionRepository.findByCode(req.code()).isPresent()) {
             throw new BizException(40901, "permission.code.exists");
@@ -83,6 +106,7 @@ public class AdminPermissionController {
     }
 
     @PutMapping("/catalog/{code}")
+    @RequirePermission("permission:update")
     public ApiResult<PermissionNode> updateCatalog(@PathVariable String code, @RequestBody UpsertPermission req) {
         Permission p = permissionRepository.findByCode(code)
                 .orElseThrow(() -> new BizException(40401, "permission.not.found"));
@@ -97,6 +121,7 @@ public class AdminPermissionController {
     }
 
     @DeleteMapping("/catalog/{code}")
+    @RequirePermission("permission:delete")
     public ApiResult<Void> deleteCatalog(@PathVariable String code) {
         Permission p = permissionRepository.findByCode(code)
                 .orElseThrow(() -> new BizException(40401, "permission.not.found"));
@@ -122,6 +147,7 @@ public class AdminPermissionController {
 
     @Transactional
     @PutMapping("/role/{roleId}")
+    @RequirePermission("permission:update")
     public ApiResult<Void> setRolePermissions(@PathVariable Long roleId, @RequestBody SetRolePermissionReq req) {
         if (!roleRepository.existsById(roleId)) throw new BizException(40401, "role.not.found");
         // 幂等 upsert：先取出现有矩阵，按 permissionCode 更新或新建，避免 (role_id,permission_code) 唯一约束冲突。

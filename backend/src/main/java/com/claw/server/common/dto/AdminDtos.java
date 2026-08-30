@@ -121,7 +121,12 @@ public final class AdminDtos {
     /* ===================== 角色权限 ===================== */
 
     public static record RoleReq(String code, String nameI18n, String grants, Boolean autoGrant,
-                                 String grantRule, String status, String dataScope, String dataScopeTypes) {
+                                 String grantRule, String status, String dataScope, String dataScopeTypes,
+                                 Long parentId, String dataRuleIds) {
+    }
+
+    /** 角色数据范围更新（PUT /api/v1/admin/roles/{id}/datascope）。 */
+    public static record RoleDataScopeReq(String dataScope, String dataScopeTypes, String dataRuleIds) {
     }
 
     public static record UserRoleAssignmentView(Long id, Long userId, String userName, String roleCode,

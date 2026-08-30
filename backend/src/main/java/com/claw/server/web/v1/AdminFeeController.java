@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.List;
+import com.claw.server.common.security.RequirePermission;
 
 /**
  * 后台费率模块（S5 补齐）：锁版费率规则维护 + 电价快照只读。
@@ -36,6 +37,7 @@ public class AdminFeeController {
     }
 
     @PostMapping("/rules")
+    @RequirePermission("fee:create")
     public ApiResult<FeeRuleView> createRule(@RequestBody FeeRuleReq req) {
         if (req.ruleCode() == null || req.ruleCode().isBlank()) {
             throw new BizException(40001, "fee.rule.code.required");
@@ -55,6 +57,7 @@ public class AdminFeeController {
     }
 
     @PutMapping("/rules/{id}")
+    @RequirePermission("fee:update")
     public ApiResult<FeeRuleView> updateRule(@PathVariable Long id, @RequestBody FeeRuleReq req) {
         FeeRule r = feeRuleRepository.findById(id)
                 .orElseThrow(() -> new BizException(40401, "fee.rule.not.found"));
@@ -70,6 +73,7 @@ public class AdminFeeController {
     }
 
     @DeleteMapping("/rules/{id}")
+    @RequirePermission("fee:delete")
     public ApiResult<Void> deleteRule(@PathVariable Long id) {
         if (!feeRuleRepository.existsById(id)) {
             throw new BizException(40401, "fee.rule.not.found");

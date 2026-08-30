@@ -1,0 +1,80 @@
+sequenceDiagram
+    autonumber
+    participant B as 浏览器
+    participant F as 前端 Router/Guard
+    participant AX as axios(api.js)
+    participant JW as JwtAuthFilter
+    participant SC as SecurityConfig
+    participant PA as PermissionAspect(新)
+    participant PS as PermissionService(改)
+    participant RD as Redis
+    participant DS as DataScopeAspect(新)
+    participant DSS as DataScopeService(改)
+    participant C as Controller
+    participant S as Service
+    participant DB as PostgreSQL
+
+    Note over B,DB: 1) 登录
+    B->>AX: POST /api/v1/auth/login
+    AX->>C: 白名单放行
+    C->>S: AuthService.login()
+    S->>DB: 查/建 users + 角色包
+    S-->>B: AuthResp(token,userId,phone,locale)
+
+    Note over B,DB: 2) 拉菜单与权限(登录后一次)
+    B->>AX: GET /api/v1/admin/permissions/mine
+    AX->>AX: 注入 Authorization + Accept-Language
+    AX->>JW: Bearer token
+    JW->>JW: 解析为 ClawUser 放入 SecurityContext
+    JW->>SC: anyRequest().authenticated()
+    SC->>C: 放行
+    C->>PS: effectivePermissions(userId)
+    PS->>RD: 查 perm:{userId} 缓存
+    alt 缓存命中
+        RD-->>PS: Set of perms
+    else 缓存未命中
+        PS->>DB: user_roles 并集 user_role_packages
+        PS->>DB: 角色继承 parentId 递归 + roles.grants
+        PS->>DB: role_permissions 取 permission code/perms
+        PS->>RD: 写入 TTL 300s
+    end
+    PS->>DB: permissions 树(menu_type<2 且未隐藏)
+    PS-->>B: menus + buttons + dataScope
+    B->>F: 写入 permStore(sessionStorage)
+    F->>F: 后端菜单树 合并 本地MenuManager覆盖 再按权限过滤
+    F-->>B: 渲染侧边栏(无权限项不出现)
+
+    Note over B,DB: 3) 访问受保护接口(核心拦截)
+    B->>AX: POST /api/v1/assets/export
+    AX->>JW: Bearer
+    JW->>SC: authenticated
+    SC->>PA: 命中 @RequirePermission("asset:export")
+    PA->>PS: hasPermission(userId,"asset:export")
+    PS->>RD: 查缓存(未命中回 DB)
+    alt 有权限
+        PS-->>PA: true
+        PA->>DS: @DataScope(entity="asset") 绑定上下文
+        DS->>DSS: resolve(userId)
+        DSS->>DB: 部门 org_code + 角色 dataScope + data_rules
+        DSS-->>DS: DataScopeResult
+        DS->>DS: 写入 DataScopeContext(ThreadLocal)
+        DS->>C: 放行
+        C->>S: assetService.list(...)
+        S->>DB: Specification + DataScopeSpec.apply
+        DB-->>S: 已过滤的数据
+        S-->>B: 200 数据
+        DS->>DS: finally 清理 ThreadLocal
+    else 无权限
+        PS-->>PA: false
+        PA-->>B: 403 无操作权限(已 i18n)
+    end
+
+    Note over B,DB: 4) 按钮显隐(纯前端体验)
+    B->>F: 渲染页面
+    F->>F: usePerm("asset:export") 查 permStore
+    F-->>B: 有则渲染 无则隐藏
+
+    Note over B,DB: 5) 权限变更即时失效
+    B->>C: PUT /api/v1/admin/permissions/role/{id}
+    C->>PS: evictCache(受影响 userId)
+    PS->>RD: DEL perm:*

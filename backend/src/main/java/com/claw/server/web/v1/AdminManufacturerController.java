@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import com.claw.server.common.security.RequirePermission;
 
 /**
  * 厂家 / 商品 / SKU / 采购 / 二维码登记 / 资产全生命周期数据（闭环核心）。
@@ -55,6 +56,7 @@ public class AdminManufacturerController {
     }
 
     @PostMapping("/manufacturers")
+    @RequirePermission("manufacturer:create")
     public ApiResult<ManufacturerView> createManufacturer(@RequestBody UpsertManufacturer req) {
         if (manufacturerRepository.findByCode(req.code()).isPresent())
             throw new BizException(40901, "manufacturer.code.exists");
@@ -66,6 +68,7 @@ public class AdminManufacturerController {
     }
 
     @PutMapping("/manufacturers/{id}")
+    @RequirePermission("manufacturer:update")
     public ApiResult<ManufacturerView> updateManufacturer(@PathVariable Long id, @RequestBody UpsertManufacturer req) {
         Manufacturer m = manufacturerRepository.findById(id).orElseThrow(() -> new BizException(40401, "manufacturer.not.found"));
         if (req.name() != null) m.setName(req.name());
@@ -79,6 +82,7 @@ public class AdminManufacturerController {
     }
 
     @DeleteMapping("/manufacturers/{id}")
+    @RequirePermission("manufacturer:delete")
     public ApiResult<Void> deleteManufacturer(@PathVariable Long id) {
         Manufacturer m = manufacturerRepository.findById(id).orElseThrow(() -> new BizException(40401, "manufacturer.not.found"));
         m.setDeleted(true);
@@ -98,6 +102,7 @@ public class AdminManufacturerController {
     }
 
     @PostMapping("/products")
+    @RequirePermission("manufacturer:create")
     public ApiResult<ProductView> createProduct(@RequestBody UpsertProduct req) {
         if (!manufacturerRepository.existsById(req.manufacturerId()))
             throw new BizException(40401, "manufacturer.not.found");
@@ -120,6 +125,7 @@ public class AdminManufacturerController {
     }
 
     @PutMapping("/products/{id}")
+    @RequirePermission("manufacturer:update")
     public ApiResult<ProductView> updateProduct(@PathVariable Long id, @RequestBody UpsertProduct req) {
         Product p = productRepository.findById(id).orElseThrow(() -> new BizException(40401, "product.not.found"));
         if (req.manufacturerId() != null) p.setManufacturerId(req.manufacturerId());
@@ -149,6 +155,7 @@ public class AdminManufacturerController {
     }
 
     @PostMapping("/products/{id}/share")
+    @RequirePermission("manufacturer:create")
     public ApiResult<Map<String, String>> createShare(@PathVariable Long id) {
         Product p = productRepository.findById(id).orElseThrow(() -> new BizException(40401, "product.not.found"));
         if (p.getShareCode() == null) {
@@ -161,6 +168,7 @@ public class AdminManufacturerController {
     }
 
     @DeleteMapping("/products/{id}")
+    @RequirePermission("manufacturer:delete")
     public ApiResult<Void> deleteProduct(@PathVariable Long id) {
         Product p = productRepository.findById(id).orElseThrow(() -> new BizException(40401, "product.not.found"));
         p.setDeleted(true);
@@ -181,6 +189,7 @@ public class AdminManufacturerController {
     }
 
     @PostMapping("/skus")
+    @RequirePermission("manufacturer:create")
     public ApiResult<ProductSkuView> createSku(@RequestBody UpsertSku req) {
         if (!productRepository.existsById(req.productId()))
             throw new BizException(40401, "product.not.found");
@@ -196,6 +205,7 @@ public class AdminManufacturerController {
     }
 
     @PutMapping("/skus/{id}")
+    @RequirePermission("manufacturer:update")
     public ApiResult<ProductSkuView> updateSku(@PathVariable Long id, @RequestBody UpsertSku req) {
         ProductSku s = productSkuRepository.findById(id).orElseThrow(() -> new BizException(40401, "sku.not.found"));
         if (req.productId() != null) s.setProductId(req.productId());
@@ -210,6 +220,7 @@ public class AdminManufacturerController {
     }
 
     @DeleteMapping("/skus/{id}")
+    @RequirePermission("manufacturer:delete")
     public ApiResult<Void> deleteSku(@PathVariable Long id) {
         ProductSku s = productSkuRepository.findById(id).orElseThrow(() -> new BizException(40401, "sku.not.found"));
         s.setDeleted(true);
@@ -227,6 +238,7 @@ public class AdminManufacturerController {
     }
 
     @PostMapping("/purchase-orders")
+    @RequirePermission("manufacturer:create")
     public ApiResult<PurchaseOrderView> createOrder(@RequestBody CreatePurchase req) {
         Product product = productRepository.findById(req.productId())
                 .orElseThrow(() -> new BizException(40401, "product.not.found"));
@@ -244,6 +256,7 @@ public class AdminManufacturerController {
     }
 
     @PutMapping("/purchase-orders/{id}/pay")
+    @RequirePermission("manufacturer:update")
     public ApiResult<PurchaseOrderView> payOrder(@PathVariable Long id) {
         PurchaseOrder o = purchaseOrderRepository.findById(id)
                 .orElseThrow(() -> new BizException(40401, "purchase.order.not.found"));
@@ -255,6 +268,7 @@ public class AdminManufacturerController {
     }
 
     @PutMapping("/purchase-orders/{id}/ship")
+    @RequirePermission("manufacturer:update")
     public ApiResult<PurchaseOrderView> shipOrder(@PathVariable Long id) {
         PurchaseOrder o = purchaseOrderRepository.findById(id)
                 .orElseThrow(() -> new BizException(40401, "purchase.order.not.found"));
@@ -269,6 +283,7 @@ public class AdminManufacturerController {
     /** 出厂前逐台登记序列号+二维码 → 生出 Asset + 生命周期 PRODUCED。 */
     @Transactional
     @PostMapping("/purchase-orders/{id}/register-qr")
+    @RequirePermission("manufacturer:create")
     public ApiResult<AssetBirthResult> registerQr(@PathVariable Long id, @RequestBody RegisterQr req) {
         PurchaseOrder o = purchaseOrderRepository.findById(id)
                 .orElseThrow(() -> new BizException(40401, "purchase.order.not.found"));
@@ -342,6 +357,7 @@ public class AdminManufacturerController {
     }
 
     @PostMapping("/assets/{id}/lifecycle")
+    @RequirePermission("manufacturer:create")
     public ApiResult<LifecycleEventView> addLifecycle(@PathVariable Long id, @RequestBody LifecycleReq req) {
         if (!assetRepository.existsById(id)) throw new BizException(40401, "asset.not.found");
         AssetLifecycleEvent e = lifecycleRepository.save(AssetLifecycleEvent.builder()
@@ -352,6 +368,7 @@ public class AdminManufacturerController {
     }
 
     @PostMapping("/assets/{id}/maintenance")
+    @RequirePermission("manufacturer:create")
     public ApiResult<MaintenanceView> addMaintenance(@PathVariable Long id, @RequestBody MaintenanceReq req) {
         if (!assetRepository.existsById(id)) throw new BizException(40401, "asset.not.found");
         AssetMaintenanceRecord m = maintenanceRepository.save(AssetMaintenanceRecord.builder()
@@ -362,6 +379,7 @@ public class AdminManufacturerController {
     }
 
     @PostMapping("/assets/{id}/usage")
+    @RequirePermission("manufacturer:create")
     public ApiResult<UsageView> addUsage(@PathVariable Long id, @RequestBody UsageReq req) {
         if (!assetRepository.existsById(id)) throw new BizException(40401, "asset.not.found");
         AssetUsageRecord u = usageRepository.save(AssetUsageRecord.builder()
@@ -374,6 +392,7 @@ public class AdminManufacturerController {
     }
 
     @PostMapping("/assets/{id}/vehicle-ops")
+    @RequirePermission("manufacturer:create")
     public ApiResult<VehicleOpsView> addVehicleOps(@PathVariable Long id, @RequestBody VehicleOpsReq req) {
         if (!assetRepository.existsById(id)) throw new BizException(40401, "asset.not.found");
         AssetVehicleOps v = vehicleOpsRepository.save(AssetVehicleOps.builder()

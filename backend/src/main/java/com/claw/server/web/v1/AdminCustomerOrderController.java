@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.claw.server.common.security.RequirePermission;
 
 /**
  * 后台客户订单闭环（Increment 2 / V38 扩展）。
@@ -42,11 +43,13 @@ public class AdminCustomerOrderController {
     }
 
     @PostMapping("/{id}/pay")
+    @RequirePermission("customer-order:create")
     public ApiResult<CustomerOrderView> pay(@PathVariable Long id, @RequestBody PayReq req) {
         return ApiResult.ok(orderService.pay(id, req));
     }
 
     @PostMapping("/{id}/choose-mode")
+    @RequirePermission("customer-order:create")
     public ApiResult<CustomerOrderView> chooseMode(@PathVariable Long id, @RequestBody ChooseModeReq req) {
         return ApiResult.ok(orderService.chooseMode(id, req));
     }
@@ -62,11 +65,13 @@ public class AdminCustomerOrderController {
     }
 
     @PostMapping("/{id}/ship")
+    @RequirePermission("customer-order:create")
     public ApiResult<CustomerOrderView> ship(@PathVariable Long id) {
         return ApiResult.ok(orderService.ship(id));
     }
 
     @PostMapping("/{id}/complete")
+    @RequirePermission("customer-order:create")
     public ApiResult<CustomerOrderView> complete(@PathVariable Long id) {
         return ApiResult.ok(orderService.complete(id));
     }
@@ -81,6 +86,7 @@ public class AdminCustomerOrderController {
 
     /** 批量登记某订单项的 N 台设备（生成资产 + 入运营闭环）。 */
     @PostMapping("/{id}/items/{itemId}/registrations")
+    @RequirePermission("customer-order:create")
     public ApiResult<List<UnitRegistrationView>> registerUnits(@PathVariable Long id,
                                                                @PathVariable Long itemId,
                                                                @RequestBody UnitRegistrationBatchReq batch) {
@@ -95,6 +101,7 @@ public class AdminCustomerOrderController {
 
     /** 发货前纠错：删除登记行（资产回滚 RETIRED）。 */
     @DeleteMapping("/{id}/registrations/{regId}")
+    @RequirePermission("customer-order:delete")
     public ApiResult<Void> deleteRegistration(@PathVariable Long id, @PathVariable Long regId) {
         unitRegistrationService.deleteRegistration(regId, AuthContext.currentUserId());
         return ApiResult.ok();

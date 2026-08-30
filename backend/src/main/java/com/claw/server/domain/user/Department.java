@@ -25,6 +25,16 @@ public class Department {
     @Column(nullable = false)
     private String name;
 
+    /** 父部门 id（部门层级）：树根 parent_id = NULL；无 DB 外键，层级由 Controller 在内存组装。 */
+    @Column(name = "parent_id")
+    @Builder.Default
+    private Long parentId = null;
+
+    /** 邮编式层级码（如 'A01' / 'A01B02'），由父部门 org_code + 本级序号派生；树根为空串。 */
+    @Column(name = "org_code", length = 32)
+    @Builder.Default
+    private String orgCode = "";
+
     @Builder.Default
     private Long tenantId = 1L;
 

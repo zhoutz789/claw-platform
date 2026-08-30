@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.List;
+import com.claw.server.common.security.RequirePermission;
 
 /**
  * 后台 IoT 位置/围栏（Increment 3 A 期）。
@@ -64,6 +65,7 @@ public class AdminIotController {
     }
 
     @PostMapping("/geofences")
+    @RequirePermission("api:create")
     public ApiResult<GeofenceView> createGeofence(@RequestBody CreateGeofenceReq req) {
         requireAdmin();
         return ApiResult.ok(geofenceService.create(req));
@@ -75,12 +77,14 @@ public class AdminIotController {
     }
 
     @PutMapping("/geofences/{id}")
+    @RequirePermission("api:update")
     public ApiResult<GeofenceView> updateGeofence(@PathVariable Long id, @RequestBody UpdateGeofenceReq req) {
         requireAdmin();
         return ApiResult.ok(geofenceService.update(id, req));
     }
 
     @DeleteMapping("/geofences/{id}")
+    @RequirePermission("api:delete")
     public ApiResult<Void> deleteGeofence(@PathVariable Long id) {
         requireAdmin();
         geofenceService.delete(id);

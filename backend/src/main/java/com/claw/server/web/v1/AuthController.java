@@ -31,9 +31,9 @@ public class AuthController {
         return ApiResult.ok(authService.login(req.phone(), req.code()));
     }
 
-    /** 当前登录态探测（需鉴权）。 */
+    /** 当前登录态详情（扩展：身份 + 语言 + 角色 + 权限位，供前端权限内核消费）。 */
     @GetMapping("/me")
-    public ApiResult<Long> me() {
-        return ApiResult.ok(AuthContext.currentUserId());
+    public ApiResult<ApiViews.AuthMeView> me() {
+        return ApiResult.ok(authService.me(AuthContext.currentUserId()));
     }
 }

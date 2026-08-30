@@ -1,0 +1,129 @@
+{
+  "app": {
+    "brand": "Claw",
+    "brandSub": "",
+    "loginTitle": "ផ្ទាំងគ្រប់គ្រង Claw",
+    "loginSlogan": ""
+  },
+  "lang": {
+    "label": "ភាសា",
+    "switch": "ប្ដូរភាសា",
+    "zh": "中文",
+    "en": "English",
+    "km": "ខ្មែរ"
+  },
+  "action": {
+    "add": "បន្ថែម",
+    "addItem": "បន្ថែមធាតុម៉ឺនុយ",
+    "addGroup": "បន្ថែមក្រុម",
+    "create": "បង្កើត",
+    "edit": "កែសម្រួល",
+    "delete": "លុប",
+    "deleteGroup": "លុបក្រុមនេះ",
+    "refresh": "ផ្ទុកឡើងវិញ",
+    "exportConfig": "នាំចេញការកំណត់",
+    "importConfig": "នាំចូលការកំណត់",
+    "cancel": "បោះបង់",
+    "ok": "យល់ព្រម",
+    "confirm": "យល់ព្រម",
+    "save": "រក្សាទុក",
+    "saveLayout": "រក្សាទុកប្លង់",
+    "search": "ស្វែងរក",
+    "resetDefault": "ស្ដារលំនាំដើម",
+    "detail": "ព័ត៌មានលម្អិត",
+    "moveUp": "ផ្លាស់ទីឡើងលើ",
+    "moveDown": "ផ្លាស់ទីចុះក្រោម",
+    "logout": "ចាកចេញ",
+    "yes": "បាទ/ចាស",
+    "no": "ទេ",
+    "selectRole": "ជ្រើសរើសតួនាទី",
+    "selectDepartment": "ជ្រើសរើសនាយកដ្ឋាន",
+    "selectParentGroup": "",
+    "hideInMenu": "លាក់ពីម៉ឺនុយ"
+  },
+  "msg": {
+    "loadFailed": "បរាជ័យក្នុងការផ្ទុក: {{msg}}",
+    "opFailed": "ប្រតិបត្តិការបរាជ័យ: {{msg}}",
+    "deleteFailed": "ការលុបបរាជ័យ: {{msg}}",
+    "detailLoadFailed": "ការផ្ទុកព័ត៌មានលម្អិតបរាជ័យ: {{msg}}",
+    "created": "បានបង្កើត",
+    "saved": "បានរក្សាទុក",
+    "deleted": "បានលុប",
+    "networkError": "កំហុសបណ្ដាញ",
+    "loading": "កំពុងផ្ទុក…"
+  },
+  "confirm": {
+    "delete": "តើអ្នកពិតជាចង់លុប?",
+    "deleteOk": "លុប",
+    "resetMenu": "ស្ដារម៉ឺនុយលំនាំដើម?",
+    "resetMenuDesc": "",
+    "resetOk": "យល់ព្រមស្ដារ"
+  },
+  "form": {
+    "required": "សូមបញ្ចូល{{label}}",
+    "placeholderSelect": "សូមជ្រើសរើស",
+    "datePlaceholder": "YYYY-MM-DD"
+  },
+  "table": {
+    "detailTitle": "ព័ត៌មានលម្អិត",
+    "actions": "សកម្មភាព"
+  },
+  "enum": {
+    "dataScope": {
+      "SELF": "ទិន្នន័យផ្ទាល់ខ្លួន",
+      "DEPARTMENT": "នាយកដ្ឋានខ្លួន",
+      "DEPARTMENT_AND_BELOW": "នាយកដ្ឋានខ្លួន និងអនុក្រោម",
+      "CUSTOM": "ផ្ទាល់ខ្លួន (នាយកដ្ឋាន/ច្បាប់ជាក់លាក់)",
+      "ALL": "ទិន្នន័យទាំងអស់",
+      "TYPE": "ប្រភេទផ្ដល់សិទ្ធិពិសេស"
+    },
+    "lifecycle": {
+      "PRODUCED": "ផលិតរួច",
+      "IN_TRANSIT": "កំពុងដឹកជញ្ជូន",
+      "IN_USE": "កំពុងប្រើប្រាស់",
+      "MAINTENANCE": "កំពុងថែទាំ",
+      "RECYCLED": "បានកែច្នៃឡើងវិញ",
+      "DESTROYED": "បានបំផ្លាញ"
+    },
+    "opType": {
+      "PASSENGER": "ដឹកអ្នកដំណើរ",
+      "LOGISTICS": "ដឹកជញ្ជូន",
+      "MOBILE_SELL": "លក់ចល័ត",
+      "ADVERTISING": "ផ្សាយពាណិជ្ជកម្ម",
+      "RECORDING": "ទិន្នន័យថត"
+    },
+    "assetStatus": {
+      "IN_STOCK": "នៅក្នុងស្តុក",
+      "IN_USE": "កំពុងប្រើប្រាស់",
+      "SHARED": "កំពុងចែករំលែក",
+      "REPAIR": "កំពុងជួសជុល",
+      "DISABLED": "បិទដំណើរការ",
+      "SCRAPPED": "បានលុបចោល"
+    }
+  },
+  "login": {
+    "otpTip": "",
+    "phone": "លេខទូរស័ព្ទ",
+    "phonePlaceholder": "ឧ. 13800000001",
+    "code": "លេខកូដផ្ទៀងផ្ទាត់",
+    "codePlaceholder": "",
+    "getCode": "ទទួលលេខកូដ",
+    "submit": "ចូល",
+    "codeSent": "",
+    "backendDownCode": "",
+    "success": "បានចូលដោយជោគជ័យ",
+    "backendDownLogin": ""
+  },
+  "layout": {
+    "searchPlaceholder": "ស្វែងរកម៉ូឌុល…",
+    "adminName": "អ្នកគ្រប់គ្រង",
+    "superAdmin": "SUPER_ADMIN",
+    "logout": "ចាកចេញ",
+    "workbench": "ផ្ទាំងការងារ",
+    "mockBanner": ""
+  },
+  "perm": {
+    "forbiddenDesc": "សូមអភ័យទោស គណនីរបស់អ្នកមិនមានសិទ្ធិចូលប្រើទំព័រនេះទេ។ សូមទំនាក់ទំនងអ្នកគ្រប់គ្រងប្រព័ន្ធប្រសិនបើអ្នកត្រូវការ។",
+    "backWorkbench": "ត្រឡប់ទៅផ្ទាំងការងារ"
+  }
+}

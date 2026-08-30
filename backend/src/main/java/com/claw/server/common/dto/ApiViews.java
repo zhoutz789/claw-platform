@@ -7,6 +7,7 @@ import com.claw.server.common.enums.KycStatus;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 
 /** 通用视图（控制器出参）。 */
 public final class ApiViews {
@@ -15,6 +16,14 @@ public final class ApiViews {
     }
 
     public static record AuthResp(String token, Long userId, String phone) {
+    }
+
+    /**
+     * 当前登录态详情（扩展自原 {@code GET /auth/me} 的数字型 userId）。
+     * 用于前端登录后一次性取得身份、语言、角色与权限位集合，驱动权限内核（菜单可见性 / 按钮级控制）。
+     */
+    public static record AuthMeView(Long userId, String phone, String locale,
+                                    List<String> roles, Set<String> permissions) {
     }
 
     public static record AssetView(Long id, AssetType assetType, String assetNo, String qrCode,

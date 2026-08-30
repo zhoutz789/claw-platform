@@ -9,8 +9,10 @@ import {
   ArrowRightOutlined, ClockCircleOutlined, AppstoreOutlined, RiseOutlined,
 } from '@ant-design/icons';
 import api from '../api';
-import { getFlatNav } from '../menuStore';
-import { ASSET_STATUS_LABEL } from '../enums';
+import { getEffectiveFlatNav } from '../menuStore';
+import { ASSET_STATUS_LABEL, enumLabel } from '../enums';
+import { navLabel, groupLabel } from '../nav';
+import { useTranslation } from 'react-i18next';
 
 const { Text, Title } = Typography;
 
@@ -37,6 +39,8 @@ function useClock() {
 
 export default function Workbench() {
   const navigate = useNavigate();
+  // 订阅语言变更：快捷入口的菜单名 / 资产状态标签需随语言重渲染
+  useTranslation();
   const now = useClock();
   const [dash, setDash] = useState(null);
   const [counts, setCounts] = useState({});
@@ -177,10 +181,15 @@ export default function Workbench() {
         <Col xs={24} lg={8}>
           <Card className="wb-card" title={<Space><AppstoreOutlined style={{ color: 'var(--brand)' }} />快捷入口</Space>} style={{ marginBottom: 16 }}>
             <div className="wb-quick">
-              {getFlatNav().map((m) => (
-                <div key={m.key} className="wb-quick-tile" onClick={() => navigate(m.path)} title={m.group}>
-                  <span className="wb-quick-label">{m.label}</span>
-                  <span className="wb-quick-group">{m.group}</span>
+              {getEffectiveFlatNav().map((m) => (
+                <div
+                  key={m.key}
+                  className="wb-quick-tile"
+                  onClick={() => navigate(m.path)}
+                  title={groupLabel(m.groupKey, m.group)}
+                >
+                  <span className="wb-quick-label">{navLabel(m)}</span>
+                  <span className="wb-quick-group">{groupLabel(m.groupKey, m.group)}</span>
                 </div>
               ))}
             </div>
@@ -196,7 +205,7 @@ export default function Workbench() {
                   return (
                     <div key={s.k} style={{ marginBottom: 10 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                        <span>{ASSET_STATUS_LABEL[s.k] || s.k}</span>
+                        <span>{enumLabel(ASSET_STATUS_LABEL, s.k)}</span>
                         <Text type="secondary">{s.v}</Text>
                       </div>
                       <Progress percent={Math.round((s.v / max) * 100)} showInfo={false} strokeColor="var(--brand)" trailColor="var(--paper-2)" />

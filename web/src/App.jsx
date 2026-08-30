@@ -1,5 +1,8 @@
+import { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { getToken } from './auth';
+import { loadPermissions } from './permStore';
+import { ForbiddenPage } from './components/Perm';
 import Login from './pages/Login';
 import AdminLayout from './layout/AdminLayout';
 import Dashboard from './pages/Dashboard';
@@ -44,6 +47,7 @@ import MenuPermission from './pages/MenuPermission';
 import MenuManager from './pages/MenuManager';
 import AssetParams from './pages/AssetParams';
 import AppPortal from './pages/AppPortal';
+import Departments from './pages/Departments';
 // —— 子菜单化：新增包装页 / 独立子菜单页 ——
 import ProductTemplate from './pages/ProductTemplate';
 import Authorization from './pages/Authorization';
@@ -57,13 +61,26 @@ import TaskRent from './pages/TaskRent';
 import TaskNear from './pages/TaskNear';
 import ErrorBoundary from './ErrorBoundary';
 
+// 登录态下启动权限内核：拉取「我的权限」并下发后端权威菜单。
+// 失败自动降级为「全部放行」，保证本地 54 页不被卡死。发后即忘（结果由 permStore 内部处理）。
+function PermissionBootstrap() {
+  useEffect(() => {
+    if (getToken()) {
+      loadPermissions().catch(() => {});
+    }
+  }, []);
+  return null;
+}
+
 export default function App() {
   const authed = getToken();
   return (
     <HashRouter>
       <ErrorBoundary>
+      <PermissionBootstrap />
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/forbidden" element={<ForbiddenPage />} />
         <Route path="/" element={authed ? <AdminLayout /> : <Navigate to="/login" replace />}>
           <Route index element={<Navigate to="/workbench" replace />} />
           <Route path="workbench" element={<Workbench />} />
@@ -122,6 +139,7 @@ export default function App() {
           <Route path="menu-permission" element={<MenuPermission />} />
           <Route path="menu-manager" element={<MenuManager />} />
           <Route path="asset-params" element={<AssetParams />} />
+          <Route path="departments" element={<Departments />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

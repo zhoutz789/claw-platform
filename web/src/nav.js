@@ -1,64 +1,204 @@
 // 全局导航配置：侧边栏枢纽 + 全局搜索共用，单一数据源避免漂移。
-// v5：按周老板指令彻底移除旧四大中心（运营/财务/风控/系统）——这些旧菜单"功能已不满足需要、用了碍眼"；
-// 仅保留 A/B/C/D 期新设计 + 任务发布 + 工作台。并按 2026-08-26 审计结论，从任务发布中剔除非新能源资产的
-// 物流/广告/录像/附近车辆，仅留 无人机任务 + 资产出租。
-// 旧四大中心的源码与路由全部保留（menuStore v4 强制回退到本 BASE_NAV），日后需要一行加回即可。
+//
+// v6（2026-08-29）：应周老板要求「恢复系统管理与权限相关菜单」。
+//   背景：v5 曾按指令移除旧四大中心（运营/财务/风控/系统），导致用户管理、角色管理（权限组）、
+//   权限矩阵、菜单权限、菜单管理、系统配置等入口整体从侧边栏消失（页面文件与路由一直完好，只是入口被摘掉）。
+//   本次将四大中心全部加回，并保留 v5 新增的产品管理 / 项目管理 / 商品管理 / 任务发布四个模块。
+//
+// v7（2026-08-30）：接入三语 i18n。
+//   内置菜单项的 label 由中文原文改为 i18n key（形如 'nav:item.orders' / 'nav:group.ops'），
+//   显示时统一经 navLabel() 翻译。
+//   ⚠️ 兼容性：老用户 localStorage 里的覆盖项存的仍是中文原文（如 '工作台'），
+//      navLabel() 会判定「与内置默认值不一致」从而原样显示，用户改过的名字不会丢、也不会变成 key。
+//
+// 重要约定：
+//   1. 本文件是「完整默认菜单」，不再做隐藏式删除。菜单的显示 / 隐藏 / 排序 / 改名 / 归类，
+//      一律由「系统中心 → 菜单管理（/menu-manager）」页面自主配置，配置持久化在本地，不写代码。
+//   2. 每一个 path 必须与 App.jsx 中真实注册的 Route 一一对应（见下方 ROUTES 常量）。
+//      叶子节点 key 默认与路由段一致，保证选中态与跳转正确；若用户在菜单管理里改了 path，
+//      跳转以 path 为准（见 AdminLayout 的 onClick）。
+//   3. 菜单数据源新增 / 删除项时，用户的自定义覆盖采用「增量合并」策略（见 menuStore.js 的 mergeWithBase），
+//      不再通过升级 STORAGE_KEY 版本号清空用户配置。
+import { tv } from './i18n';
+
+// 说明：icon 组件不能直接放进 i18n 语言包，仍在本地引用。
 import {
   DashboardOutlined, AppstoreOutlined, ShoppingOutlined, ProjectOutlined, RocketOutlined,
+  DeploymentUnitOutlined, AccountBookOutlined, SafetyOutlined, SettingOutlined,
 } from '@ant-design/icons';
 
-// 五大模块（工作台 + A/B/C/D 期新设计 + 任务发布）；children 为各模块下的页面或二级分组。
-// 叶子节点 key 与路由段一致，保证选中态与跳转正确。
+// 九大模块（工作台 + A/B/C/D 期新设计 + 四大中心）；children 为各模块下的页面。
+// 说明：v5 的五个模块（工作台/产品管理/项目管理/商品管理/任务发布）保持原有顺序与内容不变，
+// 恢复的四大中心追加在其后，顺序可在「菜单管理」页拖拽调整。
 export const NAV = [
-  { key: 'workbench', label: '工作台', icon: DashboardOutlined, path: '/workbench' },
+  { key: 'workbench', label: 'nav:item.workbench', icon: DashboardOutlined, path: '/workbench' },
   {
-    key: 'prod', label: '产品管理', icon: AppstoreOutlined,
+    key: 'prod', label: 'nav:group.prod', icon: AppstoreOutlined,
     children: [
-      { key: 'product-center', label: '产品中心', path: '/product-center' },
-      { key: 'certificate', label: '合格证', path: '/certificate' },
-      { key: 'bind-ownership', label: '绑定 / 产权', path: '/bind-ownership' },
-      { key: 'product-template', label: '产品模板', path: '/product-template' },
-      { key: 'data-binding', label: '数据接入', path: '/device-data-access' },
-      { key: 'authorization', label: '赋权管理', path: '/authorization' },
+      { key: 'product-center', label: 'nav:item.product-center', path: '/product-center' },
+      { key: 'certificate', label: 'nav:item.certificate', path: '/certificate' },
+      { key: 'bind-ownership', label: 'nav:item.bind-ownership', path: '/bind-ownership' },
+      { key: 'product-template', label: 'nav:item.product-template', path: '/product-template' },
+      { key: 'data-binding', label: 'nav:item.data-binding', path: '/device-data-access' },
+      { key: 'authorization', label: 'nav:item.authorization', path: '/authorization' },
     ],
   },
   {
-    key: 'project', label: '项目管理', icon: ProjectOutlined,
+    key: 'project', label: 'nav:group.project', icon: ProjectOutlined,
     children: [
-      { key: 'project-management', label: '项目中心', path: '/project-management' },
+      { key: 'project-management', label: 'nav:item.project-management', path: '/project-management' },
     ],
   },
   {
-    key: 'goods', label: '商品管理', icon: ShoppingOutlined,
+    key: 'goods', label: 'nav:group.goods', icon: ShoppingOutlined,
     children: [
-      { key: 'goods-list', label: '商品列表', path: '/goods-list' },
-      { key: 'product-wizard', label: '发布商品向导', path: '/product-wizard' },
-      { key: 'brand-onboarding', label: '品牌方入驻', path: '/brand-onboarding' },
-      { key: 'manufacturer', label: '厂家商品', path: '/manufacturer' },
-      { key: 'order-manage', label: '订单管理', path: '/order-manage' },
+      { key: 'goods-list', label: 'nav:item.goods-list', path: '/goods-list' },
+      { key: 'product-wizard', label: 'nav:item.product-wizard', path: '/product-wizard' },
+      { key: 'brand-onboarding', label: 'nav:item.brand-onboarding', path: '/brand-onboarding' },
+      { key: 'manufacturer', label: 'nav:item.manufacturer', path: '/manufacturer' },
+      { key: 'order-manage', label: 'nav:item.order-manage', path: '/order-manage' },
     ],
   },
   {
-    key: 'task', label: '任务发布', icon: RocketOutlined,
+    key: 'task', label: 'nav:group.task', icon: RocketOutlined,
     children: [
-      { key: 'task-drone', label: '无人机任务', path: '/task-drone' },
-      { key: 'task-rent', label: '资产出租', path: '/task-rent' },
+      { key: 'task-drone', label: 'nav:item.task-drone', path: '/task-drone' },
+      { key: 'task-rent', label: 'nav:item.task-rent', path: '/task-rent' },
+    ],
+  },
+  // ——— 以下为 2026-08-29 恢复的旧四大中心 ———
+  {
+    key: 'ops', label: 'nav:group.ops', icon: DeploymentUnitOutlined,
+    children: [
+      { key: 'orders', label: 'nav:item.orders', path: '/orders' },
+      { key: 'swap-orders', label: 'nav:item.swap-orders', path: '/swap-orders' },
+      { key: 'stations', label: 'nav:item.stations', path: '/stations' },
+      { key: 'assets', label: 'nav:item.assets', path: '/assets' },
+      { key: 'asset-trace', label: 'nav:item.asset-trace', path: '/asset-trace' },
+      { key: 'custody', label: 'nav:item.custody', path: '/custody' },
+      { key: 'product-iot', label: 'nav:item.product-iot', path: '/product-iot' },
+      { key: 'shared-pool', label: 'nav:item.shared-pool', path: '/shared-pool' },
+      { key: 'recovery', label: 'nav:item.recovery', path: '/recovery' },
+    ],
+  },
+  {
+    key: 'fin', label: 'nav:group.fin', icon: AccountBookOutlined,
+    children: [
+      { key: 'ledger', label: 'nav:item.ledger', path: '/ledger' },
+      { key: 'payments', label: 'nav:item.payments', path: '/payments' },
+      { key: 'deposits', label: 'nav:item.deposits', path: '/deposits' },
+      { key: 'settlements', label: 'nav:item.settlements', path: '/settlements' },
+      { key: 'reconciliations', label: 'nav:item.reconciliations', path: '/reconciliations' },
+      { key: 'profit', label: 'nav:item.profit', path: '/profit' },
+      { key: 'fee', label: 'nav:item.fee', path: '/fee' },
+      { key: 'operator', label: 'nav:item.operator', path: '/operator' },
+    ],
+  },
+  {
+    key: 'risk-center', label: 'nav:group.risk-center', icon: SafetyOutlined,
+    children: [
+      { key: 'risk', label: 'nav:item.risk', path: '/risk' },
+      { key: 'alerts', label: 'nav:item.alerts', path: '/alerts' },
+      { key: 'insurance', label: 'nav:item.insurance', path: '/insurance' },
+      { key: 'arbitration', label: 'nav:item.arbitration', path: '/arbitration' },
+      { key: 'complaints', label: 'nav:item.complaints', path: '/complaints' },
+    ],
+  },
+  {
+    key: 'sys', label: 'nav:group.sys', icon: SettingOutlined,
+    children: [
+      { key: 'users', label: 'nav:item.users', path: '/users' },
+      { key: 'app-portal', label: 'nav:item.app-portal', path: '/app-portal' },
+      { key: 'roles', label: 'nav:item.roles', path: '/roles' },
+      { key: 'permission', label: 'nav:item.permission', path: '/permission' },
+      { key: 'menu-permission', label: 'nav:item.menu-permission', path: '/menu-permission' },
+      { key: 'menu-manager', label: 'nav:item.menu-manager', path: '/menu-manager' },
+      { key: 'settings', label: 'nav:item.settings', path: '/settings' },
+      { key: 'countries', label: 'nav:item.countries', path: '/countries' },
+      { key: 'asset-params', label: 'nav:item.asset-params', path: '/asset-params' },
+      { key: 'departments', label: 'nav:item.departments', path: '/departments' },
     ],
   },
 ];
 
-// 拍平为「带父级标签」的搜索索引：[{ key,label,path,group }]，递归展开所有叶子
+/** 顶级叶子（无分组）在搜索结果里显示的分组名。 */
+export const HOME_GROUP_KEY = '__home__';
+export const HOME_GROUP_LABEL = 'nav:group.home';
+
+// 内置默认 label 快照：key → 默认 label（i18n key）。
+// 用于判断「用户是否改过名」：改过就原样显示用户输入，没改过才走翻译。
+const BASE_LABEL = new Map();
+const collectBaseLabel = (nodes) => {
+  for (const n of nodes) {
+    BASE_LABEL.set(n.key, n.label);
+    if (n.children) collectBaseLabel(n.children);
+  }
+};
+collectBaseLabel(NAV);
+BASE_LABEL.set(HOME_GROUP_KEY, HOME_GROUP_LABEL);
+
+/**
+ * 取得菜单节点的显示名（随当前语言变化）。
+ *
+ * 规则：
+ *   - 节点 label 与内置默认值一致 → 视为未改名，走 i18n 翻译；
+ *   - 不一致（用户在菜单管理里改过名，或老版本遗留的中文覆盖项）→ 原样显示，
+ *     既不丢失用户自定义，也不会把 i18n key 漏到界面上。
+ *
+ * @param {Object} node 菜单节点（至少含 key 与 label）
+ * @param {string} [fallback] 取不到时的兜底文案
+ * @returns {string} 显示名
+ */
+export function navLabel(node, fallback = '') {
+  if (!node || typeof node.label !== 'string') return fallback;
+  if (BASE_LABEL.get(node.key) === node.label) {
+    return tv(node.label, { defaultValue: node.label }) || node.label;
+  }
+  return node.label;
+}
+
+/**
+ * 取得分组的显示名（随当前语言变化）。用法同 navLabel。
+ * @param {string} groupKey 分组 key
+ * @param {string} groupLabel 分组 label
+ * @returns {string} 显示名
+ */
+export function groupLabel(groupKey, groupLabel) {
+  return navLabel({ key: groupKey, label: groupLabel }, groupLabel || '');
+}
+
+// App.jsx 中真实注册的全部路由（HashRouter 下即 `#/xxx`）。
+// 菜单管理页新增 / 编辑菜单项时用它校验 path，避免配出点击后空白的死链。
+// 新增页面路由时，请同步在这里补一行。
+export const ROUTES = [
+  '/workbench', '/dashboard',
+  '/orders', '/stations', '/assets', '/asset-trace', '/manufacturer', '/recovery', '/insurance',
+  '/operator', '/shared-pool', '/swap-orders', '/ledger', '/users', '/complaints', '/deposits',
+  '/settlements', '/payments', '/reconciliations', '/countries', '/risk', '/alerts', '/custody',
+  '/arbitration', '/profit', '/fee', '/roles', '/permission', '/settings', '/product-iot',
+  '/product-center', '/project-management', '/certificate', '/bind-ownership', '/device-data-access',
+  '/task-drone', '/task-logi', '/task-ad', '/task-video', '/task-rent', '/task-near',
+  '/product-template', '/authorization', '/goods-list', '/product-wizard', '/product-publish',
+  '/order-manage', '/brand-onboarding', '/app-portal', '/menu-permission', '/menu-manager',
+  '/asset-params', '/departments',
+];
+
+// 拍平为「带父级标签」的搜索索引：[{ key,label,path,group,groupKey }]，递归展开所有叶子。
+// 注意：label / group 存的是原始值（i18n key 或用户自定义文案），
+// 展示前请经 navLabel() / groupLabel() 解析，否则语言切换不会刷新。
 export const FLAT_NAV = (() => {
   const out = [];
-  const walk = (nodes, group) => {
+  const walk = (nodes, groupKey, groupLabel) => {
     for (const n of nodes) {
-      if (n.children) walk(n.children, group);
-      else if (n.path) out.push({ key: n.key, label: n.label, path: n.path, group });
+      if (n.children) walk(n.children, groupKey, groupLabel);
+      else if (n.path) out.push({ key: n.key, label: n.label, path: n.path, group: groupLabel, groupKey });
     }
   };
   for (const g of NAV) {
-    if (g.children) walk(g.children, g.label);
-    else if (g.path) out.push({ key: g.key, label: g.label, path: g.path, group: '首页' });
+    if (g.children) walk(g.children, g.key, g.label);
+    else if (g.path) {
+      out.push({ key: g.key, label: g.label, path: g.path, group: HOME_GROUP_LABEL, groupKey: HOME_GROUP_KEY });
+    }
   }
   return out;
 })();

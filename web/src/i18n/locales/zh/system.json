@@ -1,0 +1,290 @@
+{
+  "users": {
+    "title": "平台用户（含角色包 / 数据范围）",
+    "newDeptPlaceholder": "新建部门名称",
+    "addDept": "新建部门",
+    "col": {
+      "id": "用户ID",
+      "phone": "手机号",
+      "fullName": "姓名",
+      "kyc": "KYC",
+      "status": "状态",
+      "locale": "语言",
+      "department": "部门",
+      "roles": "角色包",
+      "actions": "操作"
+    },
+    "act": {
+      "assignRoles": "分配角色",
+      "setDept": "设部门"
+    },
+    "modal": {
+      "assignTitle": "分配 / 调整角色",
+      "assignHint": "为用户增删改角色（覆盖式保存）。",
+      "assignPlaceholder": "选择角色",
+      "deptTitle": "设置所属部门（数据范围维度）",
+      "deptHint": "设为某部门后，该用户若具 DEPARTMENT 角色将仅见同部门数据。",
+      "deptPlaceholder": "选择部门"
+    },
+    "msg": {
+      "rolesUpdated": "用户角色已更新",
+      "deptUpdated": "用户部门已更新（数据范围生效）",
+      "deptCreated": "部门已创建"
+    }
+  },
+  "roles": {
+    "tab": {
+      "roles": "角色模板",
+      "userRoles": "用户角色分配"
+    },
+    "roles": {
+      "title": "角色模板",
+      "subtitle": "平台角色（权限包）的创建与维护"
+    },
+    "userRoles": {
+      "title": "用户角色分配",
+      "subtitle": "将角色授予具体用户"
+    },
+    "col": {
+      "roleCode": "角色编码",
+      "nameI18n": "名称(i18n key)",
+      "grants": "权限授予",
+      "autoGrant": "自动授予",
+      "grantRule": "授予规则",
+      "dataScope": "数据范围",
+      "status": "状态",
+      "parent": "父角色",
+      "id": "ID",
+      "userId": "用户ID",
+      "userName": "用户名",
+      "roleName": "角色名",
+      "source": "来源",
+      "grantedAt": "授予时间"
+    },
+    "field": {
+      "code": "角色编码",
+      "nameI18n": "名称(i18n key)",
+      "grants": "权限(JSON)",
+      "autoGrant": "是否自动授予",
+      "grantRule": "授予规则",
+      "dataScope": "数据范围",
+      "dataScopeTypes": "特殊授权类型",
+      "dataRuleIds": "自定义数据规则(部门)",
+      "status": "状态",
+      "userId": "用户ID",
+      "roleCode": "角色编码",
+      "parentId": "父角色"
+    },
+    "ph": {
+      "code": "如 STATION_MANAGER",
+      "nameI18n": "role.station_manager.name",
+      "grants": "[\"station:read\",\"station:write\"]",
+      "grantRule": "如 注册即授予",
+      "parentId": "选择父角色以继承其权限（可空）",
+      "dataScopeTypes": "选择该角色可看的业务类型",
+      "dataRuleIds": "选择该角色可看的部门"
+    }
+  },
+  "departments": {
+    "title": "部门管理（层级 / 数据范围维度）",
+    "subtitle": "以树形维护部门层级，子部门继承父部门的组织归属。",
+    "add": "新增部门",
+    "addRoot": "新增根部门",
+    "field": {
+      "name": "部门名称",
+      "parent": "上级部门"
+    },
+    "ph": {
+      "name": "如 华南大区",
+      "parent": "留空表示顶级部门"
+    }
+  },
+  "permission": {
+    "title": "角色权限矩阵（菜单 + 增删改查 + 按钮）",
+    "tab": {
+      "catalog": "权限目录",
+      "matrix": "角色权限矩阵"
+    },
+    "hint": "勾选即授予该角色对应菜单的「读/增/改/删/导出」权限；数据范围控制其可见数据（本人 / 本部门 / 全部 / 特殊授权类型）。",
+    "selectRole": "选择角色",
+    "save": "保存",
+    "col": {
+      "point": "权限点",
+      "read": "读",
+      "create": "增",
+      "update": "改",
+      "delete": "删",
+      "export": "导出",
+      "buttonEnabled": "按钮有效"
+    },
+    "tag": {
+      "button": "按钮",
+      "menu": "菜单"
+    },
+    "msg": {
+      "saved": "权限矩阵与数据范围已保存"
+    },
+    "catalog": {
+      "title": "权限目录（菜单 / 按钮）",
+      "hint": "维护后端权限目录：新增菜单/按钮、改名、调整父级或删除。改动会写入后端权限目录（GET /catalog），并同步到菜单管理与前端权限闸门。",
+      "add": "新增目录项",
+      "col": {
+        "code": "编码",
+        "name": "名称",
+        "ptype": "类型",
+        "path": "路由",
+        "parent": "父级",
+        "sort": "排序"
+      },
+      "modal": {
+        "titleAdd": "新增权限目录项",
+        "titleEdit": "编辑权限目录项",
+        "code": "编码（如 menu:report / btn:report:export）",
+        "parentPlaceholder": "选择父级（留空为顶级）"
+      },
+      "msg": {
+        "created": "目录项已创建",
+        "updated": "目录项已更新",
+        "deleted": "目录项已删除",
+        "loadFailed": "加载权限目录失败：{{msg}}"
+      }
+    }
+  },
+  "menuPermission": {
+    "title": "菜单权限（RuoYi 式傻瓜配置）",
+    "desc": "勾选菜单即授予角色对应权限；新增功能只需在系统登记菜单，再分配给角色，便于庞大系统扩展。当前目录来自后端真实权限目录（permission 表）。",
+    "cardTitle": "菜单权限树",
+    "empty": "暂无权限目录（后端待接入）",
+    "save": "保存权限",
+    "roleLabel": "角色",
+    "selectRole": "选择角色",
+    "msg": {
+      "loadFailed": "加载角色/权限目录失败：{{msg}}",
+      "loadRoleFailed": "加载角色权限失败：{{msg}}",
+      "saved": "已保存「{{name}}」菜单权限（真实写入后端）",
+      "saveFailed": "保存失败：{{msg}}"
+    }
+  },
+  "menuManager": {
+    "title": "菜单管理（自定义导航）",
+    "rootOption": "（作为一级菜单 / 顶级分组）",
+    "card": {
+      "structure": "导航结构（拖拽排序 / 跨中心归类）",
+      "props": "选中节点属性",
+      "preview": "实时预览（你将看到的侧边栏）"
+    },
+    "alert": {
+      "title": "菜单都在这里改，不用改代码",
+      "descPrefix": "侧边栏的",
+      "descEmph": "显示 / 隐藏 / 排序 / 改名 / 归类",
+      "descMid": "全部在本页完成：左侧选中节点改属性，点节点右侧「上移 / 下移」或直接拖拽调整位置，加号按钮可新增菜单项与分组；改完点右上角",
+      "descEmph2": "「保存布局」立即生效",
+      "descSuffix": "，刷新和重开浏览器都不丢失。万一改乱了，点「恢复默认」一键回到系统内置菜单。"
+    },
+    "hint": {
+      "drag": "提示：点节点右侧的「上移 / 下移」按钮，可在同一分组内调整顺序；拖拽节点到别的分组标题上，可跨中心归类（如把页面从「运营中心」拖到「系统中心」）。"
+    },
+    "prop": {
+      "displayName": "显示名",
+      "path": "路由路径",
+      "icon": "图标（可选）"
+    },
+    "ph": {
+      "displayName": "侧边栏上展示的名字",
+      "path": "/orders 之类的页面路由，留空表示这是一个分组",
+      "icon": "不选则沿用默认图标"
+    },
+    "tag": {
+      "hidden": "隐藏",
+      "custom": "自建"
+    },
+    "empty": {
+      "selectNode": "在左侧选中一个节点进行编辑。"
+    },
+    "warn": {
+      "unregistered": "该路由未在 App.jsx 中注册，点击菜单会跳到空白页",
+      "dirty": "当前有未保存的改动，点击右上角「保存布局」后才会应用到侧边栏。"
+    },
+    "modal": {
+      "addTitle": "新增菜单项",
+      "addOk": "添加"
+    },
+    "form": {
+      "kind": "类型",
+      "kindPage": "菜单页面（有路由）",
+      "kindGroup": "分组（无页面）",
+      "name": "名称",
+      "namePlaceholder": "例如：对账中心",
+      "parent": "挂载到",
+      "path": "路由路径",
+      "pathExtra": "必须是 App.jsx 中已注册的路由，例如 /orders；已有路由可在下方下拉里选",
+      "icon": "图标（可选）",
+      "iconPlaceholder": "不选则使用默认图标"
+    },
+    "validate": {
+      "nameRequired": "请填写菜单名称",
+      "nameMax": "名称不要超过 30 个字",
+      "pathRequired": "请填写路由路径",
+      "pathSlash": "路径必须以 / 开头",
+      "pathUsed": "该路径已被其它菜单项占用",
+      "keyExists": "菜单 key「{{key}}」已存在",
+      "pathUnregistered": "该路由未在 App.jsx 中注册，点击会跳到空白页"
+    },
+    "msg": {
+      "saved": "已保存菜单布局，侧边栏已实时更新",
+      "reset": "已恢复默认菜单布局",
+      "groupAdded": "已新增分组「{{label}}」，记得点右上角「保存布局」",
+      "itemAdded": "已新增菜单项「{{label}}」，记得点右上角「保存布局」",
+      "keyExists": "菜单 key「{{key}}」已存在（同一路径不能挂两次）",
+      "pathUsed": "路径 {{path}} 已被其它菜单项占用",
+      "cannotDeletePage": "这是带页面的菜单项，不能删除；不想显示就用上面的「隐藏」开关",
+      "hasChildren": "「{{label}}」下还有 {{count}} 个菜单，请先移走，删除会连带删掉它们",
+      "builtinGroup": "这是系统内置分组，删掉后下次打开仍会被自动补回；不想显示就用上面的「隐藏」开关",
+      "deleted": "已删除该分组，点右上角「保存布局」生效",
+      "exportEmpty": "当前菜单为空，无可导出内容",
+      "exported": "菜单配置已导出为 JSON 文件",
+      "importBadJson": "导入失败：文件内容不是合法的菜单配置 JSON",
+      "importEmpty": "导入失败：文件里没有可用的菜单节点（每项都需要 key）",
+      "imported": "已导入 {{count}} 个一级菜单项，侧边栏已实时更新",
+      "importReadError": "导入失败：文件读取出错",
+      "synced": "已同步 {{count}} 个菜单项到后端目录",
+      "syncPartial": "本地已保存；{{count}} 个菜单项已同步到后端，{{failed}} 个失败",
+      "syncSkipped": "本地已保存；后端目录同步跳过（{{msg}}）"
+    },
+    "hintDelete": {
+      "hasChildren": "该分组下还有 {{count}} 个菜单，请先移走再删除"
+    }
+  },
+  "settings": {
+    "title": "系统配置",
+    "platform": {
+      "title": "平台基础信息",
+      "desc": "平台标识与默认语言。常规菜单、权限与数据范围请在「菜单管理 / 角色权限」中配置；下方为平台级参数的维护入口。",
+      "brand": "平台名称",
+      "language": "当前语言",
+      "configCount": "配置项数量",
+      "category": "配置分类数"
+    },
+    "subtitle": "平台级参数（站点标题、风控阈值开关等）的维护",
+    "col": {
+      "configKey": "配置键",
+      "configValue": "配置值",
+      "category": "分类",
+      "description": "说明",
+      "dataType": "数据类型",
+      "editable": "可编辑"
+    },
+    "field": {
+      "configKey": "配置键",
+      "configValue": "配置值",
+      "category": "分类",
+      "description": "说明",
+      "dataType": "数据类型",
+      "editable": "是否可编辑"
+    },
+    "ph": {
+      "configKey": "如 site.title",
+      "category": "UI / BIZ / RISK"
+    }
+  }
+}

@@ -81,6 +81,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
+
+        <!-- AOP：@RequirePermission + PermissionAspect 权限校验切面（权限通电内核） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -147,6 +153,14 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- 数据范围（P1-T03）单元测试用：内存 H2 引导一个仅含测试探针实体的 EntityManagerFactory，
+             以便在无外部 DB 的前提下真实执行 DataScopeSpec 生成的 JPA Criteria 查询。
+             仅 test 作用域，不进入运行时/生产构建。 -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

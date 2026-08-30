@@ -10,14 +10,24 @@ import com.claw.server.common.dto.OrderDtos.OrderLineReq;
 import com.claw.server.common.dto.OrderDtos.PayReq;
 import com.claw.server.common.enums.OrderStatus;
 import com.claw.server.common.enums.UsageMode;
+import com.claw.server.common.security.AuthContext;
+import com.claw.server.common.security.DataScope;
+import com.claw.server.common.security.DataScopeContext;
+import com.claw.server.common.security.DataScopeFieldMapping;
+import com.claw.server.common.security.DataScopeResult;
+import com.claw.server.common.security.DataScopeSpec;
 import com.claw.server.domain.deposit.DepositRuleService;
 import com.claw.server.domain.deposit.DepositService;
 import com.claw.server.domain.order.event.OrderCompletedEvent;
 import com.claw.server.domain.order.event.OrderPaidEvent;
+import com.claw.server.domain.role.DataScopeService;
 import com.claw.server.domain.sharedpool.SharedPoolService;
+import com.claw.server.domain.user.Department;
+import com.claw.server.domain.user.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,6 +63,7 @@ public class CustomerOrderService {
     private final SharedPoolService sharedPoolService;
     private final UnitRegistrationService unitRegistrationService;
     private final ApplicationEventPublisher eventPublisher;
+    private final DataScopeService dataScopeService;
 
     /** 创建客户订单（CREATED），写订单 + 订单项。 */
     @Transactional
@@ -234,9 +245,20 @@ public class CustomerOrderService {
                 .toList();
     }
 
+    @DataScope(entity = "customer_order")
     @Transactional(readOnly = true)
     public List<CustomerOrderView> list(Long buyerUserId, String status) {
-        List<CustomerOrder> all = orderRepository.findAll().stream()
+        // 数据范围 enforcement（P1-T03）：DataScopeAspect 写入 DataScopeContext；
+        // 非经切面进入时降级直接解析，保证过滤不丢。
+        DataScopeResult ds = DataScopeContext.get();
+        if (ds == null) {
+            ds = dataScopeService.resolve(AuthContext.currentUserId());
+        }
+        Specification<CustomerOrder> spec = (ds == null || ds.isAll())
+                ? (root, q, cb) -> cb.conjunction()
+                : DataScopeSpec.of(DataScopeFieldMapping.of("buyerUserId", null, null, "assetType",
+                        User.class, Department.class)).apply(ds);
+        List<CustomerOrder> all = orderRepository.findAll(spec).stream()
                 .filter(o -> !Boolean.TRUE.equals(o.getDeleted()))
                 .toList();
         if (buyerUserId != null) {

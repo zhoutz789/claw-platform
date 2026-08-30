@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.List;
+import com.claw.server.common.security.RequirePermission;
 
 /**
  * 后台订单模块（S5 补齐）：换电订单管理 + 租赁订单只读。
@@ -46,6 +47,7 @@ public class AdminOrderController {
     }
 
     @PutMapping("/swap/{id}/status")
+    @RequirePermission("order:update")
     public ApiResult<SwapOrderView> updateSwapStatus(@PathVariable Long id,
                                                      @RequestBody SwapOrderStatusReq req) {
         SwapOrder o = swapOrderRepository.findById(id)

@@ -1,0 +1,108 @@
+classDiagram
+    class User {
+        +Long id
+        +String phone
+        +String locale
+        +Long departmentId
+        +UserStatus status
+    }
+    class Department {
+        +Long id
+        +String name
+        +Long parentId
+        +String orgCode
+        +String orgType
+        +Integer sortNo
+    }
+    class UserDepartment {
+        +Long userId
+        +Long departmentId
+        +Boolean isPrimary
+    }
+    class Role {
+        +Long id
+        +String code
+        +String nameI18n
+        +Long parentId
+        +String dataScope
+        +String dataScopeTypes
+        +String grants
+    }
+    class UserRole {
+        +Long userId
+        +Long roleId
+        +Long grantedBy
+    }
+    class UserRolePackage {
+        +Long userId
+        +Long roleId
+        +RoleSource source
+        +Instant revokedAt
+        +isActive() boolean
+    }
+    class Permission {
+        +Long id
+        +String code
+        +String name
+        +Integer menuType
+        +String perms
+        +String component
+        +String i18nKey
+        +String parentCode
+        +String path
+        +Boolean hidden
+    }
+    class RolePermission {
+        +Long roleId
+        +String permissionCode
+        +Boolean canRead
+        +String buttonsJson
+        +String dataRuleIds
+    }
+    class PermissionDataRule {
+        +Long id
+        +String permissionCode
+        +String ruleName
+        +String ruleColumn
+        +String ruleConditions
+        +String ruleValue
+    }
+
+    User "1" --> "0..*" UserDepartment : 归属
+    Department "1" --> "0..*" UserDepartment : 包含
+    Department "1" --> "0..*" Department : parentId 自关联
+    User "1" --> "0..*" UserRole : 平台固定角色
+    User "1" --> "0..*" UserRolePackage : 动态角色包
+    Role "1" --> "0..*" UserRole : 被授予
+    Role "1" --> "0..*" UserRolePackage : 被打包
+    Role "1" --> "0..*" Role : parentId 角色继承
+    Role "1" --> "0..*" RolePermission : 权限矩阵
+    Permission "1" --> "0..*" RolePermission : 被授予
+    Permission "1" --> "0..*" Permission : parentCode 菜单树
+    Permission "1" --> "0..*" PermissionDataRule : 数据规则
+    RolePermission "1" --> "0..*" PermissionDataRule : dataRuleIds
+
+    class PermissionService {
+        +hasPermission(userId, perms) boolean
+        +effectivePermissions(userId) Set
+        +menuTreeFor(userId) List
+        +evictCache(userId)
+    }
+    class DataScopeService {
+        +resolve(userId) DataScopeResult
+        +specification(result) Specification
+    }
+    class PermissionAspect {
+        +check(RequirePermission)
+    }
+    class DataScopeAspect {
+        +bind(DataScope)
+    }
+
+    PermissionService ..> UserRole : 读
+    PermissionService ..> UserRolePackage : 读
+    PermissionService ..> RolePermission : 读
+    PermissionService ..> Role : 递归 parentId
+    PermissionAspect ..> PermissionService : 调用
+    DataScopeAspect ..> DataScopeService : 调用
+    DataScopeService ..> PermissionDataRule : 读规则

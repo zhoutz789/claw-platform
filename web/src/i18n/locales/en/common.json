@@ -1,0 +1,129 @@
+{
+  "app": {
+    "brand": "Claw",
+    "brandSub": "New Energy Asset Management Platform",
+    "loginTitle": "Claw Admin Console",
+    "loginSlogan": "Full-lifecycle operations platform for new energy assets"
+  },
+  "lang": {
+    "label": "Language",
+    "switch": "Switch language",
+    "zh": "中文",
+    "en": "English",
+    "km": "ខ្មែរ"
+  },
+  "action": {
+    "add": "Add",
+    "addItem": "Add menu item",
+    "addGroup": "Add group",
+    "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteGroup": "Delete this group",
+    "refresh": "Refresh",
+    "exportConfig": "Export config",
+    "importConfig": "Import config",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "confirm": "Confirm",
+    "save": "Save",
+    "saveLayout": "Save layout",
+    "search": "Search",
+    "resetDefault": "Restore defaults",
+    "detail": "Details",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "logout": "Sign out",
+    "yes": "Yes",
+    "no": "No",
+    "selectRole": "Select role",
+    "selectDepartment": "Select department",
+    "selectParentGroup": "Select a parent group, or keep it as a top-level menu",
+    "hideInMenu": "Hide from menu (still reachable via direct link)"
+  },
+  "msg": {
+    "loadFailed": "Failed to load: {{msg}}",
+    "opFailed": "Operation failed: {{msg}}",
+    "deleteFailed": "Failed to delete: {{msg}}",
+    "detailLoadFailed": "Failed to load details: {{msg}}",
+    "created": "Created",
+    "saved": "Saved",
+    "deleted": "Deleted",
+    "networkError": "Network error",
+    "loading": "Loading…"
+  },
+  "confirm": {
+    "delete": "Confirm delete?",
+    "deleteOk": "Delete",
+    "resetMenu": "Restore the default menu?",
+    "resetMenuDesc": "This clears every customization of visibility / order / renaming / added items and restores the built-in default menu. This action cannot be undone.",
+    "resetOk": "Confirm restore"
+  },
+  "form": {
+    "required": "Please enter {{label}}",
+    "placeholderSelect": "Please select",
+    "datePlaceholder": "YYYY-MM-DD"
+  },
+  "table": {
+    "detailTitle": "Details",
+    "actions": "Actions"
+  },
+  "enum": {
+    "dataScope": {
+      "SELF": "Own data only",
+      "DEPARTMENT": "Own department",
+      "DEPARTMENT_AND_BELOW": "Own department and below",
+      "CUSTOM": "Custom (specific departments / rules)",
+      "ALL": "All data",
+      "TYPE": "Specially authorised type"
+    },
+    "lifecycle": {
+      "PRODUCED": "Produced",
+      "IN_TRANSIT": "In transit",
+      "IN_USE": "In use",
+      "MAINTENANCE": "Under maintenance",
+      "RECYCLED": "Recycled",
+      "DESTROYED": "Destroyed"
+    },
+    "opType": {
+      "PASSENGER": "Passenger transport",
+      "LOGISTICS": "Logistics",
+      "MOBILE_SELL": "Mobile vending",
+      "ADVERTISING": "Advertising",
+      "RECORDING": "Video recording"
+    },
+    "assetStatus": {
+      "IN_STOCK": "In stock",
+      "IN_USE": "In use",
+      "SHARED": "Shared",
+      "REPAIR": "Under repair",
+      "DISABLED": "Disabled",
+      "SCRAPPED": "Scrapped"
+    }
+  },
+  "login": {
+    "otpTip": "OTP sign-in: enter your phone number → request a code (in dev mode the code is shown directly) → sign in",
+    "phone": "Phone number",
+    "phonePlaceholder": "e.g. 13800000001",
+    "code": "Verification code",
+    "codePlaceholder": "Click the button to request one",
+    "getCode": "Get code",
+    "submit": "Sign in",
+    "codeSent": "Code sent (echoed in dev mode): {{code}}",
+    "backendDownCode": "Backend unreachable — using the demo code: 123456",
+    "success": "Signed in",
+    "backendDownLogin": "Backend unreachable — entered demo mode"
+  },
+  "layout": {
+    "searchPlaceholder": "Search modules (e.g. reconciliation, insurance, station)",
+    "adminName": "Administrator",
+    "superAdmin": "SUPER_ADMIN",
+    "logout": "Sign out",
+    "workbench": "Workbench",
+    "mockBanner": "⚠️ Demo data mode: the backend is unreachable or the session is not authorised. The page is showing built-in demo data (the flow is visible, but this is not live database data). Once the real backend is connected and you sign in, it switches to live data automatically."
+  },
+  "perm": {
+    "forbiddenDesc": "Sorry, your account does not have permission to access this page. Contact the system administrator if you need access.",
+    "backWorkbench": "Back to Workbench"
+  }
+}

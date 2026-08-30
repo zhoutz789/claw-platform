@@ -12,6 +12,11 @@ import com.claw.server.common.enums.TransferType;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.claw.server.common.security.AuthContext;
+import com.claw.server.common.security.DataScope;
+import com.claw.server.common.security.DataScopeContext;
+import com.claw.server.common.security.DataScopeFieldMapping;
+import com.claw.server.common.security.DataScopeResult;
+import com.claw.server.common.security.DataScopeSpec;
 import com.claw.server.domain.custody.CustodyService;
 import com.claw.server.domain.iot.Device;
 import com.claw.server.domain.iot.DeviceRepository;
@@ -20,10 +25,12 @@ import com.claw.server.domain.iot.TelemetryRepository;
 import com.claw.server.domain.role.DataScopeService;
 import com.claw.server.domain.role.PermissionService;
 import com.claw.server.domain.role.RoleGrantService;
+import com.claw.server.domain.user.Department;
 import com.claw.server.domain.user.User;
 import com.claw.server.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -135,45 +142,27 @@ public class AssetService {
         return toView(asset);
     }
 
+    @DataScope(entity = "asset")
     @Transactional(readOnly = true)
     public List<ApiViews.AssetView> listAssets(AssetType assetType, AssetStatus status) {
-        List<Asset> list;
-        if (assetType != null && status != null) {
-            list = assetRepository.findByAssetTypeAndStatus(assetType, status);
-        } else if (assetType != null) {
-            list = assetRepository.findAll().stream().filter(a -> a.getAssetType() == assetType).toList();
-        } else if (status != null) {
-            list = assetRepository.findAll().stream().filter(a -> a.getStatus() == status).toList();
-        } else {
-            list = assetRepository.findAll();
+        // 数据范围 enforcement（P1-T03）：DataScopeAspect 写入 DataScopeContext；
+        // 若非经切面进入（同 Service 内部调用）则降级直接解析，保证过滤不丢。
+        DataScopeResult ds = DataScopeContext.get();
+        if (ds == null) {
+            ds = dataScopeService.resolve(AuthContext.currentUserId());
         }
-        // 数据范围 enforcement（C3）：
-        Long uid = AuthContext.currentUserId();
-        DataScopeService.DataScopeResult ds = dataScopeService.resolve(uid);
-        if (!ds.isAll()) {
-            list = applyDataScope(list, ds, uid);
+        Specification<Asset> spec = (ds == null || ds.isAll())
+                ? (root, q, cb) -> cb.conjunction()
+                : DataScopeSpec.of(DataScopeFieldMapping.of("ownerId", null, null, "assetType",
+                        User.class, Department.class)).apply(ds);
+        List<Asset> list = assetRepository.findAll(spec);
+        if (assetType != null) {
+            list = list.stream().filter(a -> a.getAssetType() == assetType).toList();
+        }
+        if (status != null) {
+            list = list.stream().filter(a -> a.getStatus() == status).toList();
         }
         return list.stream().map(this::toView).toList();
-    }
-
-    private List<Asset> applyDataScope(List<Asset> list, DataScopeService.DataScopeResult ds, Long uid) {
-        return switch (ds.scope()) {
-            case SELF -> list.stream()
-                    .filter(a -> Objects.equals(a.getOwnerId(), uid) || Objects.equals(a.getUserId(), uid))
-                    .toList();
-            case DEPARTMENT -> {
-                Set<Long> deptUserIds = userRepository.findByDepartmentId(ds.departmentId()).stream()
-                        .map(User::getId).collect(Collectors.toSet());
-                yield list.stream().filter(a -> deptUserIds.contains(a.getOwnerId())).toList();
-            }
-            case TYPE -> {
-                Set<String> types = ds.allowedTypes();
-                yield list.stream()
-                        .filter(a -> types.contains(a.getAssetType().name()))
-                        .toList();
-            }
-            default -> list; // ALL（已在上层短路）
-        };
     }
 
     @Transactional(readOnly = true)

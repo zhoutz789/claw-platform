@@ -1,17 +1,30 @@
 import { useMemo, useState, useEffect } from 'react';
-import { Layout, Menu, Input, Badge, Avatar, Space, Typography, Button, Dropdown, Empty } from 'antd';
+import { Layout, Menu, Input, Badge, Avatar, Space, Typography, Button, Dropdown } from 'antd';
 import {
   DashboardOutlined, LogoutOutlined, BellOutlined, SearchOutlined, ArrowRightOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { clearToken } from '../auth';
+import { navLabel, groupLabel } from '../nav';
+import LangSwitch from '../i18n/LangSwitch';
 import {
-  AppstoreOutlined,
-} from '@ant-design/icons';
-import {
-  useMenuNav, getFlatNav, ancestorKeysOfActive, getVisibleNav, ICON_BY_KEY,
+  ancestorKeysOfActive, resolveIcon,
+  getEffectiveNav, getEffectiveFlatNav, useEffectiveNav,
 } from '../menuStore';
+import { usePermVersion, isAllGranted } from '../permStore';
+import { ForbiddenPage } from '../components/Perm';
 import ErrorBoundary from '../ErrorBoundary';
+
+// 判断某 key 是否出现在导航树中（含任意层级），用于路由级权限守卫。
+const keyInNav = (nodes, key) => {
+  if (!Array.isArray(nodes)) return false;
+  for (const n of nodes) {
+    if (n && n.key === key) return true;
+    if (n && n.children && keyInNav(n.children, key)) return true;
+  }
+  return false;
+};
 
 const { Header, Sider, Content } = Layout;
 
@@ -22,30 +35,50 @@ const keyOf = (pathname) => {
   return seg;
 };
 
-const labelOf = (key, nav, flat) => {
+// 页面标题：命中叶子用其显示名，否则退化到一级节点，都没有则回落「工作台」
+const labelOf = (key, nav, flat, t) => {
   const hit = flat.find((i) => i.key === key);
-  if (hit) return hit.label;
+  if (hit) return navLabel(hit);
   const top = nav.find((i) => i.key === key);
-  return top?.label || '工作台';
+  if (top) return navLabel(top);
+  return t('layout.workbench');
 };
 
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t, i18n } = useTranslation();
+  // 订阅权限状态变更（降级开关 / 后端菜单下发都会触发本组件重渲染）
+  usePermVersion();
   const selected = keyOf(location.pathname);
-  const nav = useMenuNav();
-  const flat = useMemo(() => getFlatNav(), [nav]);
-  const title = labelOf(selected, nav, flat);
+  const nav = useEffectiveNav();
+  const flat = useMemo(() => getEffectiveFlatNav(), [nav]);
+  const title = labelOf(selected, nav, flat, t);
+  // 路由级权限守卫：后端权威菜单未包含当前页（且无降级）即视为无权限 → 403。
+  // workbench 作为首页永远放行；降级模式（allGranted）一律放行。
+  const effectiveNav = getEffectiveNav();
+  const routeAllowed = isAllGranted() || selected === 'workbench' || keyInNav(effectiveNav, selected);
 
-  // 全局搜索：过滤全部菜单项，点击即跳转
+  // 全局搜索：过滤全部菜单项，点击即跳转。
+  // 先解析出「当前语言下的显示名」再匹配，保证切语言后按新语言也能搜到。
   const [search, setSearch] = useState('');
   const hits = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return [];
-    return flat.filter(
-      (m) => m.label.toLowerCase().includes(q) || m.group.toLowerCase().includes(q) || m.key.includes(q)
-    ).slice(0, 8);
-  }, [search, flat]);
+    return flat
+      .map((m) => ({
+        ...m,
+        display: navLabel(m),
+        displayGroup: groupLabel(m.groupKey, m.group),
+      }))
+      .filter((m) => (
+        m.display.toLowerCase().includes(q)
+        || m.displayGroup.toLowerCase().includes(q)
+        || m.key.includes(q)
+      ))
+      .slice(0, 8);
+    // i18n.language 进依赖：切换语言后搜索索引的显示名同步刷新
+  }, [search, flat, i18n.language]);
 
   const goSearch = (m) => {
     navigate(m.path);
@@ -56,13 +89,14 @@ export default function AdminLayout() {
   const buildItems = (nodes, depth = 0) => {
     if (depth > 12) return []; // 护栏：异常嵌套直接截断，绝不让整页崩溃
     return nodes.map((n) => {
-      const Icon = n.icon || ICON_BY_KEY[n.key] || AppstoreOutlined;
+      const Icon = resolveIcon(n);
       return n.children
-        ? { key: n.key, icon: <Icon />, label: n.label, children: buildItems(n.children, depth + 1) }
-        : { key: n.key, label: n.label };
+        ? { key: n.key, icon: <Icon />, label: navLabel(n), children: buildItems(n.children, depth + 1) }
+        // 一级叶子（如工作台）也显示图标，与分组视觉对齐
+        : { key: n.key, icon: depth === 0 ? <Icon /> : undefined, label: navLabel(n) };
     });
   };
-  const menuChildren = buildItems(getVisibleNav());
+  const menuChildren = buildItems(getEffectiveNav());
 
   // 自动展开包含当前选中项的所有祖先分组（支持二级嵌套）
   const [openKeys, setOpenKeys] = useState(() => ancestorKeysOfActive(selected));
@@ -93,9 +127,9 @@ export default function AdminLayout() {
             display: 'grid', placeItems: 'center', color: '#fff', fontSize: 18,
           }}>⚡</div>
           <div style={{ fontWeight: 900, fontSize: 16 }}>
-            Claw
+            {t('app.brand')}
             <small style={{ display: 'block', fontSize: 10, color: 'var(--muted)', fontWeight: 500 }}>
-              新能源资产管理平台
+              {t('app.brandSub')}
             </small>
           </div>
         </div>
@@ -105,7 +139,11 @@ export default function AdminLayout() {
           openKeys={openKeys}
           onOpenChange={setOpenKeys}
           items={menuChildren}
-          onClick={({ key }) => { if (flat.some((f) => f.key === key)) navigate(`/${key}`); }}
+          // 跳转以节点自身 path 为准（用户在菜单管理里改过路径也能正确跳转）
+          onClick={({ key }) => {
+            const hit = flat.find((f) => f.key === key);
+            if (hit) navigate(hit.path);
+          }}
           style={{ background: 'transparent', borderInlineEnd: 'none', paddingTop: 8 }}
         />
       </Sider>
@@ -119,7 +157,7 @@ export default function AdminLayout() {
               borderBottom: '1px solid #fcd34d',
             }}
           >
-            ⚠️ 演示数据模式：后端当前不可达 / 鉴权未通过，页面展示的是内置演示数据（闭环可见，但非真实库数据）。接入真实后端并登录后将自动切换为实时数据。
+            ⚠️ {t('layout.mockBanner')}
           </div>
         )}
         <Header
@@ -141,8 +179,8 @@ export default function AdminLayout() {
                 <div className="wb-search-panel">
                   {hits.map((m) => (
                     <div key={m.key} className="wb-search-item" onClick={() => goSearch(m)}>
-                      <span>{m.label}</span>
-                      <span className="wb-search-group">{m.group}<ArrowRightOutlined style={{ marginLeft: 6 }} /></span>
+                      <span>{m.display}</span>
+                      <span className="wb-search-group">{m.displayGroup}<ArrowRightOutlined style={{ marginLeft: 6 }} /></span>
                     </div>
                   ))}
                 </div>
@@ -151,7 +189,7 @@ export default function AdminLayout() {
               <Input
                 allowClear
                 prefix={<SearchOutlined style={{ color: 'var(--muted)' }} />}
-                placeholder="搜索模块（如：对账、保险、站点）"
+                placeholder={t('layout.searchPlaceholder')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onPressEnter={() => hits[0] && goSearch(hits[0])}
@@ -164,21 +202,23 @@ export default function AdminLayout() {
             </Badge>
             <Avatar style={{ background: 'linear-gradient(135deg,var(--brand),var(--energy))' }}>管</Avatar>
             <div style={{ lineHeight: 1.1 }}>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>管理员</div>
-              <div style={{ fontSize: 10, color: 'var(--muted)' }}>SUPER_ADMIN</div>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>{t('layout.adminName')}</div>
+              <div style={{ fontSize: 10, color: 'var(--muted)' }}>{t('layout.superAdmin')}</div>
             </div>
+            {/* 语言切换器：常驻顶栏，与搜索框 / 头像并列，随时可切 */}
+            <LangSwitch variant="dropdown" />
             <Button
               icon={<LogoutOutlined />}
               onClick={() => { clearToken(); window.location.hash = '#/login'; }}
             >
-              退出
+              {t('layout.logout')}
             </Button>
           </Space>
         </Header>
 
         <Content style={{ margin: 16, padding: 16, background: 'transparent' }}>
           <ErrorBoundary resetKey={location.pathname}>
-            <Outlet />
+            {routeAllowed ? <Outlet /> : <ForbiddenPage menuKey={selected} />}
           </ErrorBoundary>
         </Content>
       </Layout>

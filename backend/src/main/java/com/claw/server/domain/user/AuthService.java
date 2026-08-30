@@ -3,7 +3,9 @@ package com.claw.server.domain.user;
 import com.claw.server.common.api.BizException;
 import com.claw.server.common.dto.ApiViews;
 import com.claw.server.common.security.JwtUtil;
+import com.claw.server.domain.role.PermissionService;
 import com.claw.server.domain.role.RoleGrantService;
+import com.claw.server.domain.role.RoleView;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Set;
 
 /**
  * 认证服务：短信验证码登录（OTP，无密码）。
@@ -26,6 +30,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final SmsCodeStore smsCodeStore;
     private final RoleGrantService roleGrantService;
+    private final PermissionService permissionService;
     private final JwtUtil jwtUtil;
     private final SmsGateway smsGateway;
 
@@ -75,6 +80,35 @@ public class AuthService {
                 .orElseThrow(() -> BizException.notFound("error.user.not.found"));
         return new ApiViews.UserProfile(u.getId(), u.getPhone(), u.getFullName(),
                 u.getKycStatus(), u.getLocale());
+    }
+
+    /**
+     * 当前登录态详情：聚合身份、账号语言、生效角色与有效权限位集合。
+     * userId 为 null（理论上 SecurityConfig 已拦截未登录）时返回空壳，避免空指针。
+     */
+    public ApiViews.AuthMeView me(Long userId) {
+        if (userId == null) {
+            return new ApiViews.AuthMeView(null, null, null, List.of(), Set.of());
+        }
+        User u = userRepository.findById(userId).orElse(null);
+        String phone = u == null ? null : u.getPhone();
+        String locale = u == null ? null : u.getLocale();
+        List<String> roles = roleGrantService.listActive(userId).stream()
+                .map(RoleView::roleCode).toList();
+        Set<String> permissions = permissionService.effectivePermissions(userId);
+        return new ApiViews.AuthMeView(userId, phone, locale, roles, permissions);
+    }
+
+    /** 更新当前账号语言偏好（PUT /users/me/locale）。 */
+    @Transactional
+    public void updateLocale(Long userId, String locale) {
+        if (locale == null || locale.isBlank()) {
+            return;
+        }
+        userRepository.findById(userId).ifPresent(u -> {
+            u.setLocale(locale);
+            userRepository.save(u);
+        });
     }
 
     /** 更新最后活跃时间等（占位，后续扩展资料字段）。 */

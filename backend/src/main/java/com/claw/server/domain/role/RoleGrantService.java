@@ -28,6 +28,7 @@ public class RoleGrantService {
 
     private final RoleRepository roleRepository;
     private final UserRolePackageRepository packageRepository;
+    private final PermissionService permissionService;
 
     /**
      * 注册钩子：为新建用户授予所有 {@code auto_grant=true} 的角色包（默认含 CONSUMER/PRODUCER/DISTRIBUTOR）。
@@ -40,6 +41,7 @@ public class RoleGrantService {
         for (Role role : autoRoles) {
             ensurePackage(userId, role, RoleSource.AUTO);
         }
+        permissionService.evictUser(userId);
         log.info("用户 {} 自动授予角色包 {} 个", userId, autoRoles.size());
     }
 
@@ -52,8 +54,9 @@ public class RoleGrantService {
         UserRolePackage pkg = packageRepository.findByUserIdAndRoleId(userId, role.getId())
                 .filter(UserRolePackage::isActive)
                 .orElseGet(() -> savePackage(userId, role, RoleSource.APPLY));
+        permissionService.evictUser(userId);
         return RoleView.of(role.getId(), role.getCode(), role.getNameI18n(), pkg.getSource(), pkg.getGrantedAt(),
-                role.getDataScope());
+                role.getDataScope(), role.getParentId(), role.getDataScopeTypes(), role.getDataRuleIds());
     }
 
     /** 域事件触发自动授予（如购车→车主、开通功能→司机）。 */
@@ -62,6 +65,7 @@ public class RoleGrantService {
         Role role = roleRepository.findByCode(roleCode)
                 .orElseThrow(() -> BizException.of(40401, "role.not.found"));
         ensurePackage(userId, role, RoleSource.AUTO);
+        permissionService.evictUser(userId);
     }
 
     /** 回收角色包（功能停用/资产处置后权限即时失效）。 */
@@ -73,6 +77,7 @@ public class RoleGrantService {
             pkg.setRevokedAt(Instant.now());
             packageRepository.save(pkg);
         });
+        permissionService.evictUser(userId);
     }
 
     /** 当前用户已生效的角色包（含角色码与名称）。 */
@@ -82,8 +87,9 @@ public class RoleGrantService {
                 .filter(UserRolePackage::isActive)
                 .map(pkg -> {
                     Role role = roleRepository.findById(pkg.getRoleId()).orElseThrow();
-                    return RoleView.of(role.getId(), role.getCode(), role.getNameI18n(), pkg.getSource(), pkg.getGrantedAt(),
-                            role.getDataScope());
+                    return RoleView.of(role.getId(), role.getCode(), role.getNameI18n(), pkg.getSource(),
+                            pkg.getGrantedAt(), role.getDataScope(), role.getParentId(),
+                            role.getDataScopeTypes(), role.getDataRuleIds());
                 })
                 .toList();
     }

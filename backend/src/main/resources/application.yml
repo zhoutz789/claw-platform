@@ -34,11 +34,21 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-    rabbitmq:
-      host: ${MQ_HOST:localhost}
-      port: ${MQ_PORT:5672}
-      username: ${MQ_USER:claw}
-      password: ${MQ_PASSWORD:claw_dev_password}
+  # 注意：RabbitMQ 的正确前缀是 spring.rabbitmq（Spring Boot 绑定 RabbitProperties）。
+  # 此前误写在 spring.data.rabbitmq 下，属于无效配置键 —— 用户名/密码被完全忽略，
+  # 回落默认 guest/guest，被容器拒绝，导致 /actuator/health 永远 DOWN。
+  # spring.data.* 下只有 redis 是合法前缀，勿再往里塞 rabbitmq。
+  rabbitmq:
+    host: ${MQ_HOST:localhost}
+    port: ${MQ_PORT:5672}
+    username: ${MQ_USER:claw}
+    password: ${MQ_PASSWORD:claw_dev_password}
+    # 连接失败不阻塞应用启动（本地/无 MQ 环境可正常起服务；MQ 恢复后由 spring-rabbit
+    # 的 CachingConnectionFactory 自动重连）。监听器容器失败亦不导致上下文启动失败。
+    listener:
+      simple:
+        auto-startup: true
+        missing-queues-fatal: false
 
 server:
   port: 8080
@@ -46,7 +56,7 @@ server:
 claw:
   security:
     # JWT 签名密钥（生产必须通过环境变量 CLAW_JWT_SECRET 注入，长度 ≥ 32 字节）
-    jwt-secret: ${CLAV_JWT_SECRET:dev-only-insecure-secret-please-override-in-prod-0123456789}
+    jwt-secret: ${CLAW_JWT_SECRET:dev-only-insecure-secret-please-override-in-prod-0123456789}
     jwt-ttl-minutes: 1440            # 登录态有效期 24h
     # dev 环境短信验证码 stub：直接把验证码回显给客户端，便于联调（生产关闭）
     sms-dev-echo: true
