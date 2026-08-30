@@ -6,5 +6,6 @@ package com.claw.server.common.enums;
  */
 public enum CertificateType {
     QUALIFICATION,
-    CONSISTENCY
+    CONSISTENCY,
+    DEVICE
 }

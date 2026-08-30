@@ -55,6 +55,10 @@ public class Station {
     @Builder.Default
     private Long tenantId = 1L;
 
+    /** 关联商家（V52 商家入驻骨架：服务站 ↔ 商家入口，招商审批流 Phase 2 回填）。 */
+    @Column(name = "merchant_id")
+    private Long merchantId;
+
     @Builder.Default
     private Boolean deleted = false;
 

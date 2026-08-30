@@ -52,6 +52,14 @@ public class Device {
 
     private Instant lastOnlineAt;
 
+    /** 设备生命周期状态（R4 冗余字段，权威历史见 lifecycle_events）。 */
+    @Column(name = "lifecycle_status", length = 20)
+    private String lifecycleStatus;
+
+    /** 实例化来源商品（生产入库 R3）。 */
+    @Column(name = "product_id")
+    private Long productId;
+
     @Column(nullable = false, length = 16)
     @Builder.Default
     private String status = "ACTIVE";
