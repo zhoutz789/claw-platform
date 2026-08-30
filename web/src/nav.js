@@ -24,7 +24,7 @@ import { tv } from './i18n';
 // 说明：icon 组件不能直接放进 i18n 语言包，仍在本地引用。
 import {
   DashboardOutlined, AppstoreOutlined, ShoppingOutlined, ProjectOutlined, RocketOutlined,
-  DeploymentUnitOutlined, AccountBookOutlined, SafetyOutlined, SettingOutlined,
+  DeploymentUnitOutlined, AccountBookOutlined, SafetyOutlined, SettingOutlined, InboxOutlined,
 } from '@ant-design/icons';
 
 // 九大模块（工作台 + A/B/C/D 期新设计 + 四大中心）；children 为各模块下的页面。
@@ -57,6 +57,20 @@ export const NAV = [
       { key: 'brand-onboarding', label: 'nav:item.brand-onboarding', path: '/brand-onboarding' },
       { key: 'manufacturer', label: 'nav:item.manufacturer', path: '/manufacturer' },
       { key: 'order-manage', label: 'nav:item.order-manage', path: '/order-manage' },
+      { key: 'merchants', label: 'nav:item.merchants', path: '/merchants' },
+    ],
+  },
+  // 供应流通（增量 B：生产 / 库存 / 调拨 / 履约 / 结算）
+  {
+    key: 'supply', label: 'nav:group.supply', icon: InboxOutlined,
+    children: [
+      { key: 'production', label: 'nav:item.production', path: '/production' },
+      { key: 'mfg-inventory', label: 'nav:item.mfg-inventory', path: '/mfg-inventory' },
+      { key: 'station-consignment', label: 'nav:item.station-consignment', path: '/station-consignment' },
+      { key: 'transfers', label: 'nav:item.transfers', path: '/transfers' },
+      { key: 'fulfillment-orders', label: 'nav:item.fulfillment-orders', path: '/fulfillment-orders' },
+      { key: 'pickup-scan', label: 'nav:item.pickup-scan', path: '/pickup-scan' },
+      { key: 'commission-rules', label: 'nav:item.commission-rules', path: '/commission-rules' },
     ],
   },
   {
@@ -110,6 +124,9 @@ export const NAV = [
       { key: 'users', label: 'nav:item.users', path: '/users' },
       { key: 'app-portal', label: 'nav:item.app-portal', path: '/app-portal' },
       { key: 'roles', label: 'nav:item.roles', path: '/roles' },
+      { key: 'role-templates', label: 'nav:item.role-templates', path: '/role-templates' },
+      { key: 'role-groups', label: 'nav:item.role-groups', path: '/role-groups' },
+      { key: 'principal-bindings', label: 'nav:item.principal-bindings', path: '/principal-bindings' },
       { key: 'permission', label: 'nav:item.permission', path: '/permission' },
       { key: 'menu-permission', label: 'nav:item.menu-permission', path: '/menu-permission' },
       { key: 'menu-manager', label: 'nav:item.menu-manager', path: '/menu-manager' },
@@ -181,6 +198,13 @@ export const ROUTES = [
   '/product-template', '/authorization', '/goods-list', '/product-wizard', '/product-publish',
   '/order-manage', '/brand-onboarding', '/app-portal', '/menu-permission', '/menu-manager',
   '/asset-params', '/departments',
+  // 增量 B · 库存 / 流转 / 渠道域
+  '/production', '/mfg-inventory', '/station-consignment', '/transfers', '/fulfillment-orders',
+  '/pickup-scan', '/commission-rules',
+  // 增量 A · 权限骨架
+  '/role-templates', '/role-groups', '/principal-bindings',
+  // Phase 2 骨架
+  '/merchants',
 ];
 
 // 拍平为「带父级标签」的搜索索引：[{ key,label,path,group,groupKey }]，递归展开所有叶子。

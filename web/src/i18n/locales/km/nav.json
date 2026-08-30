@@ -5,6 +5,7 @@
     "prod": "ការគ្រប់គ្រងផលិតផល",
     "project": "ការគ្រប់គ្រងគម្រោង",
     "goods": "ការគ្រប់គ្រងទំនិញ",
+    "supply": "",
     "task": "ការបង្ហោះកិច្ចការ",
     "ops": "មជ្ឈមណ្ឌលប្រតិបត្តិការ",
     "fin": "",
@@ -58,6 +59,17 @@
     "settings": "ការកំណត់ប្រព័ន្ធ",
     "countries": "",
     "asset-params": "ប៉ារ៉ាម៉ែត្រទ្រព្យសកម្ម",
-    "departments": "នាយកដ្ឋាន"
+    "departments": "នាយកដ្ឋាន",
+    "production": "",
+    "mfg-inventory": "",
+    "station-consignment": "",
+    "transfers": "",
+    "fulfillment-orders": "",
+    "pickup-scan": "",
+    "commission-rules": "",
+    "role-templates": "",
+    "role-groups": "",
+    "principal-bindings": "",
+    "merchants": ""
   }
 }

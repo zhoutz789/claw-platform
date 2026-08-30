@@ -1,0 +1,458 @@
+{
+  "enum": {
+    "ownership": {
+      "OWNED_BY_MFG": "Owned by manufacturer",
+      "CONSIGNED": "Consigned at station",
+      "FULL": "Bought out"
+    },
+    "lifecycle": {
+      "PRODUCING": "Producing",
+      "IN_FACTORY": "In factory",
+      "IN_TRANSIT": "In transit",
+      "AT_STATION": "At station (consigned)",
+      "SOLD": "Sold",
+      "IN_USER_PROJECT": "In user project",
+      "RECALLED": "Recalled"
+    },
+    "fulfillment": {
+      "PENDING_PAYMENT": "Pending payment",
+      "PAID_FROZEN": "Paid (frozen)",
+      "CONFIRMED": "Confirmed by station",
+      "SHIPPED": "Shipped by manufacturer",
+      "RECEIVED": "Received by station",
+      "PICKED_UP": "Picked up",
+      "SETTLED": "Settled",
+      "CANCELLED": "Cancelled",
+      "EXPIRED": "Expired"
+    },
+    "transfer": {
+      "DRAFT": "Draft",
+      "CREATED": "Created",
+      "IN_TRANSIT": "In transit",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled"
+    },
+    "commissionType": {
+      "RATE": "Percentage",
+      "AMOUNT": "Fixed amount"
+    },
+    "recovery": {
+      "PENDING": "Pending",
+      "CONFIRMED": "Confirmed",
+      "MARKED": "Marked",
+      "RETURNED": "Returned",
+      "CANCELLED": "Cancelled"
+    },
+    "recoveryReason": {
+      "UNSOLD_TIMEOUT": "Unsold timeout",
+      "FULFILL_TIMEOUT": "Fulfillment timeout",
+      "MANUAL": "Manually triggered"
+    },
+    "principalType": {
+      "MANUFACTURER": "Manufacturer",
+      "STATION": "Station",
+      "CUSTOMER": "Customer",
+      "PLATFORM_ADMIN": "Platform admin"
+    }
+  },
+  "common": {
+    "manufacturer": "Manufacturer",
+    "station": "Station",
+    "product": "Product",
+    "device": "Device",
+    "deviceId": "Device ID",
+    "status": "Status",
+    "remark": "Remark",
+    "createdAt": "Created at",
+    "updatedAt": "Updated at",
+    "none": "—",
+    "selectManufacturer": "Select manufacturer",
+    "selectStation": "Select station",
+    "selectProduct": "Select product",
+    "opSucceed": "Operation succeeded",
+    "unknown": "Unknown"
+  },
+  "production": {
+    "title": "Production",
+    "subtitle": "Instantiate devices from a product template (serial no. + certificate); on completion devices enter the manufacturer's own inventory (R3)",
+    "newTask": "New production task",
+    "completeTask": "Complete / instantiate",
+    "viewCert": "View certificate",
+    "reprintCert": "Reprint certificate",
+    "col": {
+      "id": "Task ID",
+      "manufacturerId": "Manufacturer",
+      "productId": "Product",
+      "planQuantity": "Planned qty",
+      "producedQuantity": "Produced qty",
+      "status": "Status",
+      "specJson": "Spec snapshot",
+      "createdBy": "Created by",
+      "createdAt": "Created at"
+    },
+    "field": {
+      "manufacturerId": "Manufacturer",
+      "productId": "Product template",
+      "planQuantity": "Planned quantity",
+      "specJson": "Spec snapshot (JSON)",
+      "producedQuantity": "Actual produced quantity",
+      "deviceId": "Device ID"
+    },
+    "ph": {
+      "specJson": "{ \"capacityKwh\": 2.5, \"color\": \"black\" }",
+      "producedQuantity": "Leave empty to produce the full planned quantity",
+      "deviceId": "Enter device ID"
+    },
+    "msg": {
+      "taskCreated": "Production task created",
+      "taskCompleted": "Production completed: devices instantiated, certificates issued, stock moved into own inventory",
+      "inputDeviceId": "Please enter a device ID first"
+    },
+    "cert": {
+      "title": "Certificate",
+      "certNo": "Certificate no.",
+      "deviceId": "Device ID",
+      "issuedAt": "Issued at",
+      "issuedBy": "Issued by",
+      "specJson": "Spec snapshot",
+      "notFound": "No certificate for this device (certificates are written on creation and cannot be added afterwards)",
+      "reprinted": "Certificate re-issued for printing",
+      "printTip": "Reprinting only re-emits the existing certificate; no new certificate number is generated (Q8)"
+    }
+  },
+  "mfgInventory": {
+    "title": "Manufacturer inventory",
+    "subtitle": "Dual view: own inventory (OWNED_BY_MFG) and consigned inventory held by downstream stations (CONSIGNED) (R1/R2)",
+    "tab": {
+      "own": "Own inventory",
+      "consigned": "Consigned inventory"
+    },
+    "ship": "Ship to station",
+    "viewCert": "View certificate",
+    "col": {
+      "id": "Inventory ID",
+      "assetId": "Asset ID",
+      "deviceId": "Device ID",
+      "serialNumber": "Serial no.",
+      "productId": "Product",
+      "ownershipType": "Ownership",
+      "currentStatus": "Lifecycle status",
+      "holderStationId": "Holding station",
+      "inboundAt": "Consigned inbound at"
+    },
+    "field": {
+      "deviceId": "Device ID",
+      "stationId": "Destination station",
+      "manufacturerId": "Manufacturer"
+    },
+    "msg": {
+      "shipped": "Shipped to station; consigned custody established",
+      "selectRow": "Please pick a device first"
+    }
+  },
+  "stationConsignment": {
+    "title": "Station consignment inventory",
+    "subtitle": "Stations hold consignment possession only; ownership always stays with the manufacturer (R1). Users only see their own / nearby stations (R2)",
+    "col": {
+      "id": "Inventory ID",
+      "assetId": "Asset ID",
+      "deviceId": "Device ID",
+      "serialNumber": "Serial no.",
+      "productId": "Product",
+      "ownerManufacturerId": "Owning manufacturer",
+      "currentStatus": "Lifecycle status",
+      "inboundAt": "Consigned inbound at"
+    },
+    "detail": "Custody detail",
+    "receiveTodo": "The receive endpoint (POST /api/v1/admin/inventory/receive, permission station:consignment:receive) is not provided by the backend in this round.",
+    "cert": "View certificate"
+  },
+  "transfers": {
+    "title": "Transfer orders",
+    "subtitle": "Manufacturer-initiated station-to-station transfers: source station scans to hand over, destination station scans to receive; logistics fee is borne by the manufacturer (R5)",
+    "create": "New transfer order",
+    "handover": "Scan to hand over",
+    "receive": "Scan to receive",
+    "detail": "Detail",
+    "col": {
+      "id": "Order ID",
+      "transferNo": "Transfer no.",
+      "manufacturerId": "Manufacturer",
+      "fromStationId": "Source station",
+      "toStationId": "Destination station",
+      "status": "Status",
+      "logisticsFee": "Logistics fee",
+      "handoverAt": "Handover at",
+      "receiveAt": "Received at",
+      "completedAt": "Completed at"
+    },
+    "field": {
+      "manufacturerId": "Manufacturer (pays logistics)",
+      "fromStationId": "Source station",
+      "toStationId": "Destination station",
+      "deviceIds": "Devices to transfer",
+      "logisticsFee": "Logistics fee"
+    },
+    "ph": {
+      "deviceIds": "Pick devices consigned at the source station, or type a device ID and press Enter"
+    },
+    "msg": {
+      "created": "Transfer order created",
+      "handonvered": "Handover scanned: possession transferred out, device now in transit",
+      "received": "Receive scanned: consigned custody established at destination station",
+      "needDevice": "Please select at least one device",
+      "needDifferentStation": "Source and destination stations must differ"
+    }
+  },
+  "fulfillment": {
+    "title": "Pending fulfillment orders",
+    "subtitle": "Pay & freeze → station confirms → manufacturer ships → station receives → user pickup scan → settlement (R6/R7)",
+    "create": "New fulfillment order",
+    "pay": "Pay (freeze)",
+    "confirm": "Confirm items",
+    "ship": "Ship",
+    "receive": "Receive",
+    "pickup": "Pickup scan",
+    "cancel": "Cancel",
+    "expire": "Mark expired",
+    "col": {
+      "id": "Order ID",
+      "orderNo": "Order no.",
+      "customerUserId": "Customer",
+      "manufacturerId": "Manufacturer",
+      "stationId": "Pickup station",
+      "remoteOrder": "Remote order",
+      "status": "Status",
+      "totalAmount": "Total amount",
+      "frozenAmount": "Frozen amount",
+      "paymentRef": "Payment ref",
+      "expireAt": "Expires at",
+      "paidAt": "Paid at",
+      "confirmedAt": "Confirmed at",
+      "shippedAt": "Shipped at",
+      "receivedAt": "Received at",
+      "pickedUpAt": "Picked up at",
+      "settledAt": "Settled at"
+    },
+    "field": {
+      "customerUserId": "Customer user ID",
+      "manufacturerId": "Manufacturer",
+      "stationId": "Pickup station",
+      "remoteOrder": "Remote (out-of-stock) order",
+      "totalAmount": "Total amount",
+      "items": "Order items",
+      "paymentRef": "Payment reference"
+    },
+    "ph": {
+      "paymentRef": "Payment gateway reference, optional"
+    },
+    "msg": {
+      "created": "Fulfillment order created",
+      "paid": "Payment succeeded, funds frozen",
+      "confirmed": "Items confirmed",
+      "shipped": "Shipped: device in transit, about to enter consignment stock",
+      "received": "Received by station: consignment stock locked for pickup",
+      "cancelled": "Order cancelled",
+      "expired": "Order marked expired",
+      "needItems": "Please add at least one order item"
+    },
+    "item": {
+      "productId": "Product ID",
+      "deviceId": "Device ID",
+      "qty": "Qty",
+      "price": "Unit price"
+    }
+  },
+  "pickup": {
+    "title": "Pickup scan",
+    "subtitle": "One scan atomically: deduct consignment stock + grant device authorization into the user's project + trigger settlement (R6/R7)",
+    "orderNo": "Order no. / Order ID",
+    "scan": "Scan / Query",
+    "scanPlaceholder": "Scan or type the order no. / order ID",
+    "orderInfo": "Order information",
+    "deviceIds": "Devices to pick up",
+    "deviceIdsTip": "Device IDs captured by the scanner; leave empty to pick up the devices already bound to the order items",
+    "submit": "Confirm pickup",
+    "result": "Fulfillment result",
+    "hint": "Settlement runs asynchronously (logistics fee → station commission → balance to manufacturer). Failures are suspended for platform admin intervention (Q6).",
+    "msg": {
+      "needOrder": "Please scan or type an order number first",
+      "succeed": "Pickup scan completed; settlement triggered"
+    }
+  },
+  "commission": {
+    "title": "Device sales commission rules",
+    "subtitle": "Configure device_sales_commission_rules: percentage / fixed amount, priority, effective period (R7, decoupled from PV revenue share)",
+    "col": {
+      "id": "Rule ID",
+      "ruleName": "Rule name",
+      "manufacturerId": "Manufacturer",
+      "productId": "Product",
+      "commissionType": "Type",
+      "rate": "Rate",
+      "amount": "Amount",
+      "minAmount": "Min",
+      "maxAmount": "Max",
+      "priority": "Priority",
+      "effectiveFrom": "Effective from",
+      "effectiveTo": "Effective to",
+      "enabled": "Enabled"
+    },
+    "field": {
+      "ruleName": "Rule name",
+      "manufacturerId": "Manufacturer (empty = platform default rule)",
+      "productId": "Product (empty = all products of that manufacturer)",
+      "commissionType": "Commission type",
+      "rate": "Rate (0-1, e.g. 0.08)",
+      "amount": "Fixed amount",
+      "minAmount": "Minimum amount",
+      "maxAmount": "Maximum amount",
+      "priority": "Priority (higher wins)",
+      "effectiveFrom": "Effective from",
+      "effectiveTo": "Effective to",
+      "enabled": "Enabled"
+    },
+    "ph": {
+      "effective": "2026-01-01 or 2026-01-01T00:00:00Z"
+    },
+    "tip": {
+      "rate": "For RATE fill the percentage (0.08 = 8%); for AMOUNT fill the fixed amount",
+      "global": "When both manufacturer and product are empty, the rule acts as the platform-wide default"
+    }
+  },
+  "roleTemplates": {
+    "title": "Role templates",
+    "subtitle": "4 business role templates (Manufacturer / Station / Customer / Platform admin); a template expands into a permission set (A2)",
+    "create": "New template",
+    "edit": "Edit template",
+    "permissions": "Configure permissions",
+    "savePermissions": "Save permissions",
+    "delete": "Delete",
+    "col": {
+      "id": "ID",
+      "code": "Code",
+      "name": "Name",
+      "principalType": "Principal type",
+      "description": "Description",
+      "updatedAt": "Updated at"
+    },
+    "field": {
+      "code": "Template code",
+      "name": "Template name",
+      "principalType": "Principal type",
+      "description": "Description",
+      "permissionCodes": "Permission codes"
+    },
+    "ph": {
+      "code": "e.g. MANUFACTURER",
+      "permissionCodes": "Pick the permission codes included in this template"
+    },
+    "msg": {
+      "created": "Role template created",
+      "updated": "Role template updated",
+      "permissionsSaved": "Template permissions saved"
+    },
+    "grantTodo": "One-click grant (POST /api/v1/admin/role-templates/{code}/grant) is not exposed by the backend in this round; RoleTemplateService only has expandPermissions, which the controller does not expose."
+  },
+  "roleGroups": {
+    "title": "Role groups",
+    "subtitle": "A role group aggregates several role templates and is the vehicle for bulk permission governance (6th system management capability, A3)",
+    "create": "New role group",
+    "edit": "Edit role group",
+    "templates": "Linked templates",
+    "addTemplate": "Add template",
+    "remove": "Remove",
+    "col": {
+      "id": "ID",
+      "code": "Group code",
+      "name": "Group name",
+      "description": "Description",
+      "createdBy": "Created by",
+      "createdAt": "Created at"
+    },
+    "field": {
+      "code": "Group code",
+      "name": "Group name",
+      "description": "Description",
+      "templateCode": "Role template"
+    },
+    "ph": {
+      "code": "e.g. MFG_OPS_GROUP"
+    },
+    "msg": {
+      "created": "Role group created",
+      "updated": "Role group updated",
+      "deleted": "Role group deleted",
+      "templateAdded": "Template added to the group",
+      "templateRemoved": "Template removed from the group",
+      "needTemplate": "Please select a role template"
+    }
+  },
+  "principalBindings": {
+    "title": "Principal binding (Manufacturer / Station)",
+    "subtitle": "Bind an account to manufacturer_id / station_id (strict 1:1 per Q5). Binding grants the matching business role package and drives data scope resolution",
+    "tip": "Once bound, the account gets the business feature set and data scope of that principal (manufacturer / station).",
+    "bind": "Bind principal",
+    "unbind": "Unbind",
+    "tab": {
+      "byUser": "By account",
+      "byPrincipal": "By principal"
+    },
+    "col": {
+      "id": "Binding ID",
+      "principalType": "Principal type",
+      "principalId": "Principal"
+    },
+    "msg": {
+      "bound": "Principal binding created",
+      "unbound": "Principal binding removed"
+    }
+  },
+  "merchants": {
+    "title": "Merchant onboarding skeleton",
+    "subtitle": "Basic CRUD for merchants / merchant_zones / merchant_booths (Phase 2 skeleton; full leasing approval flow not implemented)",
+    "create": "New merchant",
+    "edit": "Edit merchant",
+    "zones": "Zones",
+    "booths": "Booths",
+    "createZone": "New zone",
+    "createBooth": "New booth",
+    "phase2Tip": "Merchant onboarding is Phase 2. This page only provides skeleton data maintenance; the leasing approval flow is not implemented yet.",
+    "col": {
+      "id": "ID",
+      "code": "Code",
+      "name": "Name",
+      "contact": "Contact",
+      "country": "Country",
+      "status": "Status",
+      "merchantId": "Merchant",
+      "zoneCode": "Zone code",
+      "stationId": "Station",
+      "zoneId": "Zone",
+      "boothCode": "Booth code",
+      "areaSqm": "Area (sqm)",
+      "monthlyRent": "Monthly rent"
+    },
+    "field": {
+      "code": "Merchant code",
+      "name": "Merchant name",
+      "contact": "Contact",
+      "country": "Country",
+      "status": "Status",
+      "zoneCode": "Zone code",
+      "zoneName": "Zone name",
+      "stationId": "Station",
+      "boothCode": "Booth code",
+      "boothName": "Booth name",
+      "areaSqm": "Area (sqm)",
+      "monthlyRent": "Monthly rent"
+    },
+    "msg": {
+      "created": "Merchant created",
+      "updated": "Merchant updated",
+      "deleted": "Merchant deleted",
+      "zoneCreated": "Zone created",
+      "boothCreated": "Booth created"
+    }
+  }
+}

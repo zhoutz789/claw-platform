@@ -59,6 +59,18 @@ import TaskAd from './pages/TaskAd';
 import TaskVideo from './pages/TaskVideo';
 import TaskRent from './pages/TaskRent';
 import TaskNear from './pages/TaskNear';
+// —— 增量 B · 库存 / 流转 / 渠道域 + 增量 A · 权限骨架 ——
+import Production from './pages/Production';
+import MfgInventory from './pages/MfgInventory';
+import StationConsignment from './pages/StationConsignment';
+import Transfers from './pages/Transfers';
+import FulfillmentOrders from './pages/FulfillmentOrders';
+import PickupScan from './pages/PickupScan';
+import CommissionRules from './pages/CommissionRules';
+import RoleTemplates from './pages/RoleTemplates';
+import RoleGroups from './pages/RoleGroups';
+import PrincipalBindings from './pages/PrincipalBindings';
+import Merchants from './pages/Merchants';
 import ErrorBoundary from './ErrorBoundary';
 
 // 登录态下启动权限内核：拉取「我的权限」并下发后端权威菜单。
@@ -140,6 +152,20 @@ export default function App() {
           <Route path="menu-manager" element={<MenuManager />} />
           <Route path="asset-params" element={<AssetParams />} />
           <Route path="departments" element={<Departments />} />
+          {/* 增量 B · 库存 / 流转 / 渠道域：生产 → 库存双视图 → 调拨 → 履约 → 取货扫码 → 提成规则 */}
+          <Route path="production" element={<Production />} />
+          <Route path="mfg-inventory" element={<MfgInventory />} />
+          <Route path="station-consignment" element={<StationConsignment />} />
+          <Route path="transfers" element={<Transfers />} />
+          <Route path="fulfillment-orders" element={<FulfillmentOrders />} />
+          <Route path="pickup-scan" element={<PickupScan />} />
+          <Route path="commission-rules" element={<CommissionRules />} />
+          {/* 增量 A · 权限骨架：角色模板 / 角色组 / 主体绑定 */}
+          <Route path="role-templates" element={<RoleTemplates />} />
+          <Route path="role-groups" element={<RoleGroups />} />
+          <Route path="principal-bindings" element={<PrincipalBindings />} />
+          {/* Phase 2 骨架：商家入驻 */}
+          <Route path="merchants" element={<Merchants />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

@@ -90,3 +90,126 @@ export const PURCHASE_STATUS = opts(['CREATED', 'PAID', 'SHIPPED', 'CANCELLED'])
 export const PRODUCT_STATUS = opts(['ON_SALE', 'OFF_SHELF', 'PREPARE']);
 export const SKU_STATUS = opts(['ACTIVE', 'INACTIVE']);
 export const MANUFACTURER_STATUS = opts(['ACTIVE', 'INACTIVE']);
+
+// ==================== 增量 B · 库存 / 流转 / 渠道域 ====================
+// 以下枚举与后端 com.claw.server.common.enums 一一对应（V47–V52）。
+
+/** 库存货权类型：自有（厂家）/ 寄售（服务站占有）/ 买断。 */
+export const OWNERSHIP_TYPE = opts(['OWNED_BY_MFG', 'CONSIGNED', 'FULL']);
+export const OWNERSHIP_TYPE_LABEL = {
+  OWNED_BY_MFG: 'supply:enum.ownership.OWNED_BY_MFG',
+  CONSIGNED: 'supply:enum.ownership.CONSIGNED',
+  FULL: 'supply:enum.ownership.FULL',
+};
+
+/** 设备生命周期 7 状态（R4，与 LifecycleStatus 一致）。 */
+export const DEVICE_LIFECYCLE_STATUS = opts([
+  'PRODUCING', 'IN_FACTORY', 'IN_TRANSIT', 'AT_STATION', 'SOLD', 'IN_USER_PROJECT', 'RECALLED',
+]);
+export const DEVICE_LIFECYCLE_LABEL = {
+  PRODUCING: 'supply:enum.lifecycle.PRODUCING',
+  IN_FACTORY: 'supply:enum.lifecycle.IN_FACTORY',
+  IN_TRANSIT: 'supply:enum.lifecycle.IN_TRANSIT',
+  AT_STATION: 'supply:enum.lifecycle.AT_STATION',
+  SOLD: 'supply:enum.lifecycle.SOLD',
+  IN_USER_PROJECT: 'supply:enum.lifecycle.IN_USER_PROJECT',
+  RECALLED: 'supply:enum.lifecycle.RECALLED',
+};
+
+/** 履约订单状态（R6 状态链）。 */
+export const FULFILLMENT_STATUS = opts([
+  'PENDING_PAYMENT', 'PAID_FROZEN', 'CONFIRMED', 'SHIPPED', 'RECEIVED', 'PICKED_UP', 'SETTLED',
+  'CANCELLED', 'EXPIRED',
+]);
+export const FULFILLMENT_STATUS_LABEL = {
+  PENDING_PAYMENT: 'supply:enum.fulfillment.PENDING_PAYMENT',
+  PAID_FROZEN: 'supply:enum.fulfillment.PAID_FROZEN',
+  CONFIRMED: 'supply:enum.fulfillment.CONFIRMED',
+  SHIPPED: 'supply:enum.fulfillment.SHIPPED',
+  RECEIVED: 'supply:enum.fulfillment.RECEIVED',
+  PICKED_UP: 'supply:enum.fulfillment.PICKED_UP',
+  SETTLED: 'supply:enum.fulfillment.SETTLED',
+  CANCELLED: 'supply:enum.fulfillment.CANCELLED',
+  EXPIRED: 'supply:enum.fulfillment.EXPIRED',
+};
+/** 履约状态 → Tag 颜色（与运营看板视觉一致）。 */
+export const FULFILLMENT_STATUS_COLOR = {
+  PENDING_PAYMENT: 'default',
+  PAID_FROZEN: 'orange',
+  CONFIRMED: 'blue',
+  SHIPPED: 'cyan',
+  RECEIVED: 'geekblue',
+  PICKED_UP: 'purple',
+  SETTLED: 'green',
+  CANCELLED: 'red',
+  EXPIRED: 'volcano',
+};
+
+/** 调拨单状态（R5）。 */
+export const TRANSFER_STATUS = opts(['DRAFT', 'CREATED', 'IN_TRANSIT', 'COMPLETED', 'CANCELLED']);
+export const TRANSFER_STATUS_LABEL = {
+  DRAFT: 'supply:enum.transfer.DRAFT',
+  CREATED: 'supply:enum.transfer.CREATED',
+  IN_TRANSIT: 'supply:enum.transfer.IN_TRANSIT',
+  COMPLETED: 'supply:enum.transfer.COMPLETED',
+  CANCELLED: 'supply:enum.transfer.CANCELLED',
+};
+export const TRANSFER_STATUS_COLOR = {
+  DRAFT: 'default',
+  CREATED: 'blue',
+  IN_TRANSIT: 'orange',
+  COMPLETED: 'green',
+  CANCELLED: 'red',
+};
+
+/** 提成规则类型（R7，与 device_sales_commission_rules.commission_type 一致）。 */
+export const COMMISSION_TYPE = opts(['RATE', 'AMOUNT']);
+export const COMMISSION_TYPE_LABEL = {
+  RATE: 'supply:enum.commissionType.RATE',
+  AMOUNT: 'supply:enum.commissionType.AMOUNT',
+};
+
+/** 回收单状态（R8）。 */
+export const RECOVERY_STATUS = opts(['PENDING', 'CONFIRMED', 'MARKED', 'RETURNED', 'CANCELLED']);
+export const RECOVERY_STATUS_LABEL = {
+  PENDING: 'supply:enum.recovery.PENDING',
+  CONFIRMED: 'supply:enum.recovery.CONFIRMED',
+  MARKED: 'supply:enum.recovery.MARKED',
+  RETURNED: 'supply:enum.recovery.RETURNED',
+  CANCELLED: 'supply:enum.recovery.CANCELLED',
+};
+
+/** 回收原因（R8，Q1 起算点相关）。 */
+export const RECOVERY_REASON = opts(['UNSOLD_TIMEOUT', 'FULFILL_TIMEOUT', 'MANUAL']);
+export const RECOVERY_REASON_LABEL = {
+  UNSOLD_TIMEOUT: 'supply:enum.recoveryReason.UNSOLD_TIMEOUT',
+  FULFILL_TIMEOUT: 'supply:enum.recoveryReason.FULFILL_TIMEOUT',
+  MANUAL: 'supply:enum.recoveryReason.MANUAL',
+};
+
+/** 回收触发方式。 */
+export const RECOVERY_TRIGGER = opts(['AUTO', 'MANUAL']);
+
+// ==================== 增量 A · 权限骨架 ====================
+
+/** 主体类型（4 个业务角色模板，与 role_templates.principal_type 一致）。 */
+export const PRINCIPAL_TYPE = opts(['MANUFACTURER', 'STATION', 'CUSTOMER', 'PLATFORM_ADMIN']);
+export const PRINCIPAL_TYPE_LABEL = {
+  MANUFACTURER: 'supply:enum.principalType.MANUFACTURER',
+  STATION: 'supply:enum.principalType.STATION',
+  CUSTOMER: 'supply:enum.principalType.CUSTOMER',
+  PLATFORM_ADMIN: 'supply:enum.principalType.PLATFORM_ADMIN',
+};
+
+/** 主体绑定类型（principal_bindings 目前仅厂家 / 服务站两类，Q5 严格 1:1）。 */
+export const BINDING_PRINCIPAL_TYPE = opts(['MANUFACTURER', 'STATION']);
+
+/** 生产任务状态。 */
+export const PRODUCTION_TASK_STATUS = opts(['CREATED', 'PRODUCING', 'COMPLETED', 'CANCELLED']);
+
+/** 商家状态（Phase 2 骨架，与 merchants.status 一致）。 */
+export const MERCHANT_STATUS = opts(['PENDING', 'ACTIVE', 'SUSPENDED', 'TERMINATED']);
+/** 区块状态。 */
+export const MERCHANT_ZONE_STATUS = opts(['OPEN', 'CLOSED']);
+/** 铺位状态。 */
+export const MERCHANT_BOOTH_STATUS = opts(['AVAILABLE', 'LEASED', 'DISABLED']);

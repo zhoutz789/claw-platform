@@ -1,0 +1,458 @@
+{
+  "enum": {
+    "ownership": {
+      "OWNED_BY_MFG": "",
+      "CONSIGNED": "",
+      "FULL": ""
+    },
+    "lifecycle": {
+      "PRODUCING": "",
+      "IN_FACTORY": "",
+      "IN_TRANSIT": "",
+      "AT_STATION": "",
+      "SOLD": "",
+      "IN_USER_PROJECT": "",
+      "RECALLED": ""
+    },
+    "fulfillment": {
+      "PENDING_PAYMENT": "",
+      "PAID_FROZEN": "",
+      "CONFIRMED": "",
+      "SHIPPED": "",
+      "RECEIVED": "",
+      "PICKED_UP": "",
+      "SETTLED": "",
+      "CANCELLED": "",
+      "EXPIRED": ""
+    },
+    "transfer": {
+      "DRAFT": "",
+      "CREATED": "",
+      "IN_TRANSIT": "",
+      "COMPLETED": "",
+      "CANCELLED": ""
+    },
+    "commissionType": {
+      "RATE": "",
+      "AMOUNT": ""
+    },
+    "recovery": {
+      "PENDING": "",
+      "CONFIRMED": "",
+      "MARKED": "",
+      "RETURNED": "",
+      "CANCELLED": ""
+    },
+    "recoveryReason": {
+      "UNSOLD_TIMEOUT": "",
+      "FULFILL_TIMEOUT": "",
+      "MANUAL": ""
+    },
+    "principalType": {
+      "MANUFACTURER": "",
+      "STATION": "",
+      "CUSTOMER": "",
+      "PLATFORM_ADMIN": ""
+    }
+  },
+  "common": {
+    "manufacturer": "",
+    "station": "",
+    "product": "",
+    "device": "",
+    "deviceId": "",
+    "status": "",
+    "remark": "",
+    "createdAt": "",
+    "updatedAt": "",
+    "none": "",
+    "selectManufacturer": "",
+    "selectStation": "",
+    "selectProduct": "",
+    "opSucceed": "",
+    "unknown": ""
+  },
+  "production": {
+    "title": "",
+    "subtitle": "",
+    "newTask": "",
+    "completeTask": "",
+    "viewCert": "",
+    "reprintCert": "",
+    "col": {
+      "id": "",
+      "manufacturerId": "",
+      "productId": "",
+      "planQuantity": "",
+      "producedQuantity": "",
+      "status": "",
+      "specJson": "",
+      "createdBy": "",
+      "createdAt": ""
+    },
+    "field": {
+      "manufacturerId": "",
+      "productId": "",
+      "planQuantity": "",
+      "specJson": "",
+      "producedQuantity": "",
+      "deviceId": ""
+    },
+    "ph": {
+      "specJson": "",
+      "producedQuantity": "",
+      "deviceId": ""
+    },
+    "msg": {
+      "taskCreated": "",
+      "taskCompleted": "",
+      "inputDeviceId": ""
+    },
+    "cert": {
+      "title": "",
+      "certNo": "",
+      "deviceId": "",
+      "issuedAt": "",
+      "issuedBy": "",
+      "specJson": "",
+      "notFound": "",
+      "reprinted": "",
+      "printTip": ""
+    }
+  },
+  "mfgInventory": {
+    "title": "",
+    "subtitle": "",
+    "tab": {
+      "own": "",
+      "consigned": ""
+    },
+    "ship": "",
+    "viewCert": "",
+    "col": {
+      "id": "",
+      "assetId": "",
+      "deviceId": "",
+      "serialNumber": "",
+      "productId": "",
+      "ownershipType": "",
+      "currentStatus": "",
+      "holderStationId": "",
+      "inboundAt": ""
+    },
+    "field": {
+      "deviceId": "",
+      "stationId": "",
+      "manufacturerId": ""
+    },
+    "msg": {
+      "shipped": "",
+      "selectRow": ""
+    }
+  },
+  "stationConsignment": {
+    "title": "",
+    "subtitle": "",
+    "col": {
+      "id": "",
+      "assetId": "",
+      "deviceId": "",
+      "serialNumber": "",
+      "productId": "",
+      "ownerManufacturerId": "",
+      "currentStatus": "",
+      "inboundAt": ""
+    },
+    "detail": "",
+    "receiveTodo": "",
+    "cert": ""
+  },
+  "transfers": {
+    "title": "",
+    "subtitle": "",
+    "create": "",
+    "handover": "",
+    "receive": "",
+    "detail": "",
+    "col": {
+      "id": "",
+      "transferNo": "",
+      "manufacturerId": "",
+      "fromStationId": "",
+      "toStationId": "",
+      "status": "",
+      "logisticsFee": "",
+      "handoverAt": "",
+      "receiveAt": "",
+      "completedAt": ""
+    },
+    "field": {
+      "manufacturerId": "",
+      "fromStationId": "",
+      "toStationId": "",
+      "deviceIds": "",
+      "logisticsFee": ""
+    },
+    "ph": {
+      "deviceIds": ""
+    },
+    "msg": {
+      "created": "",
+      "handovered": "",
+      "received": "",
+      "needDevice": "",
+      "needDifferentStation": ""
+    }
+  },
+  "fulfillment": {
+    "title": "",
+    "subtitle": "",
+    "create": "",
+    "pay": "",
+    "confirm": "",
+    "ship": "",
+    "receive": "",
+    "pickup": "",
+    "cancel": "",
+    "expire": "",
+    "col": {
+      "id": "",
+      "orderNo": "",
+      "customerUserId": "",
+      "manufacturerId": "",
+      "stationId": "",
+      "remoteOrder": "",
+      "status": "",
+      "totalAmount": "",
+      "frozenAmount": "",
+      "paymentRef": "",
+      "expireAt": "",
+      "paidAt": "",
+      "confirmedAt": "",
+      "shippedAt": "",
+      "receivedAt": "",
+      "pickedUpAt": "",
+      "settledAt": ""
+    },
+    "field": {
+      "customerUserId": "",
+      "manufacturerId": "",
+      "stationId": "",
+      "remoteOrder": "",
+      "totalAmount": "",
+      "items": "",
+      "paymentRef": ""
+    },
+    "ph": {
+      "paymentRef": ""
+    },
+    "msg": {
+      "created": "",
+      "paid": "",
+      "confirmed": "",
+      "shipped": "",
+      "received": "",
+      "cancelled": "",
+      "expired": "",
+      "needItems": ""
+    },
+    "item": {
+      "productId": "",
+      "deviceId": "",
+      "qty": "",
+      "price": ""
+    }
+  },
+  "pickup": {
+    "title": "",
+    "subtitle": "",
+    "orderNo": "",
+    "scan": "",
+    "scanPlaceholder": "",
+    "orderInfo": "",
+    "deviceIds": "",
+    "deviceIdsTip": "",
+    "submit": "",
+    "result": "",
+    "hint": "",
+    "msg": {
+      "needOrder": "",
+      "succeed": ""
+    }
+  },
+  "commission": {
+    "title": "",
+    "subtitle": "",
+    "col": {
+      "id": "",
+      "ruleName": "",
+      "manufacturerId": "",
+      "productId": "",
+      "commissionType": "",
+      "rate": "",
+      "amount": "",
+      "minAmount": "",
+      "maxAmount": "",
+      "priority": "",
+      "effectiveFrom": "",
+      "effectiveTo": "",
+      "enabled": ""
+    },
+    "field": {
+      "ruleName": "",
+      "manufacturerId": "",
+      "productId": "",
+      "commissionType": "",
+      "rate": "",
+      "amount": "",
+      "minAmount": "",
+      "maxAmount": "",
+      "priority": "",
+      "effectiveFrom": "",
+      "effectiveTo": "",
+      "enabled": ""
+    },
+    "ph": {
+      "effective": ""
+    },
+    "tip": {
+      "rate": "",
+      "global": ""
+    }
+  },
+  "roleTemplates": {
+    "title": "",
+    "subtitle": "",
+    "create": "",
+    "edit": "",
+    "permissions": "",
+    "savePermissions": "",
+    "delete": "",
+    "col": {
+      "id": "",
+      "code": "",
+      "name": "",
+      "principalType": "",
+      "description": "",
+      "updatedAt": ""
+    },
+    "field": {
+      "code": "",
+      "name": "",
+      "principalType": "",
+      "description": "",
+      "permissionCodes": ""
+    },
+    "ph": {
+      "code": "",
+      "permissionCodes": ""
+    },
+    "msg": {
+      "created": "",
+      "updated": "",
+      "permissionsSaved": ""
+    },
+    "grantTodo": ""
+  },
+  "roleGroups": {
+    "title": "",
+    "subtitle": "",
+    "create": "",
+    "edit": "",
+    "templates": "",
+    "addTemplate": "",
+    "remove": "",
+    "col": {
+      "id": "",
+      "code": "",
+      "name": "",
+      "description": "",
+      "createdBy": "",
+      "createdAt": ""
+    },
+    "field": {
+      "code": "",
+      "name": "",
+      "description": "",
+      "templateCode": ""
+    },
+    "ph": {
+      "code": ""
+    },
+    "msg": {
+      "created": "",
+      "updated": "",
+      "deleted": "",
+      "templateAdded": "",
+      "templateRemoved": "",
+      "needTemplate": ""
+    }
+  },
+  "principalBindings": {
+    "title": "",
+    "subtitle": "",
+    "tip": "",
+    "bind": "",
+    "unbind": "",
+    "tab": {
+      "byUser": "",
+      "byPrincipal": ""
+    },
+    "col": {
+      "id": "",
+      "principalType": "",
+      "principalId": ""
+    },
+    "msg": {
+      "bound": "",
+      "unbound": ""
+    }
+  },
+  "merchants": {
+    "title": "",
+    "subtitle": "",
+    "create": "",
+    "edit": "",
+    "zones": "",
+    "booths": "",
+    "createZone": "",
+    "createBooth": "",
+    "phase2Tip": "",
+    "col": {
+      "id": "",
+      "code": "",
+      "name": "",
+      "contact": "",
+      "country": "",
+      "status": "",
+      "merchantId": "",
+      "zoneCode": "",
+      "stationId": "",
+      "zoneId": "",
+      "boothCode": "",
+      "areaSqm": "",
+      "monthlyRent": ""
+    },
+    "field": {
+      "code": "",
+      "name": "",
+      "contact": "",
+      "country": "",
+      "status": "",
+      "zoneCode": "",
+      "zoneName": "",
+      "stationId": "",
+      "boothCode": "",
+      "boothName": "",
+      "areaSqm": "",
+      "monthlyRent": ""
+    },
+    "msg": {
+      "created": "",
+      "updated": "",
+      "deleted": "",
+      "zoneCreated": "",
+      "boothCreated": ""
+    }
+  }
+}

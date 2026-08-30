@@ -5,6 +5,7 @@
     "prod": "产品管理",
     "project": "项目管理",
     "goods": "商品管理",
+    "supply": "供应流通",
     "task": "任务发布",
     "ops": "运营中心",
     "fin": "财务中心",
@@ -58,6 +59,17 @@
     "settings": "系统配置",
     "countries": "国家·法域",
     "asset-params": "资产参数",
-    "departments": "部门管理"
+    "departments": "部门管理",
+    "production": "生产管理",
+    "mfg-inventory": "厂家库存",
+    "station-consignment": "寄售库存",
+    "transfers": "调拨单",
+    "fulfillment-orders": "待履约订单",
+    "pickup-scan": "取货扫码",
+    "commission-rules": "提成规则",
+    "role-templates": "角色模板",
+    "role-groups": "角色组",
+    "principal-bindings": "主体绑定",
+    "merchants": "商家入驻"
   }
 }

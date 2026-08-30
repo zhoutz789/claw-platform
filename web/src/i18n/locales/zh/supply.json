@@ -1,0 +1,458 @@
+{
+  "enum": {
+    "ownership": {
+      "OWNED_BY_MFG": "厂家自有",
+      "CONSIGNED": "服务站寄售",
+      "FULL": "已买断"
+    },
+    "lifecycle": {
+      "PRODUCING": "生产中",
+      "IN_FACTORY": "厂家在库",
+      "IN_TRANSIT": "在途",
+      "AT_STATION": "服务站寄售在库",
+      "SOLD": "已售出",
+      "IN_USER_PROJECT": "用户项目中",
+      "RECALLED": "已回收"
+    },
+    "fulfillment": {
+      "PENDING_PAYMENT": "待付款",
+      "PAID_FROZEN": "已付款冻结",
+      "CONFIRMED": "服务站已确认",
+      "SHIPPED": "厂家已发货",
+      "RECEIVED": "服务站已收货",
+      "PICKED_UP": "用户已取货",
+      "SETTLED": "已结算",
+      "CANCELLED": "已取消",
+      "EXPIRED": "已超时"
+    },
+    "transfer": {
+      "DRAFT": "草稿",
+      "CREATED": "已创建",
+      "IN_TRANSIT": "在途",
+      "COMPLETED": "已完成",
+      "CANCELLED": "已取消"
+    },
+    "commissionType": {
+      "RATE": "按比例",
+      "AMOUNT": "定额"
+    },
+    "recovery": {
+      "PENDING": "待确认",
+      "CONFIRMED": "已确认",
+      "MARKED": "已标记",
+      "RETURNED": "已回流",
+      "CANCELLED": "已取消"
+    },
+    "recoveryReason": {
+      "UNSOLD_TIMEOUT": "长期未成交",
+      "FULFILL_TIMEOUT": "履约超时",
+      "MANUAL": "厂家手动发起"
+    },
+    "principalType": {
+      "MANUFACTURER": "厂家",
+      "STATION": "服务站",
+      "CUSTOMER": "用户",
+      "PLATFORM_ADMIN": "平台管理员"
+    }
+  },
+  "common": {
+    "manufacturer": "厂家",
+    "station": "服务站",
+    "product": "商品",
+    "device": "设备",
+    "deviceId": "设备ID",
+    "status": "状态",
+    "remark": "备注",
+    "createdAt": "创建时间",
+    "updatedAt": "更新时间",
+    "none": "—",
+    "selectManufacturer": "选择厂家",
+    "selectStation": "选择服务站",
+    "selectProduct": "选择商品",
+    "opSucceed": "操作成功",
+    "unknown": "未知"
+  },
+  "production": {
+    "title": "生产管理",
+    "subtitle": "基于商品模版实例化设备（序列号 + 合格证），生产完成即入厂家自有库存（R3）",
+    "newTask": "新建生产任务",
+    "completeTask": "完成生产 / 实例化",
+    "viewCert": "查看合格证",
+    "reprintCert": "补打合格证",
+    "col": {
+      "id": "任务ID",
+      "manufacturerId": "厂家",
+      "productId": "商品",
+      "planQuantity": "计划数量",
+      "producedQuantity": "已产数量",
+      "status": "状态",
+      "specJson": "规格快照",
+      "createdBy": "创建人",
+      "createdAt": "创建时间"
+    },
+    "field": {
+      "manufacturerId": "厂家",
+      "productId": "商品模版",
+      "planQuantity": "计划数量",
+      "specJson": "规格快照（JSON）",
+      "producedQuantity": "实际产出数量",
+      "deviceId": "设备ID"
+    },
+    "ph": {
+      "specJson": "{ \"capacityKwh\": 2.5, \"color\": \"black\" }",
+      "producedQuantity": "留空则按计划数量全量产出",
+      "deviceId": "输入设备ID（device_id）"
+    },
+    "msg": {
+      "taskCreated": "生产任务已创建",
+      "taskCompleted": "生产完成，已实例化设备并生成合格证入自有库存",
+      "inputDeviceId": "请先输入设备ID"
+    },
+    "cert": {
+      "title": "合格证",
+      "certNo": "合格证号",
+      "deviceId": "设备ID",
+      "issuedAt": "签发时间",
+      "issuedBy": "签发人",
+      "specJson": "规格快照",
+      "notFound": "该设备暂无合格证（合格证生成即写库，不可事后补）",
+      "reprinted": "已重新输出合格证",
+      "printTip": "补打仅重新输出已存在的合格证，不会生成新的合格证号（Q8）"
+    }
+  },
+  "mfgInventory": {
+    "title": "厂家库存",
+    "subtitle": "自有库存（OWNED_BY_MFG）与下挂服务站寄售库存（CONSIGNED）双视图（R1/R2）",
+    "tab": {
+      "own": "自有库存",
+      "consigned": "寄售库存"
+    },
+    "ship": "发货到站",
+    "viewCert": "查看合格证",
+    "col": {
+      "id": "库存ID",
+      "assetId": "资产ID",
+      "deviceId": "设备ID",
+      "serialNumber": "序列号",
+      "productId": "商品",
+      "ownershipType": "货权",
+      "currentStatus": "流通状态",
+      "holderStationId": "持有服务站",
+      "inboundAt": "入寄售库时间"
+    },
+    "field": {
+      "deviceId": "设备ID",
+      "stationId": "目标服务站",
+      "manufacturerId": "厂家"
+    },
+    "msg": {
+      "shipped": "已发货到站，寄售占有权已建立",
+      "selectRow": "请先选择一台设备"
+    }
+  },
+  "stationConsignment": {
+    "title": "服务站寄售库存",
+    "subtitle": "服务站仅持有寄售占有权，货权始终归厂家（R1）；用户仅可见所属 / 附近服务站库存（R2）",
+    "col": {
+      "id": "库存ID",
+      "assetId": "资产ID",
+      "deviceId": "设备ID",
+      "serialNumber": "序列号",
+      "productId": "商品",
+      "ownerManufacturerId": "货权厂家",
+      "currentStatus": "流通状态",
+      "inboundAt": "入寄售库时间"
+    },
+    "detail": "占有权详情",
+    "receiveTodo": "收货确认接口（POST /api/v1/admin/inventory/receive，权限码 station:consignment:receive）后端本轮未提供，暂不可操作。",
+    "cert": "查看合格证"
+  },
+  "transfers": {
+    "title": "调拨单",
+    "subtitle": "厂家发起站间调拨，源站扫码交接、目标站扫码收货，物流费由厂家承担（R5）",
+    "create": "新建调拨单",
+    "handover": "扫码交接",
+    "receive": "扫码收货",
+    "detail": "详情",
+    "col": {
+      "id": "单号ID",
+      "transferNo": "调拨单号",
+      "manufacturerId": "厂家",
+      "fromStationId": "源服务站",
+      "toStationId": "目标服务站",
+      "status": "状态",
+      "logisticsFee": "物流费",
+      "handoverAt": "交接时间",
+      "receiveAt": "收货时间",
+      "completedAt": "完成时间"
+    },
+    "field": {
+      "manufacturerId": "厂家（物流费承担方）",
+      "fromStationId": "源服务站",
+      "toStationId": "目标服务站",
+      "deviceIds": "调拨设备",
+      "logisticsFee": "物流费"
+    },
+    "ph": {
+      "deviceIds": "选择源站寄售在库设备，或手动输入设备ID后回车"
+    },
+    "msg": {
+      "created": "调拨单已创建",
+      "handonvered": "扫码交接完成，占有权已转出，设备在途",
+      "received": "扫码收货完成，目标站寄售占有权已建立",
+      "needDevice": "请至少选择一台设备",
+      "needDifferentStation": "源服务站与目标服务站不能相同"
+    }
+  },
+  "fulfillment": {
+    "title": "待履约订单",
+    "subtitle": "付款即冻结 → 服务站确认选品 → 厂家发货 → 服务站收货 → 用户取货扫码 → 触发结算（R6/R7）",
+    "create": "新建待履约订单",
+    "pay": "付款冻结",
+    "confirm": "确认选品",
+    "ship": "厂家发货",
+    "receive": "服务站收货",
+    "pickup": "取货扫码",
+    "cancel": "取消",
+    "expire": "标记超时",
+    "col": {
+      "id": "订单ID",
+      "orderNo": "订单号",
+      "customerUserId": "用户",
+      "manufacturerId": "厂家",
+      "stationId": "取货服务站",
+      "remoteOrder": "远程代下单",
+      "status": "状态",
+      "totalAmount": "订单金额",
+      "frozenAmount": "冻结金额",
+      "paymentRef": "支付流水",
+      "expireAt": "超时时点",
+      "paidAt": "付款时间",
+      "confirmedAt": "确认时间",
+      "shippedAt": "发货时间",
+      "receivedAt": "收货时间",
+      "pickedUpAt": "取货时间",
+      "settledAt": "结算时间"
+    },
+    "field": {
+      "customerUserId": "用户ID",
+      "manufacturerId": "厂家",
+      "stationId": "取货服务站",
+      "remoteOrder": "缺货远程代下单",
+      "totalAmount": "订单总额",
+      "items": "订单明细",
+      "paymentRef": "支付网关流水"
+    },
+    "ph": {
+      "paymentRef": "支付网关流水号，可留空"
+    },
+    "msg": {
+      "created": "待履约订单已创建",
+      "paid": "付款成功，资金已冻结",
+      "confirmed": "选品已确认",
+      "shipped": "已发货，设备进入在途并准备入寄售库",
+      "received": "服务站已收货，寄售库存锁定待取",
+      "cancelled": "订单已取消",
+      "expired": "订单已标记超时",
+      "needItems": "请至少填写一行订单明细"
+    },
+    "item": {
+      "productId": "商品ID",
+      "deviceId": "设备ID",
+      "qty": "数量",
+      "price": "单价"
+    }
+  },
+  "pickup": {
+    "title": "取货扫码",
+    "subtitle": "扫码原子完成三件事：扣服务站寄售库 + 设备授权进用户项目 + 触发结算（R6/R7）",
+    "orderNo": "订单号 / 订单ID",
+    "scan": "扫码 / 查询",
+    "scanPlaceholder": "扫码枪输入订单号或订单ID",
+    "orderInfo": "订单信息",
+    "deviceIds": "取货设备",
+    "deviceIdsTip": "扫码得到的设备ID；留空表示按订单明细已绑定设备取货",
+    "submit": "确认取货",
+    "result": "履约结果",
+    "hint": "结算为异步执行（物流费 → 服务站提成 → 余额归厂家），失败会挂起等平台管理员介入（Q6）。",
+    "msg": {
+      "needOrder": "请先扫码或输入订单号",
+      "succeed": "取货扫码履约完成，已触发结算"
+    }
+  },
+  "commission": {
+    "title": "设备销售提成规则",
+    "subtitle": "配置 device_sales_commission_rules：按比例 / 定额、优先级、生效期（R7，与光伏分成解耦）",
+    "col": {
+      "id": "规则ID",
+      "ruleName": "规则名称",
+      "manufacturerId": "厂家",
+      "productId": "商品",
+      "commissionType": "提成类型",
+      "rate": "比例",
+      "amount": "定额",
+      "minAmount": "保底",
+      "maxAmount": "封顶",
+      "priority": "优先级",
+      "effectiveFrom": "生效开始",
+      "effectiveTo": "生效结束",
+      "enabled": "启用"
+    },
+    "field": {
+      "ruleName": "规则名称",
+      "manufacturerId": "厂家（留空=平台默认规则）",
+      "productId": "商品（留空=该厂家全部商品）",
+      "commissionType": "提成类型",
+      "rate": "比例（0-1，如 0.08）",
+      "amount": "定额",
+      "minAmount": "保底金额",
+      "maxAmount": "封顶金额",
+      "priority": "优先级（越大越优先）",
+      "effectiveFrom": "生效开始",
+      "effectiveTo": "生效结束",
+      "enabled": "启用"
+    },
+    "ph": {
+      "effective": "2026-01-01 或 2026-01-01T00:00:00Z"
+    },
+    "tip": {
+      "rate": "RATE 类型填比例（如 0.08 表示 8%），AMOUNT 类型填定额金额",
+      "global": "厂家与商品均留空时，该规则作为平台默认规则兜底"
+    }
+  },
+  "roleTemplates": {
+    "title": "角色模板管理",
+    "subtitle": "4 类业务角色模板（厂家 / 服务站 / 用户 / 平台管理员），模板展开为权限集合（A2）",
+    "create": "新建模板",
+    "edit": "编辑模板",
+    "permissions": "配置权限",
+    "savePermissions": "保存权限",
+    "delete": "删除",
+    "col": {
+      "id": "ID",
+      "code": "模板编码",
+      "name": "模板名称",
+      "principalType": "主体类型",
+      "description": "说明",
+      "updatedAt": "更新时间"
+    },
+    "field": {
+      "code": "模板编码",
+      "name": "模板名称",
+      "principalType": "主体类型",
+      "description": "说明",
+      "permissionCodes": "权限码集合"
+    },
+    "ph": {
+      "code": "如 MANUFACTURER",
+      "permissionCodes": "选择该模板包含的权限码"
+    },
+    "msg": {
+      "created": "角色模板已创建",
+      "updated": "角色模板已更新",
+      "permissionsSaved": "模板权限已保存"
+    },
+    "grantTodo": "「一键授予」（POST /api/v1/admin/role-templates/{code}/grant）后端本轮未提供，RoleTemplateService 仅有 expandPermissions 未在 Controller 暴露。"
+  },
+  "roleGroups": {
+    "title": "角色组管理",
+    "subtitle": "角色组聚合多个角色模板，作为权限批量治理载体（系统管理第 6 项能力，A3）",
+    "create": "新建角色组",
+    "edit": "编辑角色组",
+    "templates": "关联模板",
+    "addTemplate": "添加模板",
+    "remove": "移除",
+    "col": {
+      "id": "ID",
+      "code": "组编码",
+      "name": "组名称",
+      "description": "说明",
+      "createdBy": "创建人",
+      "createdAt": "创建时间"
+    },
+    "field": {
+      "code": "组编码",
+      "name": "组名称",
+      "description": "说明",
+      "templateCode": "角色模板"
+    },
+    "ph": {
+      "code": "如 MFG_OPS_GROUP"
+    },
+    "msg": {
+      "created": "角色组已创建",
+      "updated": "角色组已更新",
+      "deleted": "角色组已删除",
+      "templateAdded": "模板已加入角色组",
+      "templateRemoved": "模板已从角色组移除",
+      "needTemplate": "请选择要添加的角色模板"
+    }
+  },
+  "principalBindings": {
+    "title": "主体绑定（厂家 / 服务站）",
+    "subtitle": "账号 ↔ manufacturer_id / station_id 绑定（Q5 严格 1:1），绑定即授予对应业务角色包，也是数据范围解析入口",
+    "tip": "绑定后该账号即具备对应主体（厂家 / 服务站）的业务功能盘与数据范围。",
+    "bind": "绑定主体",
+    "unbind": "解除绑定",
+    "tab": {
+      "byUser": "按账号查",
+      "byPrincipal": "按主体查"
+    },
+    "col": {
+      "id": "绑定ID",
+      "principalType": "主体类型",
+      "principalId": "业务主体"
+    },
+    "msg": {
+      "bound": "主体绑定已建立",
+      "unbound": "主体绑定已解除"
+    }
+  },
+  "merchants": {
+    "title": "商家入驻骨架",
+    "subtitle": "merchants / merchant_zones / merchant_booths 基础 CRUD（Phase 2 骨架，完整招商审批流未落地）",
+    "create": "新建商家",
+    "edit": "编辑商家",
+    "zones": "区块",
+    "booths": "铺位",
+    "createZone": "新建区块",
+    "createBooth": "新建铺位",
+    "phase2Tip": "商家入驻域属 Phase 2，本页仅回填骨架数据维护能力，招商审批流尚未实现。",
+    "col": {
+      "id": "ID",
+      "code": "编码",
+      "name": "名称",
+      "contact": "联系人",
+      "country": "国家",
+      "status": "状态",
+      "merchantId": "商家",
+      "zoneCode": "区块编码",
+      "stationId": "所属服务站",
+      "zoneId": "区块",
+      "boothCode": "铺位编码",
+      "areaSqm": "面积(㎡)",
+      "monthlyRent": "月租金"
+    },
+    "field": {
+      "code": "商家编码",
+      "name": "商家名称",
+      "contact": "联系人",
+      "country": "国家",
+      "status": "状态",
+      "zoneCode": "区块编码",
+      "zoneName": "区块名称",
+      "stationId": "所属服务站",
+      "boothCode": "铺位编码",
+      "boothName": "铺位名称",
+      "areaSqm": "面积(㎡)",
+      "monthlyRent": "月租金"
+    },
+    "msg": {
+      "created": "商家已创建",
+      "updated": "商家已更新",
+      "deleted": "商家已删除",
+      "zoneCreated": "区块已创建",
+      "boothCreated": "铺位已创建"
+    }
+  }
+}

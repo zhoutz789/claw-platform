@@ -5,6 +5,7 @@
     "prod": "Products",
     "project": "Projects",
     "goods": "Goods",
+    "supply": "Supply & Flow",
     "task": "Task Publishing",
     "ops": "Operations",
     "fin": "Finance",
@@ -58,6 +59,17 @@
     "settings": "System Settings",
     "countries": "Countries · Jurisdictions",
     "asset-params": "Asset Parameters",
-    "departments": "Departments"
+    "departments": "Departments",
+    "production": "Production",
+    "mfg-inventory": "Manufacturer Inventory",
+    "station-consignment": "Consignment Inventory",
+    "transfers": "Transfer Orders",
+    "fulfillment-orders": "Pending Fulfillment",
+    "pickup-scan": "Pickup Scan",
+    "commission-rules": "Commission Rules",
+    "role-templates": "Role Templates",
+    "role-groups": "Role Groups",
+    "principal-bindings": "Principal Binding",
+    "merchants": "Merchant Onboarding"
   }
 }
