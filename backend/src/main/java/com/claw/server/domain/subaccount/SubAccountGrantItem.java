@@ -37,12 +37,17 @@ public class SubAccountGrantItem implements Serializable {
     @Builder.Default
     private Instant createdAt = Instant.now();
 
-    /** 复合主键（grant_id + permission_code）。类名不能叫 Id，否则会遮蔽 jakarta.persistence.Id。 */
+    /** 复合主键（grant_id + permission_code）。类名不能叫 Id，否则会遮蔽 jakarta.persistence.Id。
+     *
+     * <p>必须实现 equals/hashCode：@IdClass 复合主键不实现会导致 Hibernate 二级缓存错乱、
+     * Set/Map 集合操作异常、实体脏检查失效（启动日志 HHH000038/HHH000039）。
+     */
     @Embeddable
     @Getter
     @Setter
     @NoArgsConstructor
     @AllArgsConstructor
+    @EqualsAndHashCode
     public static class Key implements Serializable {
         private Long grantId;
         private String permissionCode;

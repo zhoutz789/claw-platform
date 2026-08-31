@@ -22,6 +22,8 @@ public class BizException extends RuntimeException {
     public static final int ILLEGAL_ASSET_STATUS = 30001;
     /** 资源不存在（角色/资产/用户等通用） */
     public static final int NOT_FOUND = 40400;
+    /** 未认证（无有效登录上下文，或上下文里的用户在库中不存在）：HTTP 401 */
+    public static final int UNAUTHORIZED = 40100;
     /** 权限不足（无所需权限位，HTTP 403） */
     public static final int FORBIDDEN = 40301;
 
@@ -57,6 +59,11 @@ public class BizException extends RuntimeException {
         return new BizException(FORBIDDEN, messageCode, args);
     }
 
+    /** 未认证：HTTP 401。 */
+    public static BizException unauthorized(String messageCode, Object... args) {
+        return new BizException(UNAUTHORIZED, messageCode, args);
+    }
+
     public int getCode() {
         return code;
     }
@@ -69,10 +76,38 @@ public class BizException extends RuntimeException {
         return args;
     }
 
-    /** HTTP 状态映射：资金类（2xxxx）返回 422，权限类（40301）返回 403，其余 400，未知走 500 */
+    /**
+     * HTTP 状态映射：未认证（40100）返回 401，权限类（40301）返回 403，
+     * 资源不存在（40400）返回 404，资金类（2xxxx）返回 422，其余 4xxxx 返回 409，1xxxx 返回 400。
+     *
+     * <p>注意 40100 必须排在 {@code code >= 30000} 的 409 分支之前判断。
+     *
+     * <p>同理，404xx 整段必须排在 {@code code >= 30000} 的 409 分支之前判断：
+     * 否则"资源不存在"会被兜成 409 Conflict，语义错误（资源不存在 ≠ 状态机冲突），
+     * 且监控上把 404 与真实状态机冲突混为一类，掩盖真实信号。
+     *
+     * <p>为什么是整段 {@code 40400–40499} 而不只认 NOT_FOUND：
+     * 项目约定「错误码前三位 ≈ HTTP 状态码」，404xx 全段都是"查不到资源"语义，
+     * 已全量核实，共 4 个码、无一例外：
+     * <ul>
+     *   <li>40400 {@code BizException.notFound()}（49 处）</li>
+     *   <li>40401 {@code *.not.found}（130 处，全部挂在 {@code .orElseThrow()} 上，
+     *       如 station/custody/transfer.order/inventory/product/manufacturer 等）</li>
+     *   <li>40450 {@code error.country.not.found}</li>
+     *   <li>40461 {@code error.swap.battery.detail}（换电电池明细查不到）</li>
+     * </ul>
+     * 真正的状态机冲突自成一段（409xx、3xxxx 如 ILLEGAL_ASSET_STATUS 30001），
+     * 不受本分支影响，仍返回 409。
+     */
     public HttpStatus httpStatus() {
+        if (code == UNAUTHORIZED) {
+            return HttpStatus.UNAUTHORIZED;
+        }
         if (code == FORBIDDEN) {
             return HttpStatus.FORBIDDEN;
+        }
+        if (code >= 40400 && code < 40500) {
+            return HttpStatus.NOT_FOUND;
         }
         if (code >= 20000 && code < 30000) {
             return HttpStatus.UNPROCESSABLE_ENTITY;

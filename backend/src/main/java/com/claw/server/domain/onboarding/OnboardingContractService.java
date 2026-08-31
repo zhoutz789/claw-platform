@@ -44,11 +44,23 @@ public class OnboardingContractService {
         return contractRepository.findByApplicantTypeAndLangAndStatus(applicantType, lang, "PUBLISHED");
     }
 
-    /** 取当前生效版本，不存在则抛 404（供申请提交时锁定合同）。 */
+    /**
+     * 取当前生效版本（PUBLISHED），查不到则抛 404（供申请提交时锁定合同）。
+     *
+     * <p>这里必须用<b>独立</b>的 messageCode（{@code ...published.not.found}），
+     * 不能复用 {@code onboarding.contract.not.published}：后者在
+     * {@code OnboardingApplicationService} 里的语义是「合同存在但状态未发布」→ 40940
+     * （状态冲突）。同一个 key 挂两个 HTTP 状态码（404 与 409），客户端按状态码分支
+     * 就会错乱 —— 文案一样，一半场景 404、一半场景 409，且无法通过 key 区分。
+     *
+     * <p>本方法是「按 (主体, 语言) 查已发布版本，没查到」= 资源不存在 → 40401；
+     * 那边是「按 id 查到了合同，但状态不是 PUBLISHED」= 状态冲突 → 40940。
+     * 两者语义不同，key 也必须不同。
+     */
     @Transactional(readOnly = true)
     public OnboardingContract requirePublished(String applicantType, String lang) {
         return currentPublished(applicantType, lang)
-                .orElseThrow(() -> BizException.of(40401, "onboarding.contract.not.published"));
+                .orElseThrow(() -> BizException.of(40401, "onboarding.contract.published.not.found"));
     }
 
     /**

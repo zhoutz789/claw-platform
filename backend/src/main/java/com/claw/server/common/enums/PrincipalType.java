@@ -31,18 +31,23 @@ public enum PrincipalType {
     /**
      * 解析主体类型字符串（大小写/空白容忍）。
      *
+     * <p>入参非法（null/空白/非枚举值）属于客户端错误，走 {@code INVALID_PARAM}（10001）
+     * → HTTP 400，而不是 404。原因：本方法只做枚举字面量校验，不查库，
+     * 不存在"资源找不到"这回事；若错标成 40401，客户端拼错 {@code applicantType}
+     * 时会收到 404 Not Found，被误导成"资源不存在"，掩盖真正的原因（参数值非法）。
+     *
      * @param value 主体类型字符串，如 "STATION"
      * @return 枚举值
-     * @throws BizException 40401 onboarding.principal.type.unknown
+     * @throws BizException 10001 onboarding.principal.type.unknown（非法枚举值，HTTP 400）
      */
     public static PrincipalType of(String value) {
         if (value == null || value.isBlank()) {
-            throw BizException.of(40401, "onboarding.principal.type.unknown", String.valueOf(value));
+            throw BizException.invalidParam("onboarding.principal.type.unknown", String.valueOf(value));
         }
         String norm = value.trim().toUpperCase();
         return Arrays.stream(values())
                 .filter(t -> t.name().equals(norm))
                 .findFirst()
-                .orElseThrow(() -> BizException.of(40401, "onboarding.principal.type.unknown", value));
+                .orElseThrow(() -> BizException.invalidParam("onboarding.principal.type.unknown", value));
     }
 }

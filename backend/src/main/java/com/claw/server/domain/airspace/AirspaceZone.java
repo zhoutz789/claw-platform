@@ -39,8 +39,8 @@ public class AirspaceZone {
     @Column(nullable = false, precision = 10, scale = 7)
     private BigDecimal centerLng;
 
-    /** 半径（米）。 */
-    @Column(nullable = false)
+    /** 半径（米）。真库列名 radius_m（V29），必须显式声明：交由 Hibernate 隐式命名会推成 radiusm。 */
+    @Column(name = "radius_m", nullable = false)
     private Integer radiusM;
 
     @Column(length = 8)
