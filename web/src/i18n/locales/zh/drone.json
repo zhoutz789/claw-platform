@@ -1,0 +1,326 @@
+{
+  "common": {
+    "filter": "筛选",
+    "reset": "重置",
+    "all": "全部",
+    "copy": "复制",
+    "copied": "已复制坐标",
+    "copyFailed": "复制失败",
+    "gotoOps": "前往作业与安全管控 →",
+    "gotoZones": "前往空域管理查看全部 →",
+    "droneTabHint": "无人机安全态与锁机事件来自真实后端；锁机触发 / 解除、作业登记请前往「作业与安全管控」操作。",
+    "selectPlaceholder": "请选择",
+    "opsTitle": "作业与安全管控",
+    "opsSubtitle": "无人机作业登记与飞行安全管控的唯一入口：锁机触发 / 解除、作业计量均在此操作。"
+  },
+  "airspace": {
+    "title": "空域管理",
+    "subtitle": "平台级空域分区（地理围栏）：等级决定飞行计划能否放行，可飞作业区（OPERATIONAL）才允许提交飞行计划。",
+    "create": "新增空域",
+    "platformWide": "平台级·全量",
+    "immutableTip": "空域一经创建不可修改、不可停用，请谨慎填写。提交前请逐项核对名称、等级、中心坐标与半径。",
+    "immutableConfirmTitle": "确认新增空域？",
+    "immutableConfirmDesc": "空域一经创建不可修改、不可停用，请确认以下参数无误：",
+    "createdDesc": "如需调整，请新建一条并使用新名称（如原名后加 -R2）。",
+    "copyCoords": "复制坐标",
+    "summary": "共 {{total}} 个空域 · 可飞 {{operational}} · 限飞 {{restricted}} · 禁飞 {{nfz}}",
+    "col": {
+      "id": "ID",
+      "name": "空域名称",
+      "level": "等级",
+      "center": "中心坐标",
+      "radius": "半径(m)",
+      "country": "国家",
+      "note": "备注",
+      "createdAt": "创建时间"
+    },
+    "form": {
+      "name": "空域名称",
+      "level": "空域等级",
+      "lat": "中心纬度",
+      "lng": "中心经度",
+      "radius": "半径(米)",
+      "country": "国家代码",
+      "note": "备注"
+    },
+    "map": {
+      "title": "空域鸟瞰图",
+      "empty": "暂无空域，新增后在此展示鸟瞰图",
+      "scale": "比例尺"
+    },
+    "msg": {
+      "created": "空域已创建"
+    },
+    "filter": {
+      "keyword": "搜索名称 / 备注",
+      "level": "按等级筛选",
+      "country": "按国家筛选"
+    }
+  },
+  "flightPlan": {
+    "title": "飞行计划",
+    "subtitle": "飞行计划须落在「可飞作业区（OPERATIONAL）」且飞手资质有效，提交即通过合规校验。",
+    "create": "新增飞行计划",
+    "complianceTip": "空域下拉仅列「可飞作业区」；限飞 / 禁飞区不会出现在选项中，已过期的飞手资质不可选。提交后由后端二次校验空域等级与存在性。",
+    "flowTip": "当前版本提交后状态直接为已批准；起飞 / 完成 / 判违规等状态流转功能待后端开放。",
+    "col": {
+      "id": "ID",
+      "asset": "无人机资产",
+      "zone": "空域",
+      "pilot": "飞手",
+      "plannedAt": "计划起飞",
+      "status": "状态",
+      "routeNote": "航线说明",
+      "createdAt": "创建时间"
+    },
+    "form": {
+      "asset": "无人机资产",
+      "zone": "空域（仅可飞作业区）",
+      "pilot": "飞手资质",
+      "plannedAt": "计划起飞时间",
+      "routeNote": "航线说明"
+    },
+    "msg": {
+      "created": "飞行计划已提交并通过合规校验，状态：已批准",
+      "expired": "（已过期）",
+      "notOperationalRule": "该空域非可飞作业区，请选择可飞作业区"
+    },
+    "err": {
+      "notOperational": "该空域非可飞作业区，飞行计划不予批准",
+      "zoneNotFound": "所选空域不存在，请刷新后重试",
+      "assetLocked": "该资产当前处于锁机状态，须先解除后方可排期"
+    },
+    "confirm": {
+      "title": "确认提交飞行计划？",
+      "desc": "飞行计划一经提交不可修改，且状态直接为已批准。请确认以下参数无误："
+    },
+    "detail": {
+      "title": "飞行计划详情",
+      "empty": "未找到该飞行计划"
+    },
+    "filter": {
+      "zone": "按空域筛选",
+      "status": "按状态筛选",
+      "asset": "按资产筛选",
+      "pilot": "按飞手筛选"
+    }
+  },
+  "license": {
+    "title": "飞手资质",
+    "subtitle": "飞手执照（默认 SSCA 签发）：飞行计划与作业登记均以执照校验资质有效性，执照编号唯一。",
+    "create": "新增资质",
+    "renewTip": "资质到期后请由平台重新登记；当前版本不支持续期，续期请新建一条并使用新执照编号（如原号后加 -R2）。",
+    "col": {
+      "id": "ID",
+      "licenseNo": "执照编号",
+      "holder": "持证人",
+      "type": "类型",
+      "issuer": "签发机构",
+      "expiry": "有效期至",
+      "validity": "有效性",
+      "createdAt": "创建时间"
+    },
+    "form": {
+      "licenseNo": "执照编号",
+      "holder": "持证人姓名",
+      "type": "执照类型",
+      "issuer": "签发机构",
+      "expiry": "有效期至"
+    },
+    "summary": {
+      "warning": "共 {{total}} 条资质 · 其中 {{expiring}} 条将在 {{days}} 天内到期、{{expired}} 条已过期，请及时安排换证",
+      "ok": "共 {{total}} 条资质，全部有效"
+    },
+    "daysLeft": "剩余 {{days}} 天",
+    "expiredDays": "已过期 {{days}} 天",
+    "err": {
+      "duplicate": "执照编号已存在，请核对后重试"
+    },
+    "filter": {
+      "type": "按类型筛选",
+      "issuer": "按签发机构筛选",
+      "validity": "按有效性筛选"
+    }
+  },
+  "mission": {
+    "tab": "作业任务",
+    "title": "作业登记",
+    "submit": "登记作业",
+    "form": {
+      "missionType": "作业类型",
+      "asset": "无人机资产",
+      "pilot": "飞手资质",
+      "payload": "载荷描述",
+      "areaHa": "作业面积(公顷)",
+      "trips": "配送趟数",
+      "flightMinutes": "飞行时长(分钟)",
+      "executedAt": "作业时间"
+    },
+    "col": {
+      "id": "ID",
+      "asset": "无人机资产",
+      "missionType": "作业类型",
+      "payload": "载荷描述",
+      "areaHa": "面积(ha)",
+      "trips": "趟数",
+      "flightMinutes": "飞行(min)",
+      "pilot": "飞手",
+      "executedAt": "作业时间"
+    },
+    "empty": "暂无作业记录",
+    "filter": {
+      "asset": "按资产筛选",
+      "missionType": "按作业类型筛选"
+    },
+    "msg": {
+      "created": "作业已登记",
+      "assetLockedWarning": "该资产当前处于锁机状态，请确认本次作业是否在锁机前完成"
+    }
+  },
+  "fence": {
+    "title": "设备电子围栏",
+    "subtitle": "为每台无人机设备设置地理围栏（圆形 / 多边形），越界可触发告警或锁机。",
+    "create": "新增围栏",
+    "edit": "编辑围栏",
+    "autoLockNote": "自动锁机待接通：保存围栏当前不会触发自动锁机（越界自动锁机由平台侧判定，后端尚未接通）。",
+    "platformNote": "平台级空域分区（禁飞区 / 限飞区）请前往「空域管理」查看。",
+    "gotoAirspace": "前往空域管理 →",
+    "form": {
+      "name": "围栏名称",
+      "fenceType": "围栏类型",
+      "centerLat": "中心纬度",
+      "centerLng": "中心经度",
+      "radiusM": "半径(米)",
+      "polygonWkt": "多边形 WKT",
+      "triggerAction": "越界动作",
+      "status": "状态"
+    },
+    "type": { "RADIUS": "圆形", "POLYGON": "多边形" },
+    "trigger": { "ALERT": "仅告警", "LOCK": "告警并锁机" },
+    "status": { "ENABLED": "启用", "DISABLED": "停用" },
+    "col": {
+      "id": "ID",
+      "name": "围栏名称",
+      "type": "类型",
+      "params": "参数",
+      "trigger": "越界动作",
+      "status": "状态",
+      "actions": "操作"
+    },
+    "msg": {
+      "created": "围栏已保存",
+      "updated": "围栏已更新",
+      "deleted": "围栏已删除",
+      "enabled": "围栏已启用",
+      "disabled": "围栏已停用",
+      "loadFailed": "加载围栏失败"
+    },
+    "err": {
+      "invalid": "围栏参数无效，请检查坐标或 WKT 格式（至少 3 个点、括号成对）"
+    },
+    "action": {
+      "edit": "编辑",
+      "delete": "删除",
+      "enable": "启用",
+      "disable": "停用"
+    },
+    "confirmDelete": "确认删除该围栏？删除后不可恢复。"
+  },
+  "safety": {
+    "tab": "安全管控",
+    "selectAsset": "选择无人机资产",
+    "normal": {
+      "title": "可放飞",
+      "desc": "飞行安全正常：空域合规、链路在线、电量充足，允许起飞。"
+    },
+    "locked": {
+      "title": "已锁机",
+      "desc": "已锁机：越界 / 失联 / 低电量等风险触发，禁止起飞（类比断缴锁车），须解除后方可放飞。"
+    },
+    "btn": {
+      "geofence": "模拟越界锁机",
+      "lostLink": "模拟失联锁机",
+      "lowBattery": "模拟低电量锁机",
+      "manual": "人工锁机",
+      "resolve": "解除锁机",
+      "goto": "前往作业与安全管控"
+    },
+    "detail": {
+      "title": "锁机说明",
+      "placeholder": "如 电池鼓包，暂停放飞",
+      "required": "请填写锁机说明",
+      "preset": {
+        "GEOFENCE_VIOLATION": "进入 NFZ 禁飞区",
+        "LOST_LINK": "信号丢失超过 5s",
+        "LOW_BATTERY": "电量低于 15%"
+      }
+    },
+    "msg": {
+      "locked": "已锁机：{{cause}}",
+      "resolved": "锁机已解除",
+      "nothingToResolve": "当前无未解除的锁机事件",
+      "loadFailed": "加载安全态失败"
+    },
+    "confirm": {
+      "multiTitle": "存在多条未解除事件",
+      "multiDesc": "当前存在 {{count}} 条未解除事件，本次将解除其中 1 条（最早触发的那条），请重复操作直至全部解除。"
+    },
+    "col": {
+      "createdAt": "触发时间",
+      "cause": "触发原因",
+      "status": "状态",
+      "detail": "说明",
+      "resolvedAt": "解除时间"
+    },
+    "empty": "该资产暂无安全事件",
+    "events": "安全事件",
+    "loadFailed": "加载安全事件失败",
+    "lastUpdated": "更新于 {{time}}",
+    "autoLockNote": "自动锁机待接通：保存围栏当前不会触发自动锁机。"
+  },
+  "enum": {
+    "airspaceLevel": {
+      "OPERATIONAL": "可飞作业区",
+      "RESTRICTED": "限飞区",
+      "NFZ": "禁飞区"
+    },
+    "flightPlanStatus": {
+      "DRAFT": "草稿",
+      "APPROVED": "已批准",
+      "ACTIVE": "执行中",
+      "COMPLETED": "已完成",
+      "VIOLATED": "已判违规"
+    },
+    "licenseType": {
+      "AGRICULTURE": "植保",
+      "LOGISTICS": "物流",
+      "INSPECTION": "巡检",
+      "RESCUE": "救援"
+    },
+    "missionType": {
+      "SPRAY": "植保喷洒",
+      "CARGO": "物流配送",
+      "INSPECTION": "测绘巡检",
+      "RESCUE": "应急救援"
+    },
+    "safetyCause": {
+      "GEOFENCE_VIOLATION": "越界",
+      "LOST_LINK": "失联",
+      "LOW_BATTERY": "低电量",
+      "MANUAL": "人工"
+    },
+    "safetyStatus": {
+      "NORMAL": "正常",
+      "LOCKED": "已锁机"
+    },
+    "safetyEventStatus": {
+      "OPEN": "未解除",
+      "RESOLVED": "已解除"
+    },
+    "licenseValidity": {
+      "VALID": "有效",
+      "EXPIRING": "即将到期",
+      "EXPIRED": "已过期"
+    }
+  }
+}

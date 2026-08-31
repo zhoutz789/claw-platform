@@ -25,7 +25,7 @@ import { tv } from './i18n';
 import {
   DashboardOutlined, AppstoreOutlined, ShoppingOutlined, ProjectOutlined, RocketOutlined,
   DeploymentUnitOutlined, AccountBookOutlined, SafetyOutlined, SettingOutlined, InboxOutlined,
-  IdcardOutlined,
+  IdcardOutlined, SendOutlined,
 } from '@ant-design/icons';
 
 // 九大模块（工作台 + A/B/C/D 期新设计 + 四大中心）；children 为各模块下的页面。
@@ -72,6 +72,16 @@ export const NAV = [
       { key: 'fulfillment-orders', label: 'nav:item.fulfillment-orders', path: '/fulfillment-orders' },
       { key: 'pickup-scan', label: 'nav:item.pickup-scan', path: '/pickup-scan' },
       { key: 'commission-rules', label: 'nav:item.commission-rules', path: '/commission-rules' },
+    ],
+  },
+  // 增量 D · 无人机 / 低空经济域（menu:* 权限码见 V66 迁移）
+  {
+    key: 'drone', label: 'nav:group.drone', icon: SendOutlined,
+    children: [
+      { key: 'airspace-zones', label: 'nav:item.airspace-zones', path: '/airspace-zones' },
+      { key: 'flight-plans', label: 'nav:item.flight-plans', path: '/flight-plans' },
+      { key: 'pilot-licenses', label: 'nav:item.pilot-licenses', path: '/pilot-licenses' },
+      { key: 'drone-ops', label: 'nav:item.drone-ops', path: '/drone-ops' },
     ],
   },
   {
@@ -222,6 +232,8 @@ export const ROUTES = [
   // 增量 C · 入驻管理（7 个新页面，menu:* 权限码见 V62 迁移）
   '/onboarding-apply', '/onboarding-review', '/onboarding-content', '/onboarding-deposit-tiers',
   '/onboarding-deposit-confirm', '/org-manage', '/sub-accounts',
+  // 增量 D · 无人机 / 低空经济域（menu:* 权限码见 V66 迁移）
+  '/airspace-zones', '/flight-plans', '/pilot-licenses', '/drone-ops',
 ];
 
 // 拍平为「带父级标签」的搜索索引：[{ key,label,path,group,groupKey }]，递归展开所有叶子。

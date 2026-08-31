@@ -5,6 +5,10 @@ import {
 import { SwapOutlined, RocketOutlined, CarOutlined, SoundOutlined, VideoCameraOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import api from '../api';
+import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useDroneOptions } from '../components/droneShared';
+import { listMissions, createMission } from '../api/drone';
 
 const { Text } = Typography;
 
@@ -22,6 +26,8 @@ const ASSET_TYPE_ICON = { VEHICLE: '🚗', BATTERY: '🔋', CHARGER: '🔌', DRO
 // 任务发布：按子菜单 mode 渲染单个功能（无人机/物流/广告/录像/出租/附近车辆）。
 // 原 TaskPublish 的 Tabs 入口已拆为 6 个独立子页，本组件为共享实现，真实接口逻辑全部保留。
 export default function TaskPublish({ mode }) {
+  const { t } = useTranslation(['common', 'drone']);
+  const { pilotOptions } = useDroneOptions();
   // 真实数据
   const [missions, setMissions] = useState([]);
   const [missionsLoading, setMissionsLoading] = useState(false);
@@ -38,7 +44,7 @@ export default function TaskPublish({ mode }) {
   useEffect(() => {
     let alive = true;
     setMissionsLoading(true);
-    api.get('/v1/drone-missions').then((d) => { if (alive) setMissions(d || []); })
+    listMissions({}).then((d) => { if (alive) setMissions(d || []); })
       .catch((e) => { if (alive) { message.error('加载无人机作业失败：' + e.message); setMissions([]); } })
       .finally(() => { if (alive) setMissionsLoading(false); });
     return () => { alive = false; };
@@ -78,10 +84,10 @@ export default function TaskPublish({ mode }) {
         pilotId: Number(v.pilotId),
         executedAt: new Date().toISOString(),
       };
-      await api.post('/v1/drone-missions', payload);
+      await createMission(payload);
       message.success('无人机作业已发布（真实写入后端）');
       droneForm.resetFields();
-      const d = await api.get('/v1/drone-missions');
+      const d = await listMissions({});
       setMissions(d || []);
     } catch (e) {
       message.error('发布失败：' + e.message);
@@ -204,7 +210,7 @@ export default function TaskPublish({ mode }) {
       label: '无人机任务',
       children: (
         <Card>
-          <Alert type="info" showIcon style={{ marginBottom: 12 }} message="无人机任务须绑定 OPERATIONAL 空域与有效飞手资质；NFZ 禁飞、RESTRICTED 限飞。作业将真实写入后端 drone_missions。" />
+          <Alert type="info" showIcon style={{ marginBottom: 12 }} message={<span>无人机任务须绑定 OPERATIONAL 空域与有效飞手资质；NFZ 禁飞、RESTRICTED 限飞。作业将真实写入后端 drone_missions。 <Link to="/drone-ops">{t('drone:common.gotoOps')}</Link></span>} />
           <Form layout="vertical" style={{ marginBottom: 14 }} form={droneForm} onFinish={submitDrone}>
             <Space size="large" wrap align="end">
               <Form.Item label="作业类型" name="missionType" rules={[{ required: true, message: '请选择作业类型' }]} style={{ minWidth: 160 }}>
@@ -218,7 +224,10 @@ export default function TaskPublish({ mode }) {
               <Form.Item label="面积(公顷)" name="areaHa"><InputNumber min={0} placeholder="18.5" /></Form.Item>
               <Form.Item label="趟数" name="trips"><InputNumber min={0} placeholder="3" /></Form.Item>
               <Form.Item label="飞行时长(分)" name="flightMinutes"><InputNumber min={0} placeholder="96" /></Form.Item>
-              <Form.Item label="飞手ID" name="pilotId" rules={[{ required: true, message: '请输入飞手ID' }]}><InputNumber min={1} placeholder="如 1" /></Form.Item>
+              <Form.Item label={t('drone:mission.form.pilot')} name="pilotId"
+                rules={[{ required: true, message: t('form.required', { label: t('drone:mission.form.pilot') }) }]}>
+                <Select showSearch optionFilterProp="label" placeholder={t('drone:common.selectPlaceholder')} options={pilotOptions} />
+              </Form.Item>
               <Form.Item><Button type="primary" loading={droneSubmitting} htmlType="submit">发布任务</Button></Form.Item>
             </Space>
           </Form>
@@ -241,13 +250,13 @@ export default function TaskPublish({ mode }) {
     },
   };
 
-  const t = TAB_MAP[mode] || TAB_MAP.drone;
+  const tab = TAB_MAP[mode] || TAB_MAP.drone;
 
   return (
-    <PageCard title={`任务发布 · ${t.label}`}>
+    <PageCard title={`任务发布 · ${tab.label}`}>
       <Alert type="info" showIcon style={{ marginBottom: 14 }}
         message="各功能模块均设「任务大厅」：需求方发布任务，附近车辆 / 设备按能力标签 + 地理位置匹配并自主接单。涵盖物流、客运（公交 / 打的 / 顺风车，货运归入物流）、广告自媒体、录像数据、资产出租、无人机低空作业。" />
-      {t.children}
+      {tab.children}
     </PageCard>
   );
 }

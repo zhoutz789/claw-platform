@@ -3,6 +3,7 @@
 // i18n 说明：*_LABEL 系列现在存放的是 i18n key（而非中文原文）。
 // 取显示文案请统一用 enumLabel(映射, 值)，它会经 i18next 翻译并自带「取不到就显示原值」的兜底，
 // 保证任何语言下都不会把 key 漏到界面上。
+import dayjs from 'dayjs';
 import { tv } from './i18n';
 
 const opts = (arr) => arr.map((v) => ({ label: v, value: v }));
@@ -18,7 +19,10 @@ export const DISPUTE_TYPE = opts(['OWNERSHIP_DISPUTE', 'DAMAGE_CLAIM', 'MISSING_
 export const SETTLEMENT_STATUS = opts(['PENDING', 'SETTLED']);
 export const REVENUE_SHARE_BASIS = opts(['PER_SWAP', 'PER_DAY']);
 export const RENTAL_ORDER_STATUS = opts(['CREATED', 'ACTIVE', 'COMPLETED', 'CANCELLED']);
-export const ASSET_TYPE = opts(['VEHICLE', 'BATTERY', 'CHARGER', 'PV_STATION']);
+// 资产类型（与后端 AssetType 一致）。DRONE 为增量 D 补齐（N2）——
+// 后端 AssetType 早已有 DRONE，前端缺失会导致「无人机资产下拉」只能硬编码字符串。
+// 注：后端还有 EV，不在本轮范围，暂不补。
+export const ASSET_TYPE = opts(['VEHICLE', 'BATTERY', 'CHARGER', 'PV_STATION', 'DRONE']);
 export const SWAP_STATUS = opts(['CREATED', 'FROZEN', 'SWAPPING', 'SETTLED', 'COMPLETED', 'EXCEPTION', 'CANCELLED']);
 export const YES_NO = opts([{ label: '是', value: true }, { label: '否', value: false }]);
 export const BOOL_STR = opts([{ label: 'true', value: 'true' }, { label: 'false', value: 'false' }]);
@@ -213,3 +217,160 @@ export const MERCHANT_STATUS = opts(['PENDING', 'ACTIVE', 'SUSPENDED', 'TERMINAT
 export const MERCHANT_ZONE_STATUS = opts(['OPEN', 'CLOSED']);
 /** 铺位状态。 */
 export const MERCHANT_BOOTH_STATUS = opts(['AVAILABLE', 'LEASED', 'DISABLED']);
+
+// ==================== 增量 D · 无人机 / 低空经济域 ====================
+// 以下枚举与后端 com.claw.server.common.enums 一一对应（AirspaceLevel / FlightPlanStatus /
+// PilotLicenseType / DroneMissionType / DroneSafetyCause / DroneSafetyStatus /
+// DroneSafetyEventStatus）。LICENSE_VALIDITY 是前端派生值（由 licenseValidity() 计算）。
+
+/** 空域等级：可飞作业区 / 限飞区（需审批）/ 禁飞区。 */
+export const AIRSPACE_LEVEL = opts(['OPERATIONAL', 'RESTRICTED', 'NFZ']);
+export const AIRSPACE_LEVEL_LABEL = {
+  OPERATIONAL: 'drone:enum.airspaceLevel.OPERATIONAL',
+  RESTRICTED: 'drone:enum.airspaceLevel.RESTRICTED',
+  NFZ: 'drone:enum.airspaceLevel.NFZ',
+};
+export const AIRSPACE_LEVEL_COLOR = { OPERATIONAL: 'green', RESTRICTED: 'orange', NFZ: 'red' };
+/** SVG 鸟瞰图填充色（与 AIRSPACE_LEVEL_COLOR 语义一致，但 SVG 需要具体色值而非 antd 色名）。 */
+export const AIRSPACE_LEVEL_FILL = { OPERATIONAL: '#52c41a', RESTRICTED: '#fa8c16', NFZ: '#cf1322' };
+
+/**
+ * 飞行计划状态。
+ *
+ * ⚠️ 后端当前硬编码「创建即 APPROVED」，无状态流转端点，因此 DRAFT / ACTIVE /
+ * COMPLETED / VIOLATED 这 4 个值永不出现。此处全量定义是为了后端补端点后自动可用，
+ * 但前端筛选下拉只列 APPROVED，且不渲染任何流转按钮（Q4 裁定：宁可功能少，不做假按钮）。
+ */
+export const FLIGHT_PLAN_STATUS = opts(['DRAFT', 'APPROVED', 'ACTIVE', 'COMPLETED', 'VIOLATED']);
+export const FLIGHT_PLAN_STATUS_LABEL = {
+  DRAFT: 'drone:enum.flightPlanStatus.DRAFT',
+  APPROVED: 'drone:enum.flightPlanStatus.APPROVED',
+  ACTIVE: 'drone:enum.flightPlanStatus.ACTIVE',
+  COMPLETED: 'drone:enum.flightPlanStatus.COMPLETED',
+  VIOLATED: 'drone:enum.flightPlanStatus.VIOLATED',
+};
+export const FLIGHT_PLAN_STATUS_COLOR = {
+  DRAFT: 'default',
+  APPROVED: 'green',
+  ACTIVE: 'blue',
+  COMPLETED: 'geekblue',
+  VIOLATED: 'red',
+};
+/** 当前后端唯一可产出的状态，前端筛选下拉只列它。 */
+export const FLIGHT_PLAN_STATUS_ACTIVE = opts(['APPROVED']);
+
+/** 飞手执照类型（与后端 PilotLicenseType 一致）。 */
+export const PILOT_LICENSE_TYPE = opts(['AGRICULTURE', 'LOGISTICS', 'INSPECTION', 'RESCUE']);
+export const PILOT_LICENSE_TYPE_LABEL = {
+  AGRICULTURE: 'drone:enum.licenseType.AGRICULTURE',
+  LOGISTICS: 'drone:enum.licenseType.LOGISTICS',
+  INSPECTION: 'drone:enum.licenseType.INSPECTION',
+  RESCUE: 'drone:enum.licenseType.RESCUE',
+};
+export const PILOT_LICENSE_TYPE_COLOR = {
+  AGRICULTURE: 'green',
+  LOGISTICS: 'blue',
+  INSPECTION: 'cyan',
+  RESCUE: 'red',
+};
+
+/** 无人机作业类型（与后端 DroneMissionType 一致，注意没有 LOGISTICS）。 */
+export const DRONE_MISSION_TYPE = opts(['SPRAY', 'CARGO', 'INSPECTION', 'RESCUE']);
+export const DRONE_MISSION_TYPE_LABEL = {
+  SPRAY: 'drone:enum.missionType.SPRAY',
+  CARGO: 'drone:enum.missionType.CARGO',
+  INSPECTION: 'drone:enum.missionType.INSPECTION',
+  RESCUE: 'drone:enum.missionType.RESCUE',
+};
+export const DRONE_MISSION_TYPE_COLOR = {
+  SPRAY: 'green',
+  CARGO: 'blue',
+  INSPECTION: 'cyan',
+  RESCUE: 'red',
+};
+
+/** 锁机触发原因（与后端 DroneSafetyCause 一致）。 */
+export const DRONE_SAFETY_CAUSE = opts(['GEOFENCE_VIOLATION', 'LOST_LINK', 'LOW_BATTERY', 'MANUAL']);
+export const DRONE_SAFETY_CAUSE_LABEL = {
+  GEOFENCE_VIOLATION: 'drone:enum.safetyCause.GEOFENCE_VIOLATION',
+  LOST_LINK: 'drone:enum.safetyCause.LOST_LINK',
+  LOW_BATTERY: 'drone:enum.safetyCause.LOW_BATTERY',
+  MANUAL: 'drone:enum.safetyCause.MANUAL',
+};
+export const DRONE_SAFETY_CAUSE_COLOR = {
+  GEOFENCE_VIOLATION: 'red',
+  LOST_LINK: 'orange',
+  LOW_BATTERY: 'gold',
+  MANUAL: 'purple',
+};
+
+/** 资产安全态（后端 GET /v1/drone-safety/{assetId} 直接返回裸枚举字符串）。 */
+export const DRONE_SAFETY_STATUS = opts(['NORMAL', 'LOCKED']);
+export const DRONE_SAFETY_STATUS_LABEL = {
+  NORMAL: 'drone:enum.safetyStatus.NORMAL',
+  LOCKED: 'drone:enum.safetyStatus.LOCKED',
+};
+export const DRONE_SAFETY_STATUS_COLOR = { NORMAL: 'green', LOCKED: 'red' };
+
+/** 安全事件状态。 */
+export const DRONE_SAFETY_EVENT_STATUS = opts(['OPEN', 'RESOLVED']);
+export const DRONE_SAFETY_EVENT_STATUS_LABEL = {
+  OPEN: 'drone:enum.safetyEventStatus.OPEN',
+  RESOLVED: 'drone:enum.safetyEventStatus.RESOLVED',
+};
+export const DRONE_SAFETY_EVENT_STATUS_COLOR = { OPEN: 'red', RESOLVED: 'green' };
+
+/**
+ * 飞手资质有效性（前端派生值，非后端枚举）：有效 / 即将到期 / 已过期。
+ * 由 licenseValidity() 依据 LICENSE_EXPIRY_WARN_DAYS 计算。
+ */
+export const LICENSE_VALIDITY = opts(['VALID', 'EXPIRING', 'EXPIRED']);
+export const LICENSE_VALIDITY_LABEL = {
+  VALID: 'drone:enum.licenseValidity.VALID',
+  EXPIRING: 'drone:enum.licenseValidity.EXPIRING',
+  EXPIRED: 'drone:enum.licenseValidity.EXPIRED',
+};
+export const LICENSE_VALIDITY_COLOR = { VALID: 'green', EXPIRING: 'orange', EXPIRED: 'red' };
+
+/**
+ * 资质到期预警阈值（天）。柬埔寨 SSCA 换证周期按年，30 天足够走流程（Q9 裁定）。
+ * 后续可迁至 system_config 表由运营配置。
+ */
+export const LICENSE_EXPIRY_WARN_DAYS = 30;
+
+/**
+ * 计算飞手资质的有效性（前端派生）。
+ *
+ * 规则（以今天 00:00 为基准）：
+ *   - expiryDate 早于今天          → 'EXPIRED'（已过期）
+ *   - expiryDate 在 WARN_DAYS 天内 → 'EXPIRING'（即将到期）
+ *   - 其余                         → 'VALID'（有效）
+ *
+ * ⚠️ expiryDate 是 LocalDate（YYYY-MM-DD），不要传入 ISO 带时分秒的字符串再比较，
+ *    时区会引入 ±1 天误差。
+ *
+ * @param {string|null|undefined} expiryDate 有效期截止日（YYYY-MM-DD）
+ * @returns {'VALID'|'EXPIRING'|'EXPIRED'|null} 有效性；入参为空或无法解析时返回 null（调用方渲染占位符）
+ */
+export function licenseValidity(expiryDate) {
+  if (expiryDate === null || expiryDate === undefined || expiryDate === '') return null;
+  const d = dayjs(String(expiryDate));
+  if (!d.isValid()) return null;
+  const today = dayjs().startOf('day');
+  const days = d.startOf('day').diff(today, 'day');
+  if (days < 0) return 'EXPIRED';
+  if (days <= LICENSE_EXPIRY_WARN_DAYS) return 'EXPIRING';
+  return 'VALID';
+}
+
+/**
+ * 距到期 / 已过期的天数（正数剩余、负数已过）。
+ * @param {string|null|undefined} expiryDate 有效期截止日（YYYY-MM-DD）
+ * @returns {number|null} 天数；无法解析时返回 null
+ */
+export function licenseDaysLeft(expiryDate) {
+  if (expiryDate === null || expiryDate === undefined || expiryDate === '') return null;
+  const d = dayjs(String(expiryDate));
+  if (!d.isValid()) return null;
+  return d.startOf('day').diff(dayjs().startOf('day'), 'day');
+}

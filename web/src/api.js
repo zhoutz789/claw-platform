@@ -27,7 +27,13 @@ api.interceptors.response.use(
   (resp) => {
     const body = resp.data;
     if (body && typeof body.code === 'number' && body.code !== 0) {
-      return Promise.reject(new Error(body.message || `错误码 ${body.code}`));
+      // N3：把 HTTP 状态码与 ApiResult.code 一并带上，供页面按 bizCode 判别错误
+      // （否则四种完全不同的业务错误在前端都是同一个 "internal error"）。
+      // 纯增量：既有代码只读 e.message，不受影响。
+      const bizErr = new Error(body.message || `错误码 ${body.code}`);
+      bizErr.status = resp.status;
+      bizErr.bizCode = body.code;
+      return Promise.reject(bizErr);
     }
     return body && 'data' in body ? body.data : body;
   },
@@ -59,7 +65,12 @@ api.interceptors.response.use(
       (err.response && err.response.data && err.response.data.message) ||
       err.message ||
       '网络错误';
-    return Promise.reject(new Error(msg));
+    const out = new Error(msg);
+    // N3：附加 HTTP 状态码与业务码，供页面判别（兜底 -1 表示后端未给出可判别业务码）。
+    // 注意必须从 axios 的 err 上取值，而不是从新建的 out 上取。
+    out.status = status || 0;
+    out.bizCode = (err.response && err.response.data && err.response.data.code) ?? -1;
+    return Promise.reject(out);
   }
 );
 

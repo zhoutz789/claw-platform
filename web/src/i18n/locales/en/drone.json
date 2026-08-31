@@ -1,0 +1,326 @@
+{
+  "common": {
+    "filter": "Filter",
+    "reset": "Reset",
+    "all": "All",
+    "copy": "Copy",
+    "copied": "Coordinates copied",
+    "copyFailed": "Copy failed",
+    "gotoOps": "Go to Operations & Safety Control →",
+    "gotoZones": "View all in Airspace Management →",
+    "droneTabHint": "Drone safety status and lock events come from the real backend; trigger / resolve locks and register missions in Operations & Safety Control.",
+    "selectPlaceholder": "Please select",
+    "opsTitle": "Operations & Safety Control",
+    "opsSubtitle": "The single entry point for drone mission registration and flight safety control: trigger / resolve locks and record missions here."
+  },
+  "airspace": {
+    "title": "Airspace Management",
+    "subtitle": "Platform-level airspace zones (geo-fence): the level decides whether a flight plan can be approved. Only OPERATIONAL zones accept flight plans.",
+    "create": "Create Airspace",
+    "platformWide": "Platform-wide · All",
+    "immutableTip": "Once created, an airspace zone cannot be modified or disabled. Please fill in carefully and double-check the name, level, center coordinates and radius before submitting.",
+    "immutableConfirmTitle": "Confirm creating this airspace zone?",
+    "immutableConfirmDesc": "Once created, an airspace zone cannot be modified or disabled. Please confirm the parameters below:",
+    "createdDesc": "To adjust it, create a new zone with a new name (e.g. append -R2 to the original name).",
+    "copyCoords": "Copy coordinates",
+    "summary": "{{total}} zones · {{operational}} operational · {{restricted}} restricted · {{nfz}} no-fly",
+    "col": {
+      "id": "ID",
+      "name": "Zone name",
+      "level": "Level",
+      "center": "Center",
+      "radius": "Radius (m)",
+      "country": "Country",
+      "note": "Note",
+      "createdAt": "Created at"
+    },
+    "form": {
+      "name": "Zone name",
+      "level": "Airspace level",
+      "lat": "Center latitude",
+      "lng": "Center longitude",
+      "radius": "Radius (m)",
+      "country": "Country code",
+      "note": "Note"
+    },
+    "map": {
+      "title": "Airspace overview",
+      "empty": "No airspace zone yet. The overview appears here after you create one.",
+      "scale": "Scale"
+    },
+    "msg": {
+      "created": "Airspace zone created"
+    },
+    "filter": {
+      "keyword": "Search name / note",
+      "level": "Filter by level",
+      "country": "Filter by country"
+    }
+  },
+  "flightPlan": {
+    "title": "Flight Plans",
+    "subtitle": "A flight plan must fall inside an OPERATIONAL zone and the pilot license must be valid. Submitting passes the compliance check.",
+    "create": "Create Flight Plan",
+    "complianceTip": "The zone dropdown lists OPERATIONAL zones only; restricted / no-fly zones never appear, and expired licenses cannot be selected. The backend re-checks the zone level and existence on submit.",
+    "flowTip": "In the current version a submitted plan goes straight to APPROVED. Take-off / completion / violation transitions are pending backend support.",
+    "col": {
+      "id": "ID",
+      "asset": "Drone asset",
+      "zone": "Airspace",
+      "pilot": "Pilot",
+      "plannedAt": "Planned take-off",
+      "status": "Status",
+      "routeNote": "Route note",
+      "createdAt": "Created at"
+    },
+    "form": {
+      "asset": "Drone asset",
+      "zone": "Airspace (operational only)",
+      "pilot": "Pilot license",
+      "plannedAt": "Planned take-off",
+      "routeNote": "Route note"
+    },
+    "msg": {
+      "created": "Flight plan submitted and passed the compliance check. Status: APPROVED",
+      "expired": "(expired)",
+      "notOperationalRule": "This zone is not an operational zone. Please select an operational one."
+    },
+    "err": {
+      "notOperational": "This airspace zone is not an operational zone. The flight plan cannot be approved.",
+      "zoneNotFound": "The selected airspace zone does not exist. Please refresh and retry.",
+      "assetLocked": "This asset is currently locked. Resolve the lock before scheduling a flight plan."
+    },
+    "confirm": {
+      "title": "Confirm submitting this flight plan?",
+      "desc": "Once submitted a flight plan cannot be modified and its status goes straight to APPROVED. Please confirm the parameters below:"
+    },
+    "detail": {
+      "title": "Flight plan detail",
+      "empty": "Flight plan not found"
+    },
+    "filter": {
+      "zone": "Filter by airspace",
+      "status": "Filter by status",
+      "asset": "Filter by asset",
+      "pilot": "Filter by pilot"
+    }
+  },
+  "license": {
+    "title": "Pilot Licenses",
+    "subtitle": "Pilot licenses (issued by SSCA by default): flight plans and mission records both validate the license. License numbers are unique.",
+    "create": "Create License",
+    "renewTip": "When a license expires, ask the platform to register a new one. Renewal is not supported in this version — create a new record with a new license number (e.g. append -R2 to the original number).",
+    "col": {
+      "id": "ID",
+      "licenseNo": "License No.",
+      "holder": "Holder",
+      "type": "Type",
+      "issuer": "Issuer",
+      "expiry": "Valid until",
+      "validity": "Validity",
+      "createdAt": "Created at"
+    },
+    "form": {
+      "licenseNo": "License No.",
+      "holder": "Holder name",
+      "type": "License type",
+      "issuer": "Issuer",
+      "expiry": "Valid until"
+    },
+    "summary": {
+      "warning": "{{total}} licenses · {{expiring}} expire within {{days}} days and {{expired}} already expired. Please arrange renewal in time.",
+      "ok": "{{total}} licenses, all valid"
+    },
+    "daysLeft": "{{days}} days left",
+    "expiredDays": "expired {{days}} days ago",
+    "err": {
+      "duplicate": "This license number already exists. Please check and retry."
+    },
+    "filter": {
+      "type": "Filter by type",
+      "issuer": "Filter by issuer",
+      "validity": "Filter by validity"
+    }
+  },
+  "mission": {
+    "tab": "Missions",
+    "title": "Mission Registration",
+    "submit": "Register Mission",
+    "form": {
+      "missionType": "Mission type",
+      "asset": "Drone asset",
+      "pilot": "Pilot license",
+      "payload": "Payload description",
+      "areaHa": "Area (ha)",
+      "trips": "Trips",
+      "flightMinutes": "Flight minutes",
+      "executedAt": "Executed at"
+    },
+    "col": {
+      "id": "ID",
+      "asset": "Drone asset",
+      "missionType": "Mission type",
+      "payload": "Payload",
+      "areaHa": "Area (ha)",
+      "trips": "Trips",
+      "flightMinutes": "Flight (min)",
+      "pilot": "Pilot",
+      "executedAt": "Executed at"
+    },
+    "empty": "No mission record yet",
+    "filter": {
+      "asset": "Filter by asset",
+      "missionType": "Filter by mission type"
+    },
+    "msg": {
+      "created": "Mission registered",
+      "assetLockedWarning": "This asset is currently locked. Please confirm whether this mission was completed before the lock."
+    }
+  },
+  "fence": {
+    "title": "Device Geofence",
+    "subtitle": "Set a geofence (circular / polygon) per drone device. Breach can trigger an alert or a lock.",
+    "create": "Add Geofence",
+    "edit": "Edit Geofence",
+    "autoLockNote": "Auto-lock is not yet connected: saving a geofence does not trigger auto-lock (breach auto-lock is judged by the platform side and the backend is not yet connected).",
+    "platformNote": "Platform-level airspace zones (no-fly / restricted) are managed in Airspace Management.",
+    "gotoAirspace": "Go to Airspace Management →",
+    "form": {
+      "name": "Geofence name",
+      "fenceType": "Fence type",
+      "centerLat": "Center latitude",
+      "centerLng": "Center longitude",
+      "radiusM": "Radius (m)",
+      "polygonWkt": "Polygon WKT",
+      "triggerAction": "Breach action",
+      "status": "Status"
+    },
+    "type": { "RADIUS": "Circle", "POLYGON": "Polygon" },
+    "trigger": { "ALERT": "Alert only", "LOCK": "Alert and lock" },
+    "status": { "ENABLED": "Enabled", "DISABLED": "Disabled" },
+    "col": {
+      "id": "ID",
+      "name": "Geofence name",
+      "type": "Type",
+      "params": "Params",
+      "trigger": "Breach action",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "msg": {
+      "created": "Geofence saved",
+      "updated": "Geofence updated",
+      "deleted": "Geofence deleted",
+      "enabled": "Geofence enabled",
+      "disabled": "Geofence disabled",
+      "loadFailed": "Failed to load geofence"
+    },
+    "err": {
+      "invalid": "Invalid geofence parameters. Please check coordinates or WKT format (>=3 points, balanced brackets)"
+    },
+    "action": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "enable": "Enable",
+      "disable": "Disable"
+    },
+    "confirmDelete": "Confirm deleting this geofence? This cannot be undone."
+  },
+  "safety": {
+    "tab": "Safety Control",
+    "selectAsset": "Select a drone asset",
+    "normal": {
+      "title": "Cleared for take-off",
+      "desc": "Flight safety is normal: airspace compliant, link online, battery sufficient. Take-off allowed."
+    },
+    "locked": {
+      "title": "Locked",
+      "desc": "Locked: triggered by geofence violation / lost link / low battery or manual action. Take-off prohibited (similar to lock-on payment default). Must be resolved before flying."
+    },
+    "btn": {
+      "geofence": "Simulate geofence lock",
+      "lostLink": "Simulate lost-link lock",
+      "lowBattery": "Simulate low-battery lock",
+      "manual": "Manual lock",
+      "resolve": "Resolve lock",
+      "goto": "Go to Operations & Safety Control"
+    },
+    "detail": {
+      "title": "Lock reason",
+      "placeholder": "e.g. Battery swollen, flight suspended",
+      "required": "Please enter the lock reason",
+      "preset": {
+        "GEOFENCE_VIOLATION": "Entered a no-fly zone (NFZ)",
+        "LOST_LINK": "Link lost for more than 5s",
+        "LOW_BATTERY": "Battery below 15%"
+      }
+    },
+    "msg": {
+      "locked": "Locked: {{cause}}",
+      "resolved": "Lock resolved",
+      "nothingToResolve": "There is no unresolved lock event",
+      "loadFailed": "Failed to load safety status"
+    },
+    "confirm": {
+      "multiTitle": "Multiple unresolved events",
+      "multiDesc": "There are {{count}} unresolved events. This action resolves 1 of them (the earliest one). Repeat until all are resolved."
+    },
+    "col": {
+      "createdAt": "Triggered at",
+      "cause": "Cause",
+      "status": "Status",
+      "detail": "Detail",
+      "resolvedAt": "Resolved at"
+    },
+    "empty": "No safety event for this asset",
+    "events": "Safety events",
+    "loadFailed": "Failed to load safety events",
+    "lastUpdated": "Updated at {{time}}",
+    "autoLockNote": "Auto-lock is not yet connected: saving a geofence does not trigger auto-lock."
+  },
+  "enum": {
+    "airspaceLevel": {
+      "OPERATIONAL": "Operational",
+      "RESTRICTED": "Restricted",
+      "NFZ": "No-Fly Zone"
+    },
+    "flightPlanStatus": {
+      "DRAFT": "Draft",
+      "APPROVED": "Approved",
+      "ACTIVE": "Active",
+      "COMPLETED": "Completed",
+      "VIOLATED": "Violated"
+    },
+    "licenseType": {
+      "AGRICULTURE": "Agriculture",
+      "LOGISTICS": "Logistics",
+      "INSPECTION": "Inspection",
+      "RESCUE": "Rescue"
+    },
+    "missionType": {
+      "SPRAY": "Crop spraying",
+      "CARGO": "Cargo delivery",
+      "INSPECTION": "Survey & inspection",
+      "RESCUE": "Emergency rescue"
+    },
+    "safetyCause": {
+      "GEOFENCE_VIOLATION": "Geofence",
+      "LOST_LINK": "Lost link",
+      "LOW_BATTERY": "Low battery",
+      "MANUAL": "Manual"
+    },
+    "safetyStatus": {
+      "NORMAL": "Normal",
+      "LOCKED": "Locked"
+    },
+    "safetyEventStatus": {
+      "OPEN": "Open",
+      "RESOLVED": "Resolved"
+    },
+    "licenseValidity": {
+      "VALID": "Valid",
+      "EXPIRING": "Expiring soon",
+      "EXPIRED": "Expired"
+    }
+  }
+}

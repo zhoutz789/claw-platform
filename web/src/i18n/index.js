@@ -28,14 +28,17 @@ import zhCommon from './locales/zh/common.json';
 import zhNav from './locales/zh/nav.json';
 import zhSystem from './locales/zh/system.json';
 import zhSupply from './locales/zh/supply.json';
+import zhDrone from './locales/zh/drone.json';
 import enCommon from './locales/en/common.json';
 import enNav from './locales/en/nav.json';
 import enSystem from './locales/en/system.json';
 import enSupply from './locales/en/supply.json';
+import enDrone from './locales/en/drone.json';
 import kmCommon from './locales/km/common.json';
 import kmNav from './locales/km/nav.json';
 import kmSystem from './locales/km/system.json';
 import kmSupply from './locales/km/supply.json';
+import kmDrone from './locales/km/drone.json';
 
 /** localStorage 中保存用户显式选择的语言所用的键。 */
 export const LANG_STORAGE_KEY = 'claw_lang';
@@ -69,9 +72,9 @@ const isDev = Boolean(import.meta.env && import.meta.env.DEV);
  * 采用静态 import：构建期内联，避免异步加载命名空间导致的「首帧 key 未就绪」闪烁。
  */
 const resources = {
-  zh: { common: zhCommon, nav: zhNav, system: zhSystem, supply: zhSupply },
-  en: { common: enCommon, nav: enNav, system: enSystem, supply: enSupply },
-  km: { common: kmCommon, nav: kmNav, system: kmSystem, supply: kmSupply },
+  zh: { common: zhCommon, nav: zhNav, system: zhSystem, supply: zhSupply, drone: zhDrone },
+  en: { common: enCommon, nav: enNav, system: enSystem, supply: enSupply, drone: enDrone },
+  km: { common: kmCommon, nav: kmNav, system: kmSystem, supply: kmSupply, drone: kmDrone },
 };
 
 i18next
@@ -79,7 +82,7 @@ i18next
   .use(initReactI18next)
   .init({
     resources,
-    ns: ['common', 'nav', 'system', 'supply'],
+    ns: ['common', 'nav', 'system', 'supply', 'drone'],
     defaultNS: 'common',
     supportedLngs: SUPPORTED_LANGS,
     // 回退链：km 缺失 → en，en 缺失 → zh；zh 为完整基准包。

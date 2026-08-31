@@ -79,6 +79,11 @@ import OnboardingDepositTiers from './pages/OnboardingDepositTiers';
 import OnboardingDepositConfirm from './pages/OnboardingDepositConfirm';
 import OrgManage from './pages/OrgManage';
 import SubAccounts from './pages/SubAccounts';
+// —— 增量 D · 无人机 / 低空经济域（4 个新页面，menu:* 权限码见 V66 迁移） ——
+import AirspaceZones from './pages/AirspaceZones';
+import FlightPlans from './pages/FlightPlans';
+import PilotLicenses from './pages/PilotLicenses';
+import DroneOps from './pages/DroneOps';
 import ErrorBoundary from './ErrorBoundary';
 
 // 登录态下启动权限内核：拉取「我的权限」并下发后端权威菜单。
@@ -183,6 +188,11 @@ export default function App() {
           <Route path="onboarding-deposit-confirm" element={<RequirePermRoute menuKey="onboarding-deposit-confirm"><OnboardingDepositConfirm /></RequirePermRoute>} />
           <Route path="org-manage" element={<RequirePermRoute menuKey="org-manage"><OrgManage /></RequirePermRoute>} />
           <Route path="sub-accounts" element={<RequirePermRoute menuKey="sub-accounts"><SubAccounts /></RequirePermRoute>} />
+          {/* 增量 D · 无人机 / 低空经济域（菜单可见性由 menu:{navKey} 权限码控制，见 V66） */}
+          <Route path="airspace-zones" element={<RequirePermRoute menuKey="airspace-zones"><AirspaceZones /></RequirePermRoute>} />
+          <Route path="flight-plans" element={<RequirePermRoute menuKey="flight-plans"><FlightPlans /></RequirePermRoute>} />
+          <Route path="pilot-licenses" element={<RequirePermRoute menuKey="pilot-licenses"><PilotLicenses /></RequirePermRoute>} />
+          <Route path="drone-ops" element={<RequirePermRoute menuKey="drone-ops"><DroneOps /></RequirePermRoute>} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

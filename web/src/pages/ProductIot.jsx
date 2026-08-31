@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Segmented, Table, Tag, Drawer, Tabs, Descriptions, Steps, Button, Card, Space, Alert,
-  Progress, message, Modal, Form, Input, Select, Empty, Spin, Typography,
+  Segmented, Table, Tag, Drawer, Tabs, Descriptions, Button, Card, Space, Alert,
+  message, Modal, Form, Input, Select, Empty, Spin, Typography,
 } from 'antd';
 import {
   ArrowRightOutlined, QrcodeOutlined, PrinterOutlined, SafetyCertificateOutlined,
@@ -9,8 +9,11 @@ import {
 } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import api from '../api';
-// 低空经济相关：空域 / 飞手 / 作业 / 飞行计划 仍为本地种子展示（后端暂无对应实时来源），已标注。
-import { AIRSPACE_ZONES, PILOT_LICENSES, DRONE_MISSIONS, FLIGHT_PLANS } from '../mockData';
+// 低空经济：飞行安全态 / 安全事件来自真实后端 drone-safety 接口（N5 收敛为只读，
+// 锁机触发 / 解除、作业登记统一收口到「作业与安全管控」DroneOps，本 Tab 不再出现任何写按钮 / 本地演示种子）。
+import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { getSafetyStatus, listSafetyEvents } from '../api/drone';
 
 const { Text } = Typography;
 
@@ -440,122 +443,42 @@ function DeviceDrawer({ dev, products, manufacturers, transfers, onClose }) {
   );
 }
 
-// 无人机专属：空域合规 + 飞行安全管控（真实后端）+ 生命周期闭环（本地演示遥测）
+// 无人机专属：飞行安全管控（N5 收敛为只读 + 跳转作业与安全管控）
+// 本 Tab 不再有任何写按钮 / 本地演示种子；安全态与事件来自真实后端 drone-safety 接口，
+// 锁机触发 / 解除、作业登记统一在「作业与安全管控（/drone-ops）」完成。
 function DroneAirTab({ asset }) {
+  const { t } = useTranslation(['common', 'drone']);
+  const navigate = useNavigate();
   const [safety, setSafety] = useState(null); // 'NORMAL' | 'LOCKED'
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
-  // 以下为本地演示遥测（后端暂无实时遥测端点）
-  const RETIRE_MIN = 3000;
-  const [flightMin, setFlightMin] = useState(0);
-  const [soh, setSoh] = useState(92);
-  const [lifeStage, setLifeStage] = useState('IN_USE');
-  const [localEvents, setLocalEvents] = useState([]);
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
     Promise.all([
-      api.get(`/v1/drone-safety/${asset.id}`),
-      api.get(`/v1/drone-safety/${asset.id}/events`),
+      getSafetyStatus(asset.id),
+      listSafetyEvents(asset.id),
     ]).then(([st, ev]) => {
       if (!alive) return;
       setSafety(st);
       setEvents(Array.isArray(ev) ? ev : []);
     }).catch((e) => {
-      if (alive) { message.error('加载无人机安全态失败：' + e.message); setSafety('NORMAL'); setEvents([]); }
+      if (alive) { message.error('加载无人机安全态失败：' + (e.message || '未知错误')); setSafety(null); setEvents([]); }
     }).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [asset.id]);
 
-  const stageIndex = lifeStage === 'IN_USE' ? 2 : lifeStage === 'RETIRED' ? 3 : 4;
-  const retirePct = Math.min(100, Math.round((flightMin / RETIRE_MIN) * 100));
-  const healthLow = soh < 70;
-  const reachRetire = flightMin >= RETIRE_MIN || healthLow;
-  const salvage = 0; // 残值依赖成本，当前无可展示真实值
-
-  const nowStr = () => new Date().toISOString().slice(0, 16).replace('T', ' ');
-  const pushLocal = (cause, note) => setLocalEvents((e) => [{ id: 'L' + Date.now(), ts: nowStr(), cause, note }, ...e]);
-
-  const simulateFlight = () => {
-    if (lifeStage !== 'IN_USE') return;
-    setFlightMin((v) => Math.min(RETIRE_MIN + 200, v + 200));
-    pushLocal('本地演示遥测', '模拟作业 +200 飞行分钟（本地演示，非真实遥测）');
-    message.success('模拟作业 +200 飞行分钟（本地演示遥测）');
-  };
-  const triggerRetire = () => {
-    if (!reachRetire) { message.info('尚未达到退役阈值（飞行≥3000min 或 SOH<70%）'); return; }
-    setLifeStage('RETIRED');
-    pushLocal('生命周期', `达到退役阈值，自动退役（飞行 ${flightMin}min / SOH ${soh}%）`);
-    message.warning('资产已退役（本地演示），进入回收流程');
-  };
-  const recycle = () => {
-    setLifeStage('RECYCLED');
-    pushLocal('生命周期', '回收完成（本地演示）');
-    message.success('已回收（本地演示）');
-  };
-  const lock = async (cause, note) => {
-    try {
-      await api.post(`/v1/drone-safety/${asset.id}/simulate`, { cause, detail: note });
-      setSafety('LOCKED');
-      pushLocal('锁机', note);
-      message.error('已锁机（类比断缴锁车）：' + note);
-      const ev = await api.get(`/v1/drone-safety/${asset.id}/events`);
-      setEvents(Array.isArray(ev) ? ev : []);
-    } catch (e) { message.error('模拟锁机失败：' + e.message); }
-  };
-  const resolve = async () => {
-    try {
-      await api.post(`/v1/drone-safety/${asset.id}/resolve`);
-      setSafety('NORMAL');
-      pushLocal('解除', '锁机已解除');
-      message.success('锁机已解除');
-      const ev = await api.get(`/v1/drone-safety/${asset.id}/events`);
-      setEvents(Array.isArray(ev) ? ev : []);
-    } catch (e) { message.error('解除锁机失败：' + e.message); }
-  };
-
-  const zoneTag = (lv) => lv === 'OPERATIONAL'
-    ? <Tag color="green">可飞</Tag>
-    : lv === 'RESTRICTED' ? <Tag color="orange">限飞</Tag> : <Tag color="red">禁飞</Tag>;
-
-  const missions = DRONE_MISSIONS.filter((m) => m.deviceId === asset.assetNo);
-  const fp = FLIGHT_PLANS.filter((f) => f.deviceId === asset.assetNo);
-
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="middle">
       <Alert type="info" showIcon
-        message="无人机安全态与锁机事件来自真实后端 drone-safety 接口；飞行寿命/退役/残值为本地演示遥测（后端暂无实时遥测端点）；空域、飞行计划、作业计量为本地种子展示，待接入空域真实来源。" />
+        message={<span>{t('drone:common.droneTabHint')} <Link to="/drone-ops">{t('drone:common.gotoOps')}</Link></span>} />
 
       <Descriptions column={2} bordered size="small">
         <Descriptions.Item label="资产编号">{asset.assetNo}</Descriptions.Item>
         <Descriptions.Item label="类型">{TYPE_LABEL[asset.assetType] || asset.assetType}</Descriptions.Item>
         <Descriptions.Item label="序列号">{asset.serialNumber || '—'}</Descriptions.Item>
-        <Descriptions.Item label="累计飞行(本地演示)">{flightMin} min</Descriptions.Item>
       </Descriptions>
-
-      <Card size="small" title="资产全生命周期闭环（本地演示）">
-        <Steps size="small" current={stageIndex} items={[
-          { title: '建档' }, { title: '绑定' }, { title: '运营' }, { title: '退役' }, { title: '回收' },
-        ]} />
-        <div style={{ marginTop: 10 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span>飞行寿命进度(本地演示·退役阈值 {RETIRE_MIN} min)</span>
-            <span>{retirePct}%</span>
-          </div>
-          <Progress percent={retirePct} status={reachRetire ? 'exception' : 'active'}
-            strokeColor={reachRetire ? '#cf1322' : '#52c41a'} />
-        </div>
-        <div style={{ marginTop: 10, color: 'var(--muted)' }}>
-          健康度 SOH {soh}% · 当前阶段：<b>{lifeStage === 'IN_USE' ? '运营中' : lifeStage === 'RETIRED' ? '已退役' : '已回收'}</b>
-          {healthLow && ' · 健康度低于 70% 触发退役'} · 残值率 30% → 残值 ¥{salvage}（待接入成本）
-        </div>
-        <Space wrap style={{ marginTop: 10 }}>
-          <Button size="small" onClick={simulateFlight} disabled={lifeStage !== 'IN_USE'}>模拟作业 +200min</Button>
-          <Button size="small" danger disabled={lifeStage !== 'IN_USE'} onClick={triggerRetire}>执行退役</Button>
-          <Button size="small" type="primary" disabled={lifeStage !== 'RETIRED'} onClick={recycle}>回收并核算残值</Button>
-        </Space>
-      </Card>
 
       <Card size="small" title={<span>飞行安全管控（真实后端） {safety === 'LOCKED' ? <Tag color="red">已锁机</Tag> : <Tag color="green">正常</Tag>}</span>}>
         <Spin spinning={loading}>
@@ -564,57 +487,24 @@ function DroneAirTab({ asset }) {
               ? '已锁机：越界/失联/低电量等风险触发，禁止起飞（类比断缴锁车），须解除后方可放飞。'
               : '飞行安全正常：空域合规、链路在线、电量充足。'} />
         </Spin>
-        <Space wrap style={{ marginTop: 10 }}>
-          <Button size="small" onClick={() => lock('GEOFENCE_VIOLATION', '进入 NFZ 禁飞区')}>模拟越界锁机</Button>
-          <Button size="small" onClick={() => lock('LOST_LINK', '信号丢失超过 5s')}>模拟失联锁机</Button>
-          <Button size="small" onClick={() => lock('LOW_BATTERY', '电量低于 15%')}>模拟低电量锁机</Button>
-          <Button size="small" type="primary" disabled={safety !== 'LOCKED'} onClick={resolve}>解除锁机</Button>
-        </Space>
-        <Table rowKey="id" pagination={false} size="small" style={{ marginTop: 10 }} title={() => '安全事件（真实 + 本地演示）'}
-          dataSource={[
-            ...events.map((e) => ({
-              id: 'E' + e.id, ts: e.createdAt, cause: CAUSE_LABEL[e.cause] || e.cause,
-              note: (e.detail || '') + (e.status === 'RESOLVED' ? ' · 已解除' : ''), real: true,
-            })),
-            ...localEvents,
-          ]}
+      </Card>
+
+      <Card size="small" title="安全事件（真实后端）">
+        <Table rowKey="id" pagination={false} size="small"
+          dataSource={events}
+          locale={{ emptyText: '该资产暂无安全事件' }}
           columns={[
-            { title: '时间', dataIndex: 'ts', width: 160, render: (v) => <span style={{ fontSize: 12 }}>{v}</span> },
-            { title: '类型', dataIndex: 'cause', render: (v) => <Tag>{v}</Tag> },
-            { title: '说明', dataIndex: 'note' },
+            { title: '时间', dataIndex: 'createdAt', width: 160, render: (v) => <span style={{ fontSize: 12 }}>{v}</span> },
+            { title: '类型', dataIndex: 'cause', render: (v) => <Tag>{CAUSE_LABEL[v] || v}</Tag> },
+            { title: '说明', dataIndex: 'detail' },
+            { title: '状态', dataIndex: 'status',
+              render: (v) => <Tag color={v === 'RESOLVED' ? 'green' : 'red'}>{v === 'RESOLVED' ? '已解除' : '未解除'}</Tag> },
           ]} />
       </Card>
 
-      <Card size="small" title="空域分区（本地种子展示·待接入）">
-        <Table rowKey="id" pagination={false} size="small" dataSource={AIRSPACE_ZONES}
-          columns={[
-            { title: '分区', dataIndex: 'name' },
-            { title: '等级', dataIndex: 'level', render: (v) => zoneTag(v) },
-            { title: '中心', dataIndex: 'center' },
-            { title: '半径(m)', dataIndex: 'radiusM' },
-          ]} />
-      </Card>
-
-      <Card size="small" title="飞行计划（本地种子展示·待接入）">
-        <Table rowKey="id" pagination={false} size="small" dataSource={fp}
-          columns={[
-            { title: '计划', dataIndex: 'plannedAt' },
-            { title: '空域', render: (_, r) => AIRSPACE_ZONES.find((z) => z.id === r.zoneId)?.name || r.zoneId },
-            { title: '飞手', render: (_, r) => PILOT_LICENSES.find((l) => l.id === r.pilotId)?.holder || r.pilotId },
-            { title: '状态', dataIndex: 'status', render: (v) => <Tag color={v === 'APPROVED' ? 'green' : 'red'}>{v}</Tag> },
-          ]} />
-      </Card>
-
-      <Card size="small" title="作业计量（本地种子展示·待接入）">
-        <Table rowKey="id" pagination={false} size="small" dataSource={missions}
-          columns={[
-            { title: '类型', dataIndex: 'missionType' },
-            { title: '载荷', dataIndex: 'payload' },
-            { title: '面积(ha)', dataIndex: 'areaHa', render: (v) => v || '-' },
-            { title: '飞行(min)', dataIndex: 'flightMinutes' },
-            { title: '飞手', dataIndex: 'pilot' },
-          ]} />
-      </Card>
+      <Button type="primary" block icon={<ArrowRightOutlined />} onClick={() => navigate('/drone-ops')}>
+        {t('drone:common.gotoOps')}
+      </Button>
     </Space>
   );
 }

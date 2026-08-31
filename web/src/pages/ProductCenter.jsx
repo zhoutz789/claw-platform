@@ -1,9 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { message } from 'antd';
+import { useNavigate, Link } from 'react-router-dom';
+import { Alert, Button, Form, Input, InputNumber, Modal, Select, Table, Tag, message } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { SearchOutlined, PlusOutlined, DeleteOutlined, EditOutlined, PictureOutlined } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import api from '../api';
+// 设备电子围栏真实后端封装（C2 裁定：围栏落到 /v1/iot/geofences，与平台级 airspace_zones 无关）
+import { listGeofences, createGeofence, updateGeofence, deleteGeofence } from '../api/drone';
+import { useDroneError } from '../components/droneShared';
 
 /* 设备状态映射（后端枚举 → 中文 + 颜色） */
 const STATUS_LABEL = {
@@ -38,6 +42,9 @@ const ALL_API = ['定位', '速度', '当前电量', '电压', '温度', '湿度
 
 export default function ProductCenter() {
   const navigate = useNavigate();
+  const { t } = useTranslation(['common', 'drone']);
+  const { report } = useDroneError();
+  const [fenceForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState([]);
   const [manufacturers, setManufacturers] = useState([]);
@@ -69,6 +76,11 @@ export default function ProductCenter() {
   const [mngOpen, setMngOpen] = useState(false);
   const [maintOpen, setMaintOpen] = useState(false);
   const [curMaint, setCurMaint] = useState(null);
+  // 设备电子围栏（真实后端 /v1/iot/geofences，ownerType=ASSET，与平台级 airspace_zones 无关）
+  const [fences, setFences] = useState([]);
+  const [fenceLoading, setFenceLoading] = useState(false);
+  const [fenceModal, setFenceModal] = useState({ open: false, editing: null });
+  const [fenceSaving, setFenceSaving] = useState(false);
   const liveTimer = useRef(null);
   const aliveRef = useRef(true);
 
@@ -108,6 +120,18 @@ export default function ProductCenter() {
     return () => { if (liveTimer.current) clearInterval(liveTimer.current); };
     // eslint-disable-next-line
   }, [devOpen, curDev]);
+
+  // 设备电子围栏：进入 fence 菜单时按当前设备加载（与平台级空域分区无关）
+  useEffect(() => {
+    if (devRight !== 'fence' || !curDev) return undefined;
+    let alive = true;
+    setFenceLoading(true);
+    listGeofences({ ownerType: 'ASSET', ownerId: curDev.id })
+      .then((list) => { if (alive) setFences(Array.isArray(list) ? list : []); })
+      .catch((e) => { if (alive) { report(e, 'drone:fence.msg.loadFailed'); setFences([]); } })
+      .finally(() => { if (alive) setFenceLoading(false); });
+    return () => { alive = false; };
+  }, [devRight, curDev, report]);
 
   const filteredProducts = products.filter((p) =>
     !q || (p.name + (p.category || '') + (p.brand || '')).toLowerCase().includes(q.toLowerCase()));
@@ -173,6 +197,98 @@ export default function ProductCenter() {
     api.delete(`/v1/admin/manufacturer/products/${p.id}`)
       .then(() => { message.success('已删除'); setProducts(products.filter((x) => x.id !== p.id)); })
       .catch((e) => message.error('删除失败：' + e.message));
+  };
+
+  /* ---------- 设备电子围栏（真实后端 /v1/iot/geofences） ---------- */
+  // 多边形 WKT 校验：要求 POLYGON/LINESTRING 等前缀、括号成对、至少 3 个坐标对。
+  const validateWkt = (rule, value) => {
+    if (!value || !value.trim()) return Promise.reject(new Error(t('drone:fence.err.invalid')));
+    const v = value.trim().toUpperCase();
+    if (!/^(POLYGON|LINESTRING|MULTIPOINT|MULTIPOLYGON)/.test(v)) {
+      return Promise.reject(new Error(t('drone:fence.err.invalid')));
+    }
+    const open = (value.match(/\(/g) || []).length;
+    const close = (value.match(/\)/g) || []).length;
+    if (open === 0 || open !== close) return Promise.reject(new Error(t('drone:fence.err.invalid')));
+    const pairs = value.match(/[-+]?\d*\.?\d+\s+[-+]?\d*\.?\d+/g) || [];
+    if (pairs.length < 3) return Promise.reject(new Error(t('drone:fence.err.invalid')));
+    return Promise.resolve();
+  };
+
+  const openFenceCreate = () => {
+    fenceForm.resetFields();
+    setFenceModal({ open: true, editing: null });
+  };
+
+  const openFenceEdit = (f) => {
+    fenceForm.setFieldsValue({
+      name: f.name || '',
+      fenceType: f.fenceType || 'RADIUS',
+      centerLat: f.centerLat,
+      centerLng: f.centerLng,
+      radiusM: f.radiusM,
+      polygonWkt: f.polygonWkt || '',
+      triggerAction: f.triggerAction || 'ALERT',
+      status: f.status || 'ENABLED',
+    });
+    setFenceModal({ open: true, editing: f });
+  };
+
+  const submitFence = async () => {
+    let v;
+    try { v = await fenceForm.validateFields(); } catch { return; }
+    const base = {
+      ownerType: 'ASSET',
+      ownerId: curDev.id,
+      name: v.name,
+      fenceType: v.fenceType,
+      triggerAction: v.triggerAction || 'ALERT',
+    };
+    const body = v.fenceType === 'RADIUS'
+      ? { ...base, centerLat: Number(v.centerLat), centerLng: Number(v.centerLng), radiusM: Number(v.radiusM) }
+      : { ...base, polygonWkt: (v.polygonWkt || '').trim() };
+    setFenceSaving(true);
+    try {
+      if (fenceModal.editing) {
+        const patch = { name: v.name, triggerAction: v.triggerAction || 'ALERT', status: v.status };
+        if (v.fenceType === 'RADIUS') {
+          patch.centerLat = Number(v.centerLat);
+          patch.centerLng = Number(v.centerLng);
+          patch.radiusM = Number(v.radiusM);
+        } else {
+          patch.polygonWkt = (v.polygonWkt || '').trim();
+        }
+        await updateGeofence(fenceModal.editing.id, patch);
+        message.success(t('drone:fence.msg.updated'));
+      } else {
+        await createGeofence(body);
+        message.success(t('drone:fence.msg.created'));
+      }
+      setFenceModal({ open: false, editing: null });
+      const list = await listGeofences({ ownerType: 'ASSET', ownerId: curDev.id });
+      setFences(Array.isArray(list) ? list : []);
+    } catch (e) {
+      report(e, fenceModal.editing ? 'drone:fence.msg.updated' : 'drone:fence.msg.created');
+    } finally {
+      setFenceSaving(false);
+    }
+  };
+
+  const deleteFence = (f) => {
+    if (!window.confirm(t('drone:fence.confirmDelete'))) return;
+    deleteGeofence(f.id)
+      .then(() => { message.success(t('drone:fence.msg.deleted')); setFences((list) => list.filter((x) => x.id !== f.id)); })
+      .catch((e) => report(e, 'drone:fence.msg.deleted'));
+  };
+
+  const toggleFence = (f) => {
+    const next = f.status === 'ENABLED' ? 'DISABLED' : 'ENABLED';
+    updateGeofence(f.id, { status: next })
+      .then(() => {
+        message.success(next === 'ENABLED' ? t('drone:fence.msg.enabled') : t('drone:fence.msg.disabled'));
+        setFences((list) => list.map((x) => (x.id === f.id ? { ...x, status: next } : x)));
+      })
+      .catch((e) => report(e, 'drone:fence.msg.updated'));
   };
 
   /* ---------- 设备弹窗 ---------- */
@@ -254,15 +370,46 @@ export default function ProductCenter() {
       case 'fence':
         return (
           <div>
-            <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>电子围栏设置</h3>
-            <div style={{ marginBottom: 10 }}><label>围栏名称</label><input style={{ width: '100%', padding: 8, border: '1px solid var(--border)', borderRadius: 6 }} placeholder="如：站点A作业区" /></div>
-            <div style={{ marginBottom: 10 }}><label>形状</label>
-              <select style={{ width: '100%', padding: 8, border: '1px solid var(--border)', borderRadius: 6 }}>
-                <option>圆形</option><option>多边形</option>
-              </select></div>
-            <div style={{ marginBottom: 10 }}><label>半径（米）</label><input defaultValue={500} style={{ width: '100%', padding: 8, border: '1px solid var(--border)', borderRadius: 6 }} /></div>
-            <button className="btn" onClick={() => alert('保存围栏（airspace 域 V29 地理围栏）')}>保存围栏</button>
-            <p className="note">越界触发告警/锁机（类比车辆断缴锁车，V30 飞行安全管控）。</p>
+            <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>电子围栏设置（设备级 · 真实后端）</h3>
+            {/* U6：自动锁机待接通，保存围栏当前不会触发自动锁机 */}
+            <Alert type="info" showIcon style={{ marginBottom: 10 }} message={t('drone:fence.autoLockNote')} />
+            <Alert type="warning" showIcon style={{ marginBottom: 10 }}
+              message={<span>{t('drone:fence.platformNote')} <Link to="/airspace-zones">{t('drone:fence.gotoAirspace')}</Link></span>} />
+            <Space style={{ marginBottom: 10 }}>
+              <Button type="primary" icon={<PlusOutlined />} onClick={openFenceCreate}>新增围栏</Button>
+            </Space>
+            <Table
+              rowKey="id" size="small" loading={fenceLoading} pagination={false}
+              dataSource={fences}
+              columns={[
+                { title: t('drone:fence.col.id'), dataIndex: 'id', width: 70 },
+                { title: t('drone:fence.col.name'), dataIndex: 'name' },
+                { title: t('drone:fence.col.type'), dataIndex: 'fenceType', width: 90,
+                  render: (v) => t(`drone:fence.type.${v}`, { defaultValue: v }) },
+                {
+                  title: t('drone:fence.col.params'), width: 240, ellipsis: true,
+                  render: (_, r) => r.fenceType === 'RADIUS'
+                    ? `${r.centerLat ?? '—'}, ${r.centerLng ?? '—'} · ${r.radiusM ?? '—'}m`
+                    : (r.polygonWkt ? r.polygonWkt : '—'),
+                },
+                { title: t('drone:fence.col.trigger'), dataIndex: 'triggerAction', width: 110,
+                  render: (v) => t(`drone:fence.trigger.${v}`, { defaultValue: v }) },
+                { title: t('drone:fence.col.status'), dataIndex: 'status', width: 80,
+                  render: (v) => <Tag color={v === 'ENABLED' ? 'green' : 'default'}>{t(`drone:fence.status.${v}`, { defaultValue: v })}</Tag> },
+                {
+                  title: t('drone:fence.col.actions'), width: 200, fixed: 'right',
+                  render: (_, r) => (
+                    <Space>
+                      <Button size="small" type="link" onClick={() => openFenceEdit(r)}>{t('drone:fence.action.edit')}</Button>
+                      <Button size="small" type="link" onClick={() => toggleFence(r)}>
+                        {r.status === 'ENABLED' ? t('drone:fence.action.disable') : t('drone:fence.action.enable')}
+                      </Button>
+                      <Button size="small" type="link" danger onClick={() => deleteFence(r)}>{t('drone:fence.action.delete')}</Button>
+                    </Space>
+                  ),
+                },
+              ]}
+            />
           </div>
         );
       case 'revenue': {
@@ -642,6 +789,74 @@ export default function ProductCenter() {
           </div>
         </div>
       )}
+
+      {/* 设备电子围栏：新增 / 编辑（真实后端 /v1/iot/geofences） */}
+      {fenceModal.open && (
+        <Modal
+          title={fenceModal.editing ? t('drone:fence.edit') : t('drone:fence.create')}
+          open={fenceModal.open}
+          onOk={submitFence}
+          confirmLoading={fenceSaving}
+          onCancel={() => setFenceModal({ open: false, editing: null })}
+          okText={t('action.ok')}
+          cancelText={t('action.cancel')}
+          destroyOnClose
+        >
+          <Form form={fenceForm} layout="vertical" initialValues={{ fenceType: 'RADIUS', triggerAction: 'ALERT', status: 'ENABLED' }}>
+            <Form.Item name="name" label={t('drone:fence.form.name')}
+              rules={[{ required: true, message: t('form.required', { label: t('drone:fence.form.name') }) }]}>
+              <Input placeholder="如：站点A作业区" />
+            </Form.Item>
+            <Form.Item name="fenceType" label={t('drone:fence.form.fenceType')} rules={[{ required: true }]}>
+              <Select options={[
+                { label: t('drone:fence.type.RADIUS'), value: 'RADIUS' },
+                { label: t('drone:fence.type.POLYGON'), value: 'POLYGON' },
+              ]} />
+            </Form.Item>
+            <Form.Item noStyle shouldUpdate={(p, c) => p.fenceType !== c.fenceType}>
+              {({ getFieldValue }) => getFieldValue('fenceType') === 'RADIUS' ? (
+                <>
+                  <Form.Item name="centerLat" label={t('drone:fence.form.centerLat')}
+                    rules={[{ required: true, message: t('form.required', { label: t('drone:fence.form.centerLat') }) }]}>
+                    <InputNumber style={{ width: '100%' }} step={0.0001} placeholder="11.55" />
+                  </Form.Item>
+                  <Form.Item name="centerLng" label={t('drone:fence.form.centerLng')}
+                    rules={[{ required: true, message: t('form.required', { label: t('drone:fence.form.centerLng') }) }]}>
+                    <InputNumber style={{ width: '100%' }} step={0.0001} placeholder="104.92" />
+                  </Form.Item>
+                  <Form.Item name="radiusM" label={t('drone:fence.form.radiusM')}
+                    rules={[{ required: true, message: t('form.required', { label: t('drone:fence.form.radiusM') }) }]}>
+                    <InputNumber style={{ width: '100%' }} min={1} placeholder="500" />
+                  </Form.Item>
+                </>
+              ) : (
+                <Form.Item name="polygonWkt" label={t('drone:fence.form.polygonWkt')}
+                  rules={[
+                    { required: true, message: t('form.required', { label: t('drone:fence.form.polygonWkt') }) },
+                    { validator: validateWkt },
+                  ]}>
+                  <Input.TextArea rows={4} placeholder="POLYGON((104.9 11.5, 104.92 11.5, 104.92 11.52, 104.9 11.52, 104.9 11.5))" />
+                </Form.Item>
+              )}
+            </Form.Item>
+            <Form.Item name="triggerAction" label={t('drone:fence.form.triggerAction')} rules={[{ required: true }]}>
+              <Select options={[
+                { label: t('drone:fence.trigger.ALERT'), value: 'ALERT' },
+                { label: t('drone:fence.trigger.LOCK'), value: 'LOCK' },
+              ]} />
+            </Form.Item>
+            {fenceModal.editing && (
+              <Form.Item name="status" label={t('drone:fence.form.status')} rules={[{ required: true }]}>
+                <Select options={[
+                  { label: t('drone:fence.status.ENABLED'), value: 'ENABLED' },
+                  { label: t('drone:fence.status.DISABLED'), value: 'DISABLED' },
+                ]} />
+              </Form.Item>
+            )}
+          </Form>
+        </Modal>
+      )}
+
     </PageCard>
   );
 }

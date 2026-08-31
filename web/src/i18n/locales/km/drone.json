@@ -1,0 +1,326 @@
+{
+  "common": {
+    "filter": "តម្រង",
+    "reset": "កំណត់ឡើងវិញ",
+    "all": "ទាំងអស់",
+    "copy": "ចម្លង",
+    "copied": "បានចម្លងកូអរដោនេ",
+    "copyFailed": "ចម្លងមិនបានជោគជ័យ",
+    "gotoOps": "",
+    "gotoZones": "",
+    "droneTabHint": "",
+    "selectPlaceholder": "សូមជ្រើសរើស",
+    "opsTitle": "ប្រតិបត្តិការ និងការគ្រប់គ្រងសុវត្ថិភាព",
+    "opsSubtitle": ""
+  },
+  "airspace": {
+    "title": "ការគ្រប់គ្រងដែនអាកាស",
+    "subtitle": "",
+    "create": "បង្កើតដែនអាកាស",
+    "platformWide": "កម្រិតវេទិកា · ទាំងអស់",
+    "immutableTip": "",
+    "immutableConfirmTitle": "",
+    "immutableConfirmDesc": "",
+    "createdDesc": "",
+    "copyCoords": "ចម្លងកូអរដោនេ",
+    "summary": "សរុប {{total}} តំបន់ · ហោះបាន {{operational}} · មានកម្រិត {{restricted}} · ហាមហោះ {{nfz}}",
+    "col": {
+      "id": "លេខសម្គាល់",
+      "name": "ឈ្មោះតំបន់",
+      "level": "កម្រិត",
+      "center": "ចំណុចកណ្ដាល",
+      "radius": "កាំ (ម)",
+      "country": "ប្រទេស",
+      "note": "ចំណាំ",
+      "createdAt": "កាលបរិច្ឆេទបង្កើត"
+    },
+    "form": {
+      "name": "ឈ្មោះតំបន់",
+      "level": "កម្រិតដែនអាកាស",
+      "lat": "រយៈទទឹងកណ្ដាល",
+      "lng": "រយៈបណ្ដោយកណ្ដាល",
+      "radius": "កាំ (ម៉ែត្រ)",
+      "country": "លេខកូដប្រទេស",
+      "note": "ចំណាំ"
+    },
+    "map": {
+      "title": "ទិដ្ឋភាពដែនអាកាស",
+      "empty": "មិនទាន់មានដែនអាកាស",
+      "scale": "មាត្រដ្ឋាន"
+    },
+    "msg": {
+      "created": "បានបង្កើតដែនអាកាស"
+    },
+    "filter": {
+      "keyword": "ស្វែងរកឈ្មោះ / ចំណាំ",
+      "level": "តម្រងតាមកម្រិត",
+      "country": "តម្រងតាមប្រទេស"
+    }
+  },
+  "flightPlan": {
+    "title": "ផែនការហោះហើរ",
+    "subtitle": "",
+    "create": "បង្កើតផែនការហោះហើរ",
+    "complianceTip": "",
+    "flowTip": "",
+    "col": {
+      "id": "លេខសម្គាល់",
+      "asset": "ទ្រព្យសកម្មដ្រូន",
+      "zone": "ដែនអាកាស",
+      "pilot": "អ្នកបើក",
+      "plannedAt": "ពេលហោះឡើងគ្រោងទុក",
+      "status": "ស្ថានភាព",
+      "routeNote": "ចំណាំផ្លូវ",
+      "createdAt": "កាលបរិច្ឆេទបង្កើត"
+    },
+    "form": {
+      "asset": "ទ្រព្យសកម្មដ្រូន",
+      "zone": "ដែនអាកាស (តែតំបន់ហោះបាន)",
+      "pilot": "អាជ្ញាបណ្ណអ្នកបើក",
+      "plannedAt": "ពេលហោះឡើងគ្រោងទុក",
+      "routeNote": "ចំណាំផ្លូវ"
+    },
+    "msg": {
+      "created": "",
+      "expired": "(ផុតកំណត់)",
+      "notOperationalRule": ""
+    },
+    "err": {
+      "notOperational": "",
+      "zoneNotFound": "",
+      "assetLocked": "ទ្រព្យសកម្មនេះបានចាក់សោ។ សូមដោះសោជាមុនសិនមុនពេលកំណត់ផែនការហោះហើរ។"
+    },
+    "confirm": {
+      "title": "",
+      "desc": ""
+    },
+    "detail": {
+      "title": "ព័ត៌មានលម្អិតផែនការហោះហើរ",
+      "empty": "រកមិនឃើញផែនការហោះហើរ"
+    },
+    "filter": {
+      "zone": "តម្រងតាមដែនអាកាស",
+      "status": "តម្រងតាមស្ថានភាព",
+      "asset": "តម្រងតាមទ្រព្យសកម្ម",
+      "pilot": "តម្រងតាមអ្នកបើក"
+    }
+  },
+  "license": {
+    "title": "អាជ្ញាបណ្ណអ្នកបើក",
+    "subtitle": "",
+    "create": "បង្កើតអាជ្ញាបណ្ណ",
+    "renewTip": "",
+    "col": {
+      "id": "លេខសម្គាល់",
+      "licenseNo": "លេខអាជ្ញាបណ្ណ",
+      "holder": "អ្នកកាន់",
+      "type": "ប្រភេទ",
+      "issuer": "អ្នកចេញ",
+      "expiry": "មានសុពលភាពដល់",
+      "validity": "សុពលភាព",
+      "createdAt": "កាលបរិច្ឆេទបង្កើត"
+    },
+    "form": {
+      "licenseNo": "លេខអាជ្ញាបណ្ណ",
+      "holder": "ឈ្មោះអ្នកកាន់",
+      "type": "ប្រភេទអាជ្ញាបណ្ណ",
+      "issuer": "អ្នកចេញ",
+      "expiry": "មានសុពលភាពដល់"
+    },
+    "summary": {
+      "warning": "សរុប {{total}} អាជ្ញាបណ្ណ · {{expiring}} នឹងផុតកំណត់ក្នុង {{days}} ថ្ងៃ និង {{expired}} បានផុតកំណត់",
+      "ok": "សរុប {{total}} អាជ្ញាបណ្ណ ទាំងអស់មានសុពលភាព"
+    },
+    "daysLeft": "នៅសល់ {{days}} ថ្ងៃ",
+    "expiredDays": "បានផុតកំណត់ {{days}} ថ្ងៃ",
+    "err": {
+      "duplicate": "លេខអាជ្ញាបណ្ណមានរួចហើយ"
+    },
+    "filter": {
+      "type": "តម្រងតាមប្រភេទ",
+      "issuer": "តម្រងតាមអ្នកចេញ",
+      "validity": "តម្រងតាមសុពលភាព"
+    }
+  },
+  "mission": {
+    "tab": "ប្រតិបត្តិការ",
+    "title": "ការចុះបញ្ជីប្រតិបត្តិការ",
+    "submit": "ចុះបញ្ជីប្រតិបត្តិការ",
+    "form": {
+      "missionType": "ប្រភេទប្រតិបត្តិការ",
+      "asset": "ទ្រព្យសកម្មដ្រូន",
+      "pilot": "អាជ្ញាបណ្ណអ្នកបើក",
+      "payload": "ការពិពណ៌នាបន្ទុក",
+      "areaHa": "ផ្ទៃដី (ហិកតា)",
+      "trips": "ចំនួនជើង",
+      "flightMinutes": "រយៈពេលហោះ (នាទី)",
+      "executedAt": "ពេលប្រតិបត្តិ"
+    },
+    "col": {
+      "id": "លេខសម្គាល់",
+      "asset": "ទ្រព្យសកម្មដ្រូន",
+      "missionType": "ប្រភេទប្រតិបត្តិការ",
+      "payload": "បន្ទុក",
+      "areaHa": "ផ្ទៃ (ហិកតា)",
+      "trips": "ជើង",
+      "flightMinutes": "ហោះ (នាទី)",
+      "pilot": "អ្នកបើក",
+      "executedAt": "ពេលប្រតិបត្តិ"
+    },
+    "empty": "មិនទាន់មានកំណត់ត្រាប្រតិបត្តិការ",
+    "filter": {
+      "asset": "តម្រងតាមទ្រព្យសកម្ម",
+      "missionType": "តម្រងតាមប្រភេទ"
+    },
+    "msg": {
+      "created": "បានចុះបញ្ជីប្រតិបត្តិការ",
+      "assetLockedWarning": "This asset is currently locked. Please confirm whether this mission was completed before the lock."
+    }
+  },
+  "fence": {
+    "title": "Device Geofence",
+    "subtitle": "Set a geofence (circular / polygon) per drone device. Breach can trigger an alert or a lock.",
+    "create": "Add Geofence",
+    "edit": "Edit Geofence",
+    "autoLockNote": "Auto-lock is not yet connected: saving a geofence does not trigger auto-lock (breach auto-lock is judged by the platform side and the backend is not yet connected).",
+    "platformNote": "Platform-level airspace zones (no-fly / restricted) are managed in Airspace Management.",
+    "gotoAirspace": "Go to Airspace Management →",
+    "form": {
+      "name": "Geofence name",
+      "fenceType": "Fence type",
+      "centerLat": "Center latitude",
+      "centerLng": "Center longitude",
+      "radiusM": "Radius (m)",
+      "polygonWkt": "Polygon WKT",
+      "triggerAction": "Breach action",
+      "status": "Status"
+    },
+    "type": { "RADIUS": "Circle", "POLYGON": "Polygon" },
+    "trigger": { "ALERT": "Alert only", "LOCK": "Alert and lock" },
+    "status": { "ENABLED": "Enabled", "DISABLED": "Disabled" },
+    "col": {
+      "id": "ID",
+      "name": "Geofence name",
+      "type": "Type",
+      "params": "Params",
+      "trigger": "Breach action",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "msg": {
+      "created": "Geofence saved",
+      "updated": "Geofence updated",
+      "deleted": "Geofence deleted",
+      "enabled": "Geofence enabled",
+      "disabled": "Geofence disabled",
+      "loadFailed": "Failed to load geofence"
+    },
+    "err": {
+      "invalid": "Invalid geofence parameters. Please check coordinates or WKT format (>=3 points, balanced brackets)"
+    },
+    "action": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "enable": "Enable",
+      "disable": "Disable"
+    },
+    "confirmDelete": "Confirm deleting this geofence? This cannot be undone."
+  },
+  "safety": {
+    "tab": "ការគ្រប់គ្រងសុវត្ថិភាព",
+    "selectAsset": "ជ្រើសរើសទ្រព្យសកម្មដ្រូន",
+    "normal": {
+      "title": "អាចហោះឡើងបាន",
+      "desc": ""
+    },
+    "locked": {
+      "title": "បានចាក់សោ",
+      "desc": ""
+    },
+    "btn": {
+      "geofence": "ក្លែងចាក់សោដោយហួសដែន",
+      "lostLink": "ក្លែងចាក់សោដោយបាត់សញ្ញា",
+      "lowBattery": "ក្លែងចាក់សោដោយថ្មទាប",
+      "manual": "ចាក់សោដោយដៃ",
+      "resolve": "ដោះសោ",
+      "goto": "ទៅកាន់ប្រតិបត្តិការ និងសុវត្ថិភាព"
+    },
+    "detail": {
+      "title": "មូលហេតុចាក់សោ",
+      "placeholder": "ឧ. ថ្មឡើងប៉ោង ផ្អាកហោះហើរ",
+      "required": "សូមបញ្ចូលមូលហេតុចាក់សោ",
+      "preset": {
+        "GEOFENCE_VIOLATION": "",
+        "LOST_LINK": "",
+        "LOW_BATTERY": "ថ្មទាបជាង 15%"
+      }
+    },
+    "msg": {
+      "locked": "បានចាក់សោ: {{cause}}",
+      "resolved": "បានដោះសោ",
+      "nothingToResolve": "មិនមានព្រឹត្តិការណ៍ចាក់សោដែលមិនទាន់ដោះ",
+      "loadFailed": "បរាជ័យក្នុងការផ្ទុកស្ថានភាពសុវត្ថិភាព"
+    },
+    "confirm": {
+      "multiTitle": "មានព្រឹត្តិការណ៍មិនទាន់ដោះច្រើន",
+      "multiDesc": ""
+    },
+    "col": {
+      "createdAt": "ពេលកើតឡើង",
+      "cause": "មូលហេតុ",
+      "status": "ស្ថានភាព",
+      "detail": "ការពិពណ៌នា",
+      "resolvedAt": "ពេលដោះសោ"
+    },
+    "empty": "មិនមានព្រឹត្តិការណ៍សុវត្ថិភាព",
+    "events": "ព្រឹត្តិការណ៍សុវត្ថិភាព",
+    "loadFailed": "បរាជ័យក្នុងការផ្ទុកព្រឹត្តិការណ៍សុវត្ថិភាព",
+    "lastUpdated": "Updated at {{time}}",
+    "autoLockNote": "Auto-lock is not yet connected: saving a geofence does not trigger auto-lock."
+  },
+  "enum": {
+    "airspaceLevel": {
+      "OPERATIONAL": "",
+      "RESTRICTED": "",
+      "NFZ": ""
+    },
+    "flightPlanStatus": {
+      "DRAFT": "សេចក្ដីព្រាង",
+      "APPROVED": "បានអនុម័ត",
+      "ACTIVE": "កំពុងដំណើរការ",
+      "COMPLETED": "បានបញ្ចប់",
+      "VIOLATED": ""
+    },
+    "licenseType": {
+      "AGRICULTURE": "កសិកម្ម",
+      "LOGISTICS": "ដឹកជញ្ជូន",
+      "INSPECTION": "អង្កេត",
+      "RESCUE": "ជួយសង្គ្រោះ"
+    },
+    "missionType": {
+      "SPRAY": "បាញ់ថ្នាំកសិកម្ម",
+      "CARGO": "ដឹកជញ្ជូនទំនិញ",
+      "INSPECTION": "ស្ទង់មាត្រ និងអង្កេត",
+      "RESCUE": "ជួយសង្គ្រោះបន្ទាន់"
+    },
+    "safetyCause": {
+      "GEOFENCE_VIOLATION": "",
+      "LOST_LINK": "",
+      "LOW_BATTERY": "ថ្មទាប",
+      "MANUAL": "ដោយដៃ"
+    },
+    "safetyStatus": {
+      "NORMAL": "",
+      "LOCKED": ""
+    },
+    "safetyEventStatus": {
+      "OPEN": "មិនទាន់ដោះ",
+      "RESOLVED": "បានដោះ"
+    },
+    "licenseValidity": {
+      "VALID": "មានសុពលភាព",
+      "EXPIRING": "ជិតផុតកំណត់",
+      "EXPIRED": "បានផុតកំណត់"
+    }
+  }
+}
