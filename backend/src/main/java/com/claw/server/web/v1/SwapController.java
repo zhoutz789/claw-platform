@@ -1,5 +1,6 @@
 package com.claw.server.web.v1;
 
+import com.claw.server.common.api.BizException;
 import com.claw.server.common.api.ApiResult;
 import com.claw.server.common.dto.SwapRequests;
 import com.claw.server.common.dto.SwapViews;
@@ -75,10 +76,21 @@ public class SwapController {
         return ApiResult.ok(billingService.quote(kwh != null ? kwh : new BigDecimal("2.00")));
     }
 
+    /**
+     * 取当前登录用户 ID；无认证上下文时返回 401（不是 500）。
+     *
+     * <p>此前抛 IllegalStateException("unauthenticated")，而全局异常处理器没有对应
+     * handler —— 会兜成 500 + "internal error"。未登录是客户端问题，正确语义是 401：
+     * 客户端据此跳登录页，而不是展示「服务异常」。
+     *
+     * <p><b>为什么 E2E 抓不到</b>：dev-open-access=true 会注入虚拟操作员 id=1，
+     * uid == null 这条路径走不到，所以开着 dev 开关冒烟永远是绿的。验证必须关掉该开关，
+     * 见 scripts/e2e-smoke.sh 的未认证探测轮。
+     */
     private Long requireOperator() {
         Long uid = AuthContext.currentUserId();
         if (uid == null) {
-            throw new IllegalStateException("unauthenticated");
+            throw BizException.unauthorized("error.auth.unauthenticated");
         }
         return uid;
     }

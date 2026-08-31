@@ -1,5 +1,6 @@
 package com.claw.server.domain.airspace;
 
+import com.claw.server.common.api.BizException;
 import com.claw.server.common.enums.DroneSafetyCause;
 import com.claw.server.common.enums.DroneSafetyEventStatus;
 import com.claw.server.common.enums.DroneSafetyStatus;
@@ -43,16 +44,31 @@ public class DroneSafetyService {
         return eventRepository.save(e);
     }
 
-    /** 解除最近一条未解除的锁机事件。 */
+    /**
+     * 解除最早触发的一条未解除事件（FIFO）。
+     *
+     * <p>两处修正（N1 错误契约）：
+     * <ol>
+     *   <li><b>确定性</b>：改用带 {@code OrderByCreatedAtAsc} 的查询。原实现是
+     *       {@code findByAssetIdAndStatus(...).stream().findFirst()}，该查询没有 ORDER BY，
+     *       命中哪一条由数据库返回顺序决定 —— 同一份数据可能解除不同的事件；</li>
+     *   <li><b>语义化错误码</b>：原来抛裸 {@code IllegalArgumentException}，
+     *       全局异常处理器没有对应 handler，会兜成 500 + {@code "internal error"}。
+     *       「当前没有可解除的事件」是<b>状态冲突</b>而非服务端故障 → 40961（HTTP 409）。
+     *       前端据此弹 info 提示而不是报错。</li>
+     * </ol>
+     *
+     * @throws BizException 40961 error.drone.safety.nothing.to.resolve（无 OPEN 事件）
+     */
     @Transactional
     public DroneSafetyEvent resolve(Long assetId) {
-        return eventRepository.findByAssetIdAndStatus(assetId, DroneSafetyEventStatus.OPEN).stream()
-                .findFirst()
+        return eventRepository
+                .findFirstByAssetIdAndStatusOrderByCreatedAtAsc(assetId, DroneSafetyEventStatus.OPEN)
                 .map(e -> {
                     e.setStatus(DroneSafetyEventStatus.RESOLVED);
                     e.setResolvedAt(Instant.now());
                     return eventRepository.save(e);
                 })
-                .orElseThrow(() -> new IllegalArgumentException("无未解除的锁机事件"));
+                .orElseThrow(() -> BizException.of(40961, "error.drone.safety.nothing.to.resolve"));
     }
 }

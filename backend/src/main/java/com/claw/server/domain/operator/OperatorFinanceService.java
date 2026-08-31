@@ -1,5 +1,6 @@
 package com.claw.server.domain.operator;
 
+import com.claw.server.common.api.BizException;
 import com.claw.server.common.enums.BondStatus;
 import com.claw.server.common.enums.KycApprovalStatus;
 import com.claw.server.common.enums.OperatorAccountType;
@@ -122,8 +123,21 @@ public class OperatorFinanceService {
     // 3. KYC 审批
     // ------------------------------------------------------------------
 
+    /** KYC 准入信用分门槛（R1）。与校验处、文案占位符保持一致，避免阈值漂移。 */
+    private static final int KYC_MIN_CLAW_SCORE = 650;
+
     /**
      * 审批 KYC（R1 准入门槛）。
+     *
+     * <p>三项准入校验原本抛裸 {@code IllegalArgumentException}（且是英文硬编码），
+     * 全局异常处理器无对应 handler → 兜成 500 + {@code "internal error"}。
+     * 但「背景调查未通过 / 有犯罪记录 / 信用分不足」是<b>业务规则拒绝</b>，
+     * 属状态冲突（409），既不是客户端参数错（400），更不是服务端故障（500）。
+     * 运营点「审批」被拒时看到 500 会以为系统坏了，实际是这条申请不合规。
+     *
+     * @throws BizException 40930 error.operator.kyc.background.not.passed
+     * @throws BizException 40931 error.operator.kyc.criminal.record
+     * @throws BizException 40932 error.operator.kyc.score.below.threshold
      */
     @Transactional
     public OperatorKycRecord approveKyc(Long kycId, Long approvedBy) {
@@ -131,13 +145,15 @@ public class OperatorFinanceService {
 
         // 校验：须通过背景调查 + 无犯罪记录 + 信用分 >= 650
         if (!"PASS".equals(kyc.getBackgroundCheck())) {
-            throw new IllegalArgumentException("KYC background check not passed");
+            throw BizException.of(40930, "error.operator.kyc.background.not.passed",
+                    String.valueOf(kyc.getBackgroundCheck()));
         }
         if (Boolean.TRUE.equals(kyc.getCriminalRecord())) {
-            throw new IllegalArgumentException("Criminal record found");
+            throw BizException.of(40931, "error.operator.kyc.criminal.record");
         }
-        if (kyc.getClawScore() != null && kyc.getClawScore() < 650) {
-            throw new IllegalArgumentException("Claw Score below threshold");
+        if (kyc.getClawScore() != null && kyc.getClawScore() < KYC_MIN_CLAW_SCORE) {
+            throw BizException.of(40932, "error.operator.kyc.score.below.threshold",
+                    kyc.getClawScore(), KYC_MIN_CLAW_SCORE);
         }
 
         kyc.setStatus(KycApprovalStatus.APPROVED);

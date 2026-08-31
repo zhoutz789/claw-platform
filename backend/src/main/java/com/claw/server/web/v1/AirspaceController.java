@@ -1,6 +1,7 @@
 package com.claw.server.web.v1;
 
 import com.claw.server.common.api.ApiResult;
+import com.claw.server.common.api.BizException;
 import com.claw.server.common.enums.AirspaceLevel;
 import com.claw.server.common.enums.FlightPlanStatus;
 import com.claw.server.common.enums.PilotLicenseType;
@@ -45,12 +46,27 @@ public class AirspaceController {
         return ApiResult.ok(zoneRepository.findAll());
     }
 
+    /**
+     * 提交飞行计划。合规前置：空域必须存在且为 OPERATIONAL（可飞作业区）。
+     *
+     * <p>两处校验原本抛裸 {@code IllegalArgumentException}，全局异常处理器无对应
+     * handler，兜成 500 + {@code "internal error"} —— 前端无法区分「空域不存在」
+     * 「空域不可飞」和「服务真的挂了」，三种情况只能统一提示「操作失败」（N1）。
+     * 改为语义化业务码后：
+     * <ul>
+     *   <li>40470 → HTTP 404，空域不存在（落在 httpStatus() 的 404xx 整段分支）；</li>
+     *   <li>40960 → HTTP 409，空域存在但等级不符（状态冲突）。</li>
+     * </ul>
+     *
+     * @throws BizException 40470 error.drone.zone.not.found（zone 不存在）
+     * @throws BizException 40960 error.drone.zone.not.operational（zone 非 OPERATIONAL）
+     */
     @PostMapping("/flight-plans")
     public ApiResult<FlightPlan> createFlightPlan(@RequestBody CreateFlightPlan req) {
         AirspaceZone zone = zoneRepository.findById(req.zoneId())
-                .orElseThrow(() -> new IllegalArgumentException("airspace zone not found"));
+                .orElseThrow(() -> BizException.of(40470, "error.drone.zone.not.found"));
         if (zone.getLevel() != AirspaceLevel.OPERATIONAL) {
-            throw new IllegalArgumentException("空域非可飞作业区，飞行计划不予批准");
+            throw BizException.of(40960, "error.drone.zone.not.operational", zone.getLevel());
         }
         FlightPlan fp = FlightPlan.builder()
                 .assetId(req.assetId()).zoneId(req.zoneId()).pilotId(req.pilotId())
@@ -64,8 +80,23 @@ public class AirspaceController {
         return ApiResult.ok(flightPlanRepository.findAll());
     }
 
+    /**
+     * 登记飞手资质。
+     *
+     * <p>{@code pilot_licenses.license_no} 有唯一约束，重复登记会撞
+     * {@code DataIntegrityViolationException} → 500。这里先预检，命中则抛
+     * 40962（HTTP 409，状态冲突），客户端可直接提示「执照编号已存在，请核对后重试」。
+     *
+     * <p>预检不能替代唯一约束：并发下两个请求可能同时通过预检，仍由数据库兜底。
+     * 预检的价值是把「可预期的用户输入冲突」变成明确的 409，而不是丢一个 500。
+     *
+     * @throws BizException 40962 error.drone.license.duplicate（执照号已存在）
+     */
     @PostMapping("/pilot-licenses")
     public ApiResult<PilotLicense> createLicense(@RequestBody CreateLicense req) {
+        if (licenseRepository.existsByLicenseNo(req.licenseNo())) {
+            throw BizException.of(40962, "error.drone.license.duplicate", req.licenseNo());
+        }
         PilotLicense l = PilotLicense.builder()
                 .licenseNo(req.licenseNo()).holderName(req.holderName()).ltype(req.ltype())
                 .issuer(req.issuer() != null ? req.issuer() : "SSCA")
