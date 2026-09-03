@@ -50,7 +50,9 @@
     "saved": "已保存",
     "deleted": "已删除",
     "networkError": "网络错误",
-    "loading": "加载中…"
+    "loading": "加载中…",
+    "success": "操作成功",
+    "failed": "操作失败"
   },
   "confirm": {
     "delete": "确认删除？",

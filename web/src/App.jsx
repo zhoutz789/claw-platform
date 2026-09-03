@@ -63,10 +63,15 @@ import TaskNear from './pages/TaskNear';
 import Production from './pages/Production';
 import MfgInventory from './pages/MfgInventory';
 import StationConsignment from './pages/StationConsignment';
+import InventoryOverview from './pages/InventoryOverview';
 import Transfers from './pages/Transfers';
 import FulfillmentOrders from './pages/FulfillmentOrders';
 import PickupScan from './pages/PickupScan';
 import CommissionRules from './pages/CommissionRules';
+// —— 模块四 · 服务站功能（库存 / 项目 / 结算三层解耦）——
+import StationInventory from './pages/StationInventory';
+import StationProjects from './pages/StationProjects';
+import StationSettlement from './pages/StationSettlement';
 import RoleTemplates from './pages/RoleTemplates';
 import RoleGroups from './pages/RoleGroups';
 import PrincipalBindings from './pages/PrincipalBindings';
@@ -167,12 +172,17 @@ export default function App() {
           <Route path="departments" element={<Departments />} />
           {/* 增量 B · 库存 / 流转 / 渠道域：生产 → 库存双视图 → 调拨 → 履约 → 取货扫码 → 提成规则 */}
           <Route path="production" element={<Production />} />
+          <Route path="inventory-overview" element={<RequirePermRoute menuKey="inventory-overview"><InventoryOverview /></RequirePermRoute>} />
           <Route path="mfg-inventory" element={<MfgInventory />} />
           <Route path="station-consignment" element={<StationConsignment />} />
           <Route path="transfers" element={<Transfers />} />
           <Route path="fulfillment-orders" element={<FulfillmentOrders />} />
           <Route path="pickup-scan" element={<PickupScan />} />
           <Route path="commission-rules" element={<CommissionRules />} />
+          {/* 模块四 · 服务站功能：库存 / 项目 / 结算三层解耦 */}
+          <Route path="station-inventory" element={<RequirePermRoute menuKey="station-inventory"><StationInventory /></RequirePermRoute>} />
+          <Route path="station-projects" element={<RequirePermRoute menuKey="station-projects"><StationProjects /></RequirePermRoute>} />
+          <Route path="station-settlements" element={<RequirePermRoute menuKey="station-settlements"><StationSettlement /></RequirePermRoute>} />
           {/* 增量 A · 权限骨架：角色模板 / 角色组 / 主体绑定 */}
           <Route path="role-templates" element={<RoleTemplates />} />
           <Route path="role-groups" element={<RoleGroups />} />

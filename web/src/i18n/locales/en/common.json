@@ -50,7 +50,9 @@
     "saved": "Saved",
     "deleted": "Deleted",
     "networkError": "Network error",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "success": "Operation succeeded",
+    "failed": "Operation failed"
   },
   "confirm": {
     "delete": "Confirm delete?",

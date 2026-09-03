@@ -1,0 +1,111 @@
+{
+  "inventory": {
+    "title": "ស្តុកស្ថានីយ",
+    "subtitle": "ស្តុកនៅកន្លែង និងចលនាចេញ/ចូលរបស់ស្ថានីយ (ម៉ូឌុល 4 · ស្រទាប់ស្តុក)",
+    "selectStation": "ជ្រើសរើសស្ថានីយ",
+    "noStation": "គណនីបច្ចុប្បន្នគ្មានស្ថានីយដែលអាចមើលឃើញ។ សូមទាក់ទងអ្នកគ្រប់គ្រង។",
+    "empty": "គ្មានទិន្នន័យស្តុក",
+    "inbound": "ទទួលចូល",
+    "adjust": "កែតម្រូវ",
+    "movements": "ចលនាចេញ/ចូល",
+    "inboundTitle": "ការទទួលស្តុកស្ថានីយ",
+    "adjustTitle": "ការកែតម្រូវស្តុកស្ថានីយ",
+    "skuCode": "កូដ SKU",
+    "qty": "បរិមាណ",
+    "deltaQty": "បរិមាណផ្លាស់ប្តូរ",
+    "reason": "មូលហេតុ",
+    "col": {
+      "id": "",
+      "stationId": "",
+      "skuCode": "",
+      "stockQty": "",
+      "updatedAt": "",
+      "deltaQty": "",
+      "reason": "",
+      "refType": "",
+      "refId": "",
+      "createdAt": ""
+    }
+  },
+  "project": {
+    "title": "គម្រោងស្ថានីយ",
+    "subtitle": "មែកធាតុគម្រោងក្រោមស្ថានីយ និងការចែកធនធានតាម ID (ម៉ូឌុល 4 · ស្រទាប់គម្រោង)",
+    "treeEmpty": "មិនទាន់មានគម្រោង។ ចុច «គម្រោងថ្មី» ដើម្បីបង្កើត។",
+    "create": "គម្រោងថ្មី",
+    "edit": "កែសម្រួល",
+    "delete": "លុប",
+    "alloc": "ចែកធនធាន",
+    "dealloc": "រំសាយ",
+    "allocTitle": "ចែកធនធានស្តុក (តែឡូជីកប៉ុណ្ណោះ មិនដកស្តុក)",
+    "newName": "ឈ្មោះគម្រោង",
+    "parent": "មេ (ទទេ=ឫស)",
+    "sortNo": "លេខរៀង",
+    "qty": "បរិមាណចែក",
+    "note": "កំណត់សម្គាល់",
+    "selectStock": "ជ្រើសរើសជួរស្តុក",
+    "detailTitle": "ព័ត៌មានគម្រោង",
+    "statusActive": "ដំណើរការ",
+    "statusArchived": "បានរក្សាទុក",
+    "col": {
+      "name": "",
+      "status": "",
+      "sortNo": "",
+      "stationId": "",
+      "createdAt": "",
+      "updatedAt": "",
+      "skuCode": "",
+      "allocatedQty": "",
+      "availableQty": "",
+      "note": ""
+    }
+  },
+  "settlement": {
+    "title": "ការទូទាត់ស្ថានីយ",
+    "subtitle": "ការបង្កើត/បញ្ជាក់/ទូទាត់ការទូទាត់ស្តុក (ម៉ូឌុល 4 · ស្រទាប់ទូទាត់)",
+    "generate": "បង្កើតសេចក្តីព្រាង",
+    "generateTitle": "បង្កើតសេចក្តីព្រាងតាមស្ថានីយ និងអំឡុងពេល",
+    "confirm": "បញ្ជាក់",
+    "pay": "សម្គាល់បង់",
+    "detail": "ព័ត៌មានលម្អិត",
+    "detailTitle": "ព័ត៌មានលម្អិតការទូទាត់",
+    "empty": "មិនទាន់មានការទូទាត់",
+    "selectStation": "ជ្រើសរើសស្ថានីយ",
+    "periodStart": "ដើមអំឡុង",
+    "periodEnd": "ចុងអំឡុង",
+    "logisticsFee": "ថ្លៃដឹកជញ្ជូន (រោងចក្រ)",
+    "stationCommission": "គណៈកម្មការស្ថានីយ",
+    "manufacturerNet": "ចំណេញរោងចក្រ",
+    "statusDraft": "សេចក្តីព្រាង",
+    "statusConfirmed": "បានបញ្ជាក់",
+    "statusPaid": "បានបង់",
+    "col": {
+      "settlementNo": "",
+      "stationId": "",
+      "periodStart": "",
+      "periodEnd": "",
+      "status": "",
+      "logisticsFee": "",
+      "stationCommission": "",
+      "manufacturerNet": "",
+      "currency": "",
+      "createdAt": ""
+    },
+    "items": {
+      "title": "",
+      "itemType": "",
+      "description": "",
+      "amount": "",
+      "direction": ""
+    },
+    "itemType": {
+      "LOGISTICS": "",
+      "COMMISSION": "",
+      "RECOVERY": "",
+      "ADJUST": ""
+    },
+    "direction": {
+      "DEBIT": "",
+      "CREDIT": ""
+    }
+  }
+}

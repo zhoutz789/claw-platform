@@ -1,0 +1,111 @@
+{
+  "inventory": {
+    "title": "服务站库存",
+    "subtitle": "本站在库现货与出入库流水（模块四 · 库存层）",
+    "selectStation": "选择服务站",
+    "noStation": "当前账号无可见服务站，请联系管理员配置主体绑定",
+    "empty": "暂无库存数据",
+    "inbound": "入站收货",
+    "adjust": "盘点调整",
+    "movements": "出入库流水",
+    "inboundTitle": "服务站入站收货",
+    "adjustTitle": "服务站盘点调整",
+    "skuCode": "SKU 编码",
+    "qty": "数量",
+    "deltaQty": "调整数量（正=盘盈/负=盘亏）",
+    "reason": "调整原因",
+    "col": {
+      "id": "ID",
+      "stationId": "服务站",
+      "skuCode": "SKU 编码",
+      "stockQty": "现货数量",
+      "updatedAt": "更新时间",
+      "deltaQty": "变动数量",
+      "reason": "原因",
+      "refType": "来源类型",
+      "refId": "来源 ID",
+      "createdAt": "时间"
+    }
+  },
+  "project": {
+    "title": "服务站项目",
+    "subtitle": "站下库存项目树与按 ID 占用（模块四 · 项目层）",
+    "treeEmpty": "暂无项目，点击「新建项目」创建",
+    "create": "新建项目",
+    "edit": "编辑",
+    "delete": "删除",
+    "alloc": "占用库存",
+    "dealloc": "解除占用",
+    "allocTitle": "占用库存（仅逻辑占用，不扣减现货）",
+    "newName": "项目名称",
+    "parent": "父项目（留空为根）",
+    "sortNo": "排序号",
+    "qty": "占用数量",
+    "note": "备注",
+    "selectStock": "选择现货库存行",
+    "detailTitle": "项目详情",
+    "statusActive": "启用",
+    "statusArchived": "已归档",
+    "col": {
+      "name": "项目名称",
+      "status": "状态",
+      "sortNo": "排序号",
+      "stationId": "服务站",
+      "createdAt": "创建时间",
+      "updatedAt": "更新时间",
+      "skuCode": "SKU 编码",
+      "allocatedQty": "已占用",
+      "availableQty": "可用量",
+      "note": "备注"
+    }
+  },
+  "settlement": {
+    "title": "服务站结算",
+    "subtitle": "寄售结算单生成 / 确认 / 支付（模块四 · 结算层）",
+    "generate": "生成草稿",
+    "generateTitle": "按服务站与周期生成结算草稿",
+    "confirm": "确认",
+    "pay": "标记支付",
+    "detail": "明细",
+    "detailTitle": "结算单明细",
+    "empty": "暂无结算单",
+    "selectStation": "选择服务站",
+    "periodStart": "周期开始",
+    "periodEnd": "周期结束",
+    "logisticsFee": "物流费（厂家承担）",
+    "stationCommission": "服务站提成",
+    "manufacturerNet": "厂家净额",
+    "statusDraft": "草稿",
+    "statusConfirmed": "已确认",
+    "statusPaid": "已支付",
+    "col": {
+      "settlementNo": "结算单号",
+      "stationId": "服务站",
+      "periodStart": "周期开始",
+      "periodEnd": "周期结束",
+      "status": "状态",
+      "logisticsFee": "物流费",
+      "stationCommission": "服务站提成",
+      "manufacturerNet": "厂家净额",
+      "currency": "币种",
+      "createdAt": "创建时间"
+    },
+    "items": {
+      "title": "结算明细",
+      "itemType": "类型",
+      "description": "说明",
+      "amount": "金额",
+      "direction": "方向"
+    },
+    "itemType": {
+      "LOGISTICS": "物流费",
+      "COMMISSION": "服务站提成",
+      "RECOVERY": "回收",
+      "ADJUST": "调整"
+    },
+    "direction": {
+      "DEBIT": "厂家出",
+      "CREDIT": "服务站入"
+    }
+  }
+}

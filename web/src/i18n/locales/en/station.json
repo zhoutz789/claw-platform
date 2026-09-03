@@ -1,0 +1,111 @@
+{
+  "inventory": {
+    "title": "Station Inventory",
+    "subtitle": "On-hand stock and in/out movements of the station (Module 4 · Inventory layer)",
+    "selectStation": "Select station",
+    "noStation": "No visible station for current account. Contact admin to configure principal binding.",
+    "empty": "No inventory data",
+    "inbound": "Inbound",
+    "adjust": "Adjust",
+    "movements": "Movements",
+    "inboundTitle": "Station Inbound Receipt",
+    "adjustTitle": "Station Stock Adjustment",
+    "skuCode": "SKU Code",
+    "qty": "Quantity",
+    "deltaQty": "Delta (positive=surplus / negative=loss)",
+    "reason": "Reason",
+    "col": {
+      "id": "ID",
+      "stationId": "Station",
+      "skuCode": "SKU Code",
+      "stockQty": "On-hand Qty",
+      "updatedAt": "Updated At",
+      "deltaQty": "Delta",
+      "reason": "Reason",
+      "refType": "Ref Type",
+      "refId": "Ref ID",
+      "createdAt": "Time"
+    }
+  },
+  "project": {
+    "title": "Station Projects",
+    "subtitle": "Per-station project tree and ID-based allocation (Module 4 · Project layer)",
+    "treeEmpty": "No projects yet. Click \"New Project\" to create one.",
+    "create": "New Project",
+    "edit": "Edit",
+    "delete": "Delete",
+    "alloc": "Allocate",
+    "dealloc": "Release",
+    "allocTitle": "Allocate stock (logical only, does not deduct on-hand)",
+    "newName": "Project Name",
+    "parent": "Parent (blank = root)",
+    "sortNo": "Sort No",
+    "qty": "Allocated Qty",
+    "note": "Note",
+    "selectStock": "Select stock row",
+    "detailTitle": "Project Detail",
+    "statusActive": "Active",
+    "statusArchived": "Archived",
+    "col": {
+      "name": "Project Name",
+      "status": "Status",
+      "sortNo": "Sort No",
+      "stationId": "Station",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "skuCode": "SKU Code",
+      "allocatedQty": "Allocated",
+      "availableQty": "Available",
+      "note": "Note"
+    }
+  },
+  "settlement": {
+    "title": "Station Settlements",
+    "subtitle": "Consignment settlement generation / confirmation / payment (Module 4 · Settlement layer)",
+    "generate": "Generate Draft",
+    "generateTitle": "Generate settlement draft by station and period",
+    "confirm": "Confirm",
+    "pay": "Mark Paid",
+    "detail": "Detail",
+    "detailTitle": "Settlement Detail",
+    "empty": "No settlements yet",
+    "selectStation": "Select station",
+    "periodStart": "Period Start",
+    "periodEnd": "Period End",
+    "logisticsFee": "Logistics Fee (by manufacturer)",
+    "stationCommission": "Station Commission",
+    "manufacturerNet": "Manufacturer Net",
+    "statusDraft": "Draft",
+    "statusConfirmed": "Confirmed",
+    "statusPaid": "Paid",
+    "col": {
+      "settlementNo": "Settlement No",
+      "stationId": "Station",
+      "periodStart": "Period Start",
+      "periodEnd": "Period End",
+      "status": "Status",
+      "logisticsFee": "Logistics Fee",
+      "stationCommission": "Station Commission",
+      "manufacturerNet": "Manufacturer Net",
+      "currency": "Currency",
+      "createdAt": "Created At"
+    },
+    "items": {
+      "title": "Settlement Items",
+      "itemType": "Type",
+      "description": "Description",
+      "amount": "Amount",
+      "direction": "Direction"
+    },
+    "itemType": {
+      "LOGISTICS": "Logistics",
+      "COMMISSION": "Station Commission",
+      "RECOVERY": "Recovery",
+      "ADJUST": "Adjustment"
+    },
+    "direction": {
+      "DEBIT": "Manufacturer Out",
+      "CREDIT": "Station In"
+    }
+  }
+}

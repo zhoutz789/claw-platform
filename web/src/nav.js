@@ -25,7 +25,7 @@ import { tv } from './i18n';
 import {
   DashboardOutlined, AppstoreOutlined, ShoppingOutlined, ProjectOutlined, RocketOutlined,
   DeploymentUnitOutlined, AccountBookOutlined, SafetyOutlined, SettingOutlined, InboxOutlined,
-  IdcardOutlined, SendOutlined,
+  IdcardOutlined, SendOutlined, ShopOutlined,
 } from '@ant-design/icons';
 
 // 九大模块（工作台 + A/B/C/D 期新设计 + 四大中心）；children 为各模块下的页面。
@@ -55,16 +55,14 @@ export const NAV = [
     children: [
       { key: 'goods-list', label: 'nav:item.goods-list', path: '/goods-list' },
       { key: 'product-wizard', label: 'nav:item.product-wizard', path: '/product-wizard' },
-      { key: 'brand-onboarding', label: 'nav:item.brand-onboarding', path: '/brand-onboarding' },
-      { key: 'manufacturer', label: 'nav:item.manufacturer', path: '/manufacturer' },
-      { key: 'order-manage', label: 'nav:item.order-manage', path: '/order-manage' },
-      { key: 'merchants', label: 'nav:item.merchants', path: '/merchants' },
     ],
   },
   // 供应流通（增量 B：生产 / 库存 / 调拨 / 履约 / 结算）
   {
     key: 'supply', label: 'nav:group.supply', icon: InboxOutlined,
     children: [
+      // 模块三 · 库存总览：供应流通组首位默认入口（sort_no=450，见 V67 迁移）
+      { key: 'inventory-overview', label: 'nav:item.inventory-overview', path: '/inventory-overview' },
       { key: 'production', label: 'nav:item.production', path: '/production' },
       { key: 'mfg-inventory', label: 'nav:item.mfg-inventory', path: '/mfg-inventory' },
       { key: 'station-consignment', label: 'nav:item.station-consignment', path: '/station-consignment' },
@@ -72,6 +70,15 @@ export const NAV = [
       { key: 'fulfillment-orders', label: 'nav:item.fulfillment-orders', path: '/fulfillment-orders' },
       { key: 'pickup-scan', label: 'nav:item.pickup-scan', path: '/pickup-scan' },
       { key: 'commission-rules', label: 'nav:item.commission-rules', path: '/commission-rules' },
+    ],
+  },
+  // 模块四 · 服务站功能（库存 / 项目 / 结算三层解耦，menu:* 权限码见 V68 迁移）
+  {
+    key: 'station', label: 'nav:group.station', icon: ShopOutlined,
+    children: [
+      { key: 'station-inventory', label: 'nav:item.station-inventory', path: '/station-inventory' },
+      { key: 'station-projects', label: 'nav:item.station-projects', path: '/station-projects' },
+      { key: 'station-settlements', label: 'nav:item.station-settlements', path: '/station-settlements' },
     ],
   },
   // 增量 D · 无人机 / 低空经济域（menu:* 权限码见 V66 迁移）
@@ -225,6 +232,10 @@ export const ROUTES = [
   // 增量 B · 库存 / 流转 / 渠道域
   '/production', '/mfg-inventory', '/station-consignment', '/transfers', '/fulfillment-orders',
   '/pickup-scan', '/commission-rules',
+  // 模块三 · 库存总览（首位默认入口，sort_no=450）
+  '/inventory-overview',
+  // 模块四 · 服务站功能（库存 / 项目 / 结算三层解耦，menu:* 权限码见 V68 迁移）
+  '/station-inventory', '/station-projects', '/station-settlements',
   // 增量 A · 权限骨架
   '/role-templates', '/role-groups', '/principal-bindings',
   // Phase 2 骨架
