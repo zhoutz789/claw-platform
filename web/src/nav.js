@@ -55,6 +55,10 @@ export const NAV = [
     children: [
       { key: 'goods-list', label: 'nav:item.goods-list', path: '/goods-list' },
       { key: 'product-wizard', label: 'nav:item.product-wizard', path: '/product-wizard' },
+      { key: 'brand-onboarding', label: 'nav:item.brand-onboarding', path: '/brand-onboarding' },
+      { key: 'manufacturer', label: 'nav:item.manufacturer', path: '/manufacturer' },
+      { key: 'order-manage', label: 'nav:item.order-manage', path: '/order-manage' },
+      { key: 'merchants', label: 'nav:item.merchants', path: '/merchants' },
     ],
   },
   // 供应流通（增量 B：生产 / 库存 / 调拨 / 履约 / 结算）

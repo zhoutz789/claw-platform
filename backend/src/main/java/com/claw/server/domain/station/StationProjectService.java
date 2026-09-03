@@ -47,6 +47,7 @@ public class StationProjectService {
         int depth = 0;
         if (req.parentId() != null) {
             StationProject parent = load(req.parentId());
+            assertStationAllowed(parent.getStationId());
             depth = parent.getDepth() + 1;
         }
         StationProject p = StationProject.builder()
@@ -77,6 +78,7 @@ public class StationProjectService {
                 throw BizException.invalidParam("station.project.parent.self");
             }
             StationProject parent = load(req.parentId());
+            assertStationAllowed(parent.getStationId());
             p.setParentId(req.parentId());
             int newDepth = parent.getDepth() + 1;
             p.setDepth(newDepth);
@@ -184,13 +186,24 @@ public class StationProjectService {
         log.info("解除占用 allocId={} projectId={}", allocId, alloc.getStationProjectId());
     }
 
-    /** 读时计算某库存行的可用量 = stock_qty − Σallocated（同 station_stock_id）。 */
+    /**
+     * 读时计算某库存行的可用量 = stock_qty − Σallocated（同 station_stock_id）。
+     *
+     * <p>设计 §2.3（BC-3）：Σallocated 仅统计<b>未归档</b>项目的占用，已 {@code ARCHIVED}
+     * 的项目不再占用可用量。项目记录缺失（孤儿占用）按"未归档"处理，仍计入占用，
+     * 避免凭空释放可能仍被真实占用的库存。
+     */
     @Transactional(readOnly = true)
     public int availableQty(Long stationStockId) {
         StationStock stock = stockRepository.findById(stationStockId).orElse(null);
         int stockQty = stock == null ? 0 : stock.getStockQty();
-        int allocated = allocRepository.findByStationStockId(stationStockId).stream()
-                .mapToInt(StationProjectInventoryAlloc::getAllocatedQty).sum();
+        int allocated = 0;
+        for (StationProjectInventoryAlloc a : allocRepository.findByStationStockId(stationStockId)) {
+            StationProject p = projectRepository.findById(a.getStationProjectId()).orElse(null);
+            if (p == null || !"ARCHIVED".equals(p.getStatus())) {
+                allocated += a.getAllocatedQty();
+            }
+        }
         return stockQty - allocated;
     }
 

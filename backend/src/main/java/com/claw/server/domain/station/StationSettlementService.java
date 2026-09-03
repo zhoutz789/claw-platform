@@ -154,6 +154,7 @@ public class StationSettlementService {
     @Transactional(readOnly = true)
     public StationViews.StationSettlementDetailView get(Long id) {
         StationSettlement s = load(id);
+        assertStationAllowed(s.getStationId());
         List<StationViews.StationSettlementItemView> items = itemRepository
                 .findBySettlementIdOrderByCreatedAtAsc(id).stream()
                 .map(i -> new StationViews.StationSettlementItemView(
