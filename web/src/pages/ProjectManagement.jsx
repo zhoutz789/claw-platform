@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import api from '../api';
+import { useTranslation } from 'react-i18next';
 
 /* 项目树节点 -> antd Tree treeData */
 const toTreeData = (nodes) => (nodes || []).map((n) => ({
@@ -23,7 +24,8 @@ const flatten = (nodes, acc = []) => {
   return acc;
 };
 
-export default function ProjectManagement() {
+export default function ProjectManagement() {  const { t } = useTranslation('common');
+
   const [tree, setTree] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [expandedKeys, setExpandedKeys] = useState([]);
@@ -141,11 +143,11 @@ export default function ProjectManagement() {
   const delProj = () => {
     if (!selectedNode) return;
     Modal.confirm({
-      title: '删除项目',
+      title: t('common:m263'),
       content: '确认删除项目「' + selectedNode.name + '」？子项目一并移除。',
-      okText: '删除', okType: 'danger', cancelText: '取消',
+      okText: t('common:m83'), okType: 'danger', cancelText: t('common:m96'),
       onOk: () => api.delete(`/v1/projects/${selectedNode.id}`)
-        .then(() => { message.success('已删除'); setSelectedId(null); loadTree(); })
+        .then(() => { message.success(t('common:m3')); setSelectedId(null); loadTree(); })
         .catch((e) => message.error('删除失败：' + e.message)),
     });
   };
@@ -153,10 +155,10 @@ export default function ProjectManagement() {
   /* ---------- 设备绑定/解绑 ---------- */
   const bindDevice = () => {
     if (!selectedId) return;
-    if (!bindAssetId) { message.warning('请选择要绑定的资产'); return; }
+    if (!bindAssetId) { message.warning(t('common:m264')); return; }
     api.post(`/v1/projects/${selectedId}/devices`, { assetId: bindAssetId })
       .then(() => {
-        message.success('设备已绑定');
+        message.success(t('common:m265'));
         setBindAssetId(null);
         return api.get(`/v1/projects/${selectedId}/devices`);
       })
@@ -166,7 +168,7 @@ export default function ProjectManagement() {
   const unbindDevice = (pdId) => {
     api.delete(`/v1/projects/devices/${pdId}`)
       .then(() => {
-        message.success('已解绑');
+        message.success(t('common:m266'));
         setDevices((prev) => prev.filter((d) => d.id !== pdId));
       })
       .catch((e) => message.error('解绑失败：' + e.message));
@@ -190,7 +192,7 @@ export default function ProjectManagement() {
       if (v.perSwapFee != null && v.perSwapFee !== '') body.perSwapFee = v.perSwapFee;
       api.post(`/v1/projects/devices/${authModal.pdId}/authorize`, body)
         .then(() => {
-          message.success('授权已提交');
+          message.success(t('common:m267'));
           setAuthModal({ open: false, pdId: null });
         })
         .catch((e) => message.error('授权失败：' + e.message));
@@ -202,7 +204,7 @@ export default function ProjectManagement() {
     entryForm.validateFields().then((v) => {
       api.post(`/v1/projects/${selectedId}/entries`, { amount: v.amount, type: v.type, memo: v.memo })
         .then(() => {
-          message.success('记账成功');
+          message.success(t('common:m268'));
           setEntryModal(false);
           api.get(`/v1/projects/${selectedId}/account`)
             .then((acc) => setAccount(acc || null))
@@ -215,27 +217,27 @@ export default function ProjectManagement() {
   const authType = Form.useWatch('authType', authForm);
 
   const devColumns = [
-    { title: '设备编号', dataIndex: 'assetNo', render: (v, r) => <span>{v || '—'} <span style={{ color: '#8a9099' }}>#{r.id}</span></span> },
-    { title: '类型', dataIndex: 'assetType', render: (v) => v || '—' },
-    { title: '状态', dataIndex: 'assetStatus', render: (v) => (v ? <Tag>{v}</Tag> : '—') },
-    { title: '操作', render: (_, r) => (
+    { title: t('common:m5'), dataIndex: 'assetNo', render: (v, r) => <span>{v || '—'} <span style={{ color: '#8a9099' }}>#{r.id}</span></span> },
+    { title: t('common:m36'), dataIndex: 'assetType', render: (v) => v || '—' },
+    { title: t('common:m8'), dataIndex: 'assetStatus', render: (v) => (v ? <Tag>{v}</Tag> : '—') },
+    { title: t('common:m58'), render: (_, r) => (
       <Space>
-        <Button size="small" type="link" danger icon={<UnlockOutlined />} onClick={() => unbindDevice(r.id)}>解绑</Button>
-        <Button size="small" type="link" icon={<SafetyCertificateOutlined />} onClick={() => openAuth(r)}>授权</Button>
+        <Button size="small" type="link" danger icon={<UnlockOutlined />} onClick={() => unbindDevice(r.id)}>{t('common:m269')}</Button>
+        <Button size="small" type="link" icon={<SafetyCertificateOutlined />} onClick={() => openAuth(r)}>{t('common:m64')}</Button>
       </Space>
     ) },
   ];
 
   return (
-    <PageCard title="项目管理" extra={<span style={{ fontSize: 12, color: '#8a9099' }}>项目树 / 设备绑定 / 赋权 / 核算（C 期）</span>}>
+    <PageCard title={t('common:m270')} extra={<span style={{ fontSize: 12, color: '#8a9099' }}>{t('common:m271')}</span>}>
       <div style={{ display: 'flex', gap: 16, minHeight: 480 }}>
         {/* 左栏：项目树 */}
         <div style={{ width: 280, flex: 'none', borderRight: '1px solid #f0f0f0', paddingRight: 12 }}>
           <div style={{ marginBottom: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            <Button type="primary" size="small" icon={<PlusOutlined />} onClick={openAddRoot}>新建项目</Button>
-            <Button size="small" icon={<PlusOutlined />} disabled={!selectedNode} onClick={openAddChild}>子项目</Button>
-            <Button size="small" icon={<EditOutlined />} disabled={!selectedNode} onClick={openEdit}>编辑</Button>
-            <Button size="small" danger icon={<DeleteOutlined />} disabled={!selectedNode} onClick={delProj}>删除</Button>
+            <Button type="primary" size="small" icon={<PlusOutlined />} onClick={openAddRoot}>{t('common:m272')}</Button>
+            <Button size="small" icon={<PlusOutlined />} disabled={!selectedNode} onClick={openAddChild}>{t('common:m273')}</Button>
+            <Button size="small" icon={<EditOutlined />} disabled={!selectedNode} onClick={openEdit}>{t('common:m82')}</Button>
+            <Button size="small" danger icon={<DeleteOutlined />} disabled={!selectedNode} onClick={delProj}>{t('common:m83')}</Button>
           </div>
           <Spin spinning={loading}>
             {tree.length ? (
@@ -247,57 +249,55 @@ export default function ProjectManagement() {
                 onSelect={(keys) => setSelectedId(keys[0] || null)}
                 showLine
               />
-            ) : <Empty description="暂无项目" />}
+            ) : <Empty description={t('common:m274')} />}
           </Spin>
         </div>
 
         {/* 右栏：详情 */}
         <div style={{ flex: 1, minWidth: 0 }}>
           {!selectedNode ? (
-            <Empty description="请选择左侧项目节点" style={{ marginTop: 80 }} />
+            <Empty description={t('common:m275')} style={{ marginTop: 80 }} />
           ) : (
             <Spin spinning={detailLoading}>
               <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                <Card size="small" title="项目信息">
+                <Card size="small" title={t('common:m276')}>
                   <Descriptions column={2} size="small">
-                    <Descriptions.Item label="名称">{selectedNode.name}</Descriptions.Item>
-                    <Descriptions.Item label="状态">{selectedNode.status ? <Tag color="blue">{selectedNode.status}</Tag> : '—'}</Descriptions.Item>
-                    <Descriptions.Item label="账户ID">{selectedNode.accountId != null ? selectedNode.accountId : '—'}</Descriptions.Item>
-                    <Descriptions.Item label="创建时间">{selectedNode.createdAt || '—'}</Descriptions.Item>
+                    <Descriptions.Item label={t('common:m277')}>{selectedNode.name}</Descriptions.Item>
+                    <Descriptions.Item label={t('common:m8')}>{selectedNode.status ? <Tag color="blue">{selectedNode.status}</Tag> : '—'}</Descriptions.Item>
+                    <Descriptions.Item label={t('common:m278')}>{selectedNode.accountId != null ? selectedNode.accountId : '—'}</Descriptions.Item>
+                    <Descriptions.Item label={t('common:m279')}>{selectedNode.createdAt || '—'}</Descriptions.Item>
                   </Descriptions>
                 </Card>
 
-                <Card size="small" title="设备绑定">
+                <Card size="small" title={t('common:m280')}>
                   <Space style={{ marginBottom: 12 }}>
                     <Select
                       showSearch
                       style={{ width: 320 }}
-                      placeholder="选择资产（按 assetNo 搜索）"
+                      placeholder={t('common:m281')}
                       value={bindAssetId}
                       onChange={setBindAssetId}
                       optionFilterProp="label"
                       options={assets.map((a) => ({ label: a.assetNo, value: a.id }))}
                       allowClear
                     />
-                    <Button type="primary" icon={<LinkOutlined />} onClick={bindDevice}>绑定</Button>
+                    <Button type="primary" icon={<LinkOutlined />} onClick={bindDevice}>{t('common:m282')}</Button>
                   </Space>
                   <Table rowKey="id" size="small" pagination={false} dataSource={devices} columns={devColumns}
                     locale={{ emptyText: '暂无绑定设备' }} />
                 </Card>
 
-                <Card size="small" title="项目核算" extra={
+                <Card size="small" title={t('common:m283')} extra={
                   <Button size="small" type="primary" icon={<WalletOutlined />}
-                    onClick={() => { entryForm.resetFields(); entryForm.setFieldsValue({ type: 'INCOME' }); setEntryModal(true); }}>
-                    记一笔
-                  </Button>
+                    onClick={() => { entryForm.resetFields(); entryForm.setFieldsValue({ type: 'INCOME' }); setEntryModal(true); }}>{t('common:m284')}</Button>
                 }>
                   {account ? (
                     <Descriptions column={2} size="small">
-                      <Descriptions.Item label="余额">{account.currency || ''} {account.balance != null ? account.balance : '—'}</Descriptions.Item>
-                      <Descriptions.Item label="账户ID">{account.accountId != null ? account.accountId : '—'}</Descriptions.Item>
-                      <Descriptions.Item label="更新时间">{account.updatedAt || '—'}</Descriptions.Item>
+                      <Descriptions.Item label={t('common:m285')}>{account.currency || ''} {account.balance != null ? account.balance : '—'}</Descriptions.Item>
+                      <Descriptions.Item label={t('common:m278')}>{account.accountId != null ? account.accountId : '—'}</Descriptions.Item>
+                      <Descriptions.Item label={t('common:m286')}>{account.updatedAt || '—'}</Descriptions.Item>
                     </Descriptions>
-                  ) : <Empty description="暂无核算账户" />}
+                  ) : <Empty description={t('common:m287')} />}
                 </Card>
               </Space>
             </Spin>
@@ -311,21 +311,21 @@ export default function ProjectManagement() {
         open={projModal.open}
         onOk={submitProj}
         onCancel={() => setProjModal({ open: false, editing: null })}
-        okText="保存" cancelText="取消"
+        okText={t('common:m97')} cancelText={t('common:m96')}
       >
         <Form form={projForm} layout="vertical">
-          <Form.Item label="项目名称" name="name" rules={[{ required: true, message: '请输入项目名称' }]}>
-            <Input placeholder="如：华南运营区" />
+          <Form.Item label={t('common:m288')} name="name" rules={[{ required: true, message: t('common:m289') }]}>
+            <Input placeholder={t('common:m290')} />
           </Form.Item>
-          <Form.Item label="父项目ID（留空为顶层项目）" name="parentId">
-            <InputNumber style={{ width: '100%' }} placeholder="留空为顶层项目" />
+          <Form.Item label={t('common:m291')} name="parentId">
+            <InputNumber style={{ width: '100%' }} placeholder={t('common:m292')} />
           </Form.Item>
-          <Form.Item label="排序号" name="sortNo">
+          <Form.Item label={t('common:m293')} name="sortNo">
             <InputNumber style={{ width: '100%' }} placeholder="0" />
           </Form.Item>
           {projModal.editing && (
-            <Form.Item label="状态" name="status">
-              <Input placeholder="如：ACTIVE" />
+            <Form.Item label={t('common:m8')} name="status">
+              <Input placeholder={t('common:m294')} />
             </Form.Item>
           )}
         </Form>
@@ -333,42 +333,42 @@ export default function ProjectManagement() {
 
       {/* 授权弹窗 */}
       <Modal
-        title="设备授权"
+        title={t('common:m295')}
         open={authModal.open}
         onOk={submitAuth}
         onCancel={() => setAuthModal({ open: false, pdId: null })}
-        okText="提交授权" cancelText="取消"
+        okText={t('common:m296')} cancelText={t('common:m96')}
         width={480}
       >
         <Form form={authForm} layout="vertical">
-          <Form.Item label="授权类型" name="authType" rules={[{ required: true }]}>
+          <Form.Item label={t('common:m297')} name="authType" rules={[{ required: true }]}>
             <Select options={[
-              { label: 'TRANSFER 转移产权（granteeUserId 留空=进资产大厅）', value: 'TRANSFER' },
-              { label: 'SHARE 共享（需 stationId）', value: 'SHARE' },
-              { label: 'AUTHORIZE 授使用权', value: 'AUTHORIZE' },
+              { label: t('common:m298'), value: 'TRANSFER' },
+              { label: t('common:m299'), value: 'SHARE' },
+              { label: t('common:m300'), value: 'AUTHORIZE' },
             ]} />
           </Form.Item>
-          <Form.Item label="被授权用户ID（granteeUserId，TRANSFER 可留空）" name="granteeUserId">
-            <InputNumber style={{ width: '100%' }} placeholder="数字用户ID" />
+          <Form.Item label={t('common:m301')} name="granteeUserId">
+            <InputNumber style={{ width: '100%' }} placeholder={t('common:m302')} />
           </Form.Item>
-          <Form.Item label="权限范围（scope，如 use/locate/revenue）" name="scope">
+          <Form.Item label={t('common:m303')} name="scope">
             <Input placeholder="use" />
           </Form.Item>
           {authType === 'SHARE' && (
-            <Form.Item label="站点ID（stationId，SHARE 必填）" name="stationId" rules={[{ required: true, message: 'SHARE 需填写 stationId' }]}>
-              <InputNumber style={{ width: '100%' }} placeholder="数字站点ID" />
+            <Form.Item label={t('common:m304')} name="stationId" rules={[{ required: true, message: t('common:m305') }]}>
+              <InputNumber style={{ width: '100%' }} placeholder={t('common:m306')} />
             </Form.Item>
           )}
-          <Form.Item label="产权人分账比例（ownerSplitRate，可选）" name="ownerSplitRate">
-            <InputNumber style={{ width: '100%' }} placeholder="如 0.3" />
+          <Form.Item label={t('common:m307')} name="ownerSplitRate">
+            <InputNumber style={{ width: '100%' }} placeholder={t('common:m308')} />
           </Form.Item>
-          <Form.Item label="站点分账比例（stationSplitRate，可选）" name="stationSplitRate">
-            <InputNumber style={{ width: '100%' }} placeholder="如 0.1" />
+          <Form.Item label={t('common:m309')} name="stationSplitRate">
+            <InputNumber style={{ width: '100%' }} placeholder={t('common:m310')} />
           </Form.Item>
-          <Form.Item label="日使用费（dailyUsageFee，可选）" name="dailyUsageFee">
+          <Form.Item label={t('common:m311')} name="dailyUsageFee">
             <InputNumber style={{ width: '100%' }} placeholder="0" />
           </Form.Item>
-          <Form.Item label="单次换电费（perSwapFee，可选）" name="perSwapFee">
+          <Form.Item label={t('common:m312')} name="perSwapFee">
             <InputNumber style={{ width: '100%' }} placeholder="0" />
           </Form.Item>
         </Form>
@@ -376,24 +376,24 @@ export default function ProjectManagement() {
 
       {/* 记账弹窗 */}
       <Modal
-        title="记一笔"
+        title={t('common:m284')}
         open={entryModal}
         onOk={submitEntry}
         onCancel={() => setEntryModal(false)}
-        okText="记账" cancelText="取消"
+        okText={t('common:m313')} cancelText={t('common:m96')}
       >
         <Form form={entryForm} layout="vertical">
-          <Form.Item label="类型" name="type" rules={[{ required: true }]}>
+          <Form.Item label={t('common:m36')} name="type" rules={[{ required: true }]}>
             <Select options={[
-              { label: '收入 INCOME', value: 'INCOME' },
-              { label: '支出 EXPENSE', value: 'EXPENSE' },
+              { label: t('common:m314'), value: 'INCOME' },
+              { label: t('common:m315'), value: 'EXPENSE' },
             ]} />
           </Form.Item>
-          <Form.Item label="金额" name="amount" rules={[{ required: true, message: '请输入金额' }]}>
+          <Form.Item label={t('common:m316')} name="amount" rules={[{ required: true, message: t('common:m317') }]}>
             <InputNumber style={{ width: '100%' }} placeholder="0.00" />
           </Form.Item>
-          <Form.Item label="备注" name="memo">
-            <Input.TextArea rows={2} placeholder="可选" />
+          <Form.Item label={t('common:m318')} name="memo">
+            <Input.TextArea rows={2} placeholder={t('common:m319')} />
           </Form.Item>
         </Form>
       </Modal>

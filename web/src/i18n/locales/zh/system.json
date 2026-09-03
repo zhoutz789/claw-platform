@@ -134,7 +134,8 @@
         "ptype": "类型",
         "path": "路由",
         "parent": "父级",
-        "sort": "排序"
+        "sort": "排序",
+        "icon": "图标"
       },
       "modal": {
         "titleAdd": "新增权限目录项",

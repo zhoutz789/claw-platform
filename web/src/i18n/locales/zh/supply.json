@@ -488,7 +488,8 @@
       "ownerManufacturerId": "货权厂家",
       "holderStationId": "持有服务站",
       "inboundAt": "入站时间",
-      "updatedAt": "更新时间"
+      "updatedAt": "更新时间",
+      "count": "数量"
     },
     "station": {
       "total": "共 {count} 台",

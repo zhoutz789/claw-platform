@@ -198,6 +198,7 @@
     },
     "msg": {
       "created": "",
+      "handonvered": "ការប្រគល់បានស្កេន៖ ការកាន់កាប់បានផ្ទេរចេញ ឧបករណ៍ឥឡូវនេះស្ថិតក្នុងដំណើរ",
       "handovered": "",
       "received": "",
       "needDevice": "",
@@ -488,7 +489,8 @@
       "ownerManufacturerId": "ក្រុមហ៊ុនផលិតម្ចាស់",
       "holderStationId": "ស្ថានីកាន់កាប",
       "inboundAt": "ពេលចូល",
-      "updatedAt": "ពេលធ្វើបច្ចុប្បន្នភាព"
+      "updatedAt": "ពេលធ្វើបច្ចុប្បន្នភាព",
+      "count": "ចំនួន"
     },
     "station": {
       "total": "សរុប {count} ឯកតា",

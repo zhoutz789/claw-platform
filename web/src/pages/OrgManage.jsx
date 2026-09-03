@@ -12,6 +12,7 @@ import {
   changeOrgTier, disableOrg, enableOrg, getCreditUsage, listOrgDeposits, listOrgStatusLogs,
   listOrgs, listTiersAdmin,
 } from '../api/onboarding';
+import { useTranslation } from 'react-i18next';
 
 /**
  * 组织管理页（增量 C · 页面 9 · O36 / Q7）。
@@ -24,7 +25,8 @@ import {
  *
  * 对接后端 AdminOrgController（/api/v1/admin/orgs）。权限码 org:status:manage / org:credit:view。
  */
-export default function OrgManage() {
+export default function OrgManage() {  const { t } = useTranslation('common');
+
   const { message, modal } = App.useApp();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -96,30 +98,27 @@ export default function OrgManage() {
     modal.confirm({
       title: `禁用「${row.name}」`,
       width: 520,
-      okText: '确认禁用',
+      okText: t('common:m320'),
       okButtonProps: { danger: true },
-      cancelText: '取消',
+      cancelText: t('common:m96'),
       content: (
         <div style={{ marginTop: 12 }}>
-          <div style={{ marginBottom: 8, color: '#cf1322' }}>
-            禁用后该组织<b>不可产生任何新单</b>（新建履约单 / 调拨 / 铺货入站 / 新建子账号），
-            但<b>在途订单继续履约到底</b>；C 端「附近服务站」检索下线，门头不再对外展示。
-          </div>
+          <div style={{ marginBottom: 8, color: '#cf1322' }}>{t('common:m321')}<b>{t('common:m322')}</b>{t('common:m323')}<b>{t('common:m324')}</b>{t('common:m325')}</div>
           <textarea
             className="ant-input"
             rows={3}
-            placeholder="禁用原因（必填，将永久留痕）"
+            placeholder={t('common:m326')}
             onChange={(e) => { reason = e.target.value; }}
           />
         </div>
       ),
       onOk: async () => {
         if (!reason || !reason.trim()) {
-          message.error('请填写禁用原因');
+          message.error(t('common:m327'));
           return Promise.reject(new Error('no-reason'));
         }
         await disableOrg(row.principalType, row.principalId, reason.trim());
-        message.success('已禁用');
+        message.success(t('common:m328'));
         load();
         if (current) setCurrent({ ...current, onboardingStatus: 'DISABLED', disabledReason: reason.trim() });
       },
@@ -129,12 +128,12 @@ export default function OrgManage() {
   const doEnable = (row) => {
     modal.confirm({
       title: `启用「${row.name}」`,
-      content: '启用后该组织恢复全部功能（在途订单不受影响）。',
-      okText: '确认启用',
-      cancelText: '取消',
+      content: t('common:m329'),
+      okText: t('common:m330'),
+      cancelText: t('common:m96'),
       onOk: async () => {
         await enableOrg(row.principalType, row.principalId, '平台启用');
-        message.success('已启用');
+        message.success(t('common:m331'));
         load();
         if (current) setCurrent({ ...current, onboardingStatus: 'ACTIVATED' });
       },
@@ -154,28 +153,26 @@ export default function OrgManage() {
             defaultValue=""
             onChange={(e) => { tierId = e.target.value ? Number(e.target.value) : null; }}
           >
-            <option value="">请选择档位</option>
+            <option value="">{t('common:m332')}</option>
             {tiers.filter((t) => Boolean(t.enabled)).map((t) => (
               <option key={t.id} value={t.id}>
-                {t.tierName}（保证金 {fmtMoney(t.depositAmount)}，额度{' '}
+                {t.tierName}{t('common:m333')}{fmtMoney(t.depositAmount)}{t('common:m334')}{' '}
                 {fmtMoney(t.creditLimitOverride ?? Number(t.depositAmount) * Number(t.creditMultiplier))}）
               </option>
             ))}
           </select>
-          <div style={{ marginTop: 8, color: '#8c8c8c', fontSize: 12 }}>
-            改档后授信额度立即重算。<b>降档导致存量超额时不强制回收</b>，只切断新增，管理页显示「超额」标记。
-          </div>
+          <div style={{ marginTop: 8, color: '#8c8c8c', fontSize: 12 }}>{t('common:m335')}<b>{t('common:m336')}</b>{t('common:m337')}</div>
         </div>
       ),
-      okText: '确认改档',
-      cancelText: '取消',
+      okText: t('common:m338'),
+      cancelText: t('common:m96'),
       onOk: async () => {
         if (!tierId) {
-          message.error('请选择档位');
+          message.error(t('common:m332'));
           return Promise.reject(new Error('no-tier'));
         }
         await changeOrgTier(row.principalType, row.principalId, tierId, '平台改档');
-        message.success('档位已调整，授信额度已重算');
+        message.success(t('common:m339'));
         load();
         openDetail(row);
       },
@@ -184,30 +181,30 @@ export default function OrgManage() {
 
   const columns = [
     {
-      title: '主体类型', dataIndex: 'principalType', width: 100,
+      title: t('common:m340'), dataIndex: 'principalType', width: 100,
       render: (v) => <Tag color="blue">{APPLICANT_TYPES.find((x) => x.value === v)?.label || v}</Tag>,
     },
-    { title: '编码', dataIndex: 'code', width: 150, render: (v) => v || EMPTY },
-    { title: '名称', dataIndex: 'name', width: 200, render: (v) => v || EMPTY },
+    { title: t('common:m341'), dataIndex: 'code', width: 150, render: (v) => v || EMPTY },
+    { title: t('common:m277'), dataIndex: 'name', width: 200, render: (v) => v || EMPTY },
     {
-      title: '入驻状态', dataIndex: 'onboardingStatus', width: 160,
+      title: t('common:m342'), dataIndex: 'onboardingStatus', width: 160,
       render: (v, r) => (
         <Space size={4} direction="vertical">
           <OrgStatusTag value={v} />
           {v === 'DISABLED' && (
-            <Tag color="red" style={{ marginInlineStart: 0 }}>已禁用 · 仅可履约不可下单</Tag>
+            <Tag color="red" style={{ marginInlineStart: 0 }}>{t('common:m343')}</Tag>
           )}
           {usageMap[`${r.principalType}-${r.principalId}`]?.overLimit && (
-            <Tag color="volcano" style={{ marginInlineStart: 0 }}>超额</Tag>
+            <Tag color="volcano" style={{ marginInlineStart: 0 }}>{t('common:m344')}</Tag>
           )}
         </Space>
       ),
     },
     {
-      title: '额度占用', key: '_usage', width: 160,
+      title: t('common:m345'), key: '_usage', width: 160,
       render: (_, r) => {
         const u = usageMap[`${r.principalType}-${r.principalId}`];
-        if (r.creditLimit == null) return <Tag>未设档位</Tag>;
+        if (r.creditLimit == null) return <Tag>{t('common:m346')}</Tag>;
         if (!u) return EMPTY;
         return (
           <Space direction="vertical" size={2}>
@@ -222,25 +219,21 @@ export default function OrgManage() {
       },
     },
     {
-      title: '授信额度', dataIndex: 'creditLimit', width: 140,
-      render: (v) => (v == null ? <Tag>未设档位</Tag> : fmtMoney(v)),
+      title: t('common:m347'), dataIndex: 'creditLimit', width: 140,
+      render: (v) => (v == null ? <Tag>{t('common:m346')}</Tag> : fmtMoney(v)),
     },
-    { title: '禁用原因', dataIndex: 'disabledReason', render: (v) => v || EMPTY },
-    { title: '禁用时间', dataIndex: 'disabledAt', width: 160, render: (v) => fmtTime(v) },
+    { title: t('common:m348'), dataIndex: 'disabledReason', render: (v) => v || EMPTY },
+    { title: t('common:m349'), dataIndex: 'disabledAt', width: 160, render: (v) => fmtTime(v) },
     {
-      title: '操作', key: '_actions', width: 220, fixed: 'right',
+      title: t('common:m58'), key: '_actions', width: 220, fixed: 'right',
       render: (_, r) => (
         <Space size="small">
-          <Button size="small" type="link" onClick={() => openDetail(r)}>详情</Button>
+          <Button size="small" type="link" onClick={() => openDetail(r)}>{t('common:m141')}</Button>
           <Perm code="org:status:manage">
             {r.onboardingStatus === 'DISABLED' ? (
-              <Button size="small" type="link" icon={<CheckCircleOutlined />} onClick={() => doEnable(r)}>
-                启用
-              </Button>
+              <Button size="small" type="link" icon={<CheckCircleOutlined />} onClick={() => doEnable(r)}>{t('common:m350')}</Button>
             ) : (
-              <Button size="small" type="link" danger icon={<StopOutlined />} onClick={() => doDisable(r)}>
-                禁用
-              </Button>
+              <Button size="small" type="link" danger icon={<StopOutlined />} onClick={() => doDisable(r)}>{t('common:m351')}</Button>
             )}
           </Perm>
         </Space>
@@ -250,31 +243,31 @@ export default function OrgManage() {
 
   return (
     <PageCard
-      title="组织管理"
+      title={t('common:m352')}
       subtitle="服务站 / 厂家 / 商家统一治理：状态、保证金档位、授信额度、禁用启用"
       reload={load}
       loading={loading}
     >
       <Space wrap style={{ marginBottom: 12 }}>
-        <span>主体类型</span>
+        <span>{t('common:m340')}</span>
         <select
           style={{ height: 32, minWidth: 120 }}
           value={principalType || ''}
           onChange={(e) => setPrincipalType(e.target.value || undefined)}
         >
-          <option value="">全部</option>
+          <option value="">{t('common:m353')}</option>
           {APPLICANT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
         </select>
-        <span>入驻状态</span>
+        <span>{t('common:m342')}</span>
         <select
           style={{ height: 32, minWidth: 120 }}
           value={onboardingStatus || ''}
           onChange={(e) => setOnboardingStatus(e.target.value || undefined)}
         >
-          <option value="">全部</option>
+          <option value="">{t('common:m353')}</option>
           {ORG_STATUS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
-        <Button onClick={load}>查询</Button>
+        <Button onClick={load}>{t('common:m354')}</Button>
       </Space>
 
       <Table
@@ -296,37 +289,37 @@ export default function OrgManage() {
         extra={current && (
           <Space>
             <Perm code="org:status:manage">
-              <Button size="small" onClick={() => doChangeTier(current)}>改档</Button>
+              <Button size="small" onClick={() => doChangeTier(current)}>{t('common:m355')}</Button>
               {current.onboardingStatus === 'DISABLED' ? (
-                <Button size="small" type="primary" onClick={() => doEnable(current)}>启用</Button>
+                <Button size="small" type="primary" onClick={() => doEnable(current)}>{t('common:m350')}</Button>
               ) : (
-                <Button size="small" danger onClick={() => doDisable(current)}>禁用</Button>
+                <Button size="small" danger onClick={() => doDisable(current)}>{t('common:m351')}</Button>
               )}
             </Perm>
           </Space>
         )}
       >
-        {detailLoading ? <div>加载中…</div> : current ? (
+        {detailLoading ? <div>{t('common:m79')}</div> : current ? (
           <Space direction="vertical" size={12} style={{ width: '100%' }}>
             <Descriptions bordered size="small" column={2}>
-              <Descriptions.Item label="主体类型">
+              <Descriptions.Item label={t('common:m340')}>
                 <Tag color="blue">{APPLICANT_TYPES.find((x) => x.value === current.principalType)?.label}</Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="入驻状态"><OrgStatusTag value={current.onboardingStatus} /></Descriptions.Item>
-              <Descriptions.Item label="编码">{current.code || EMPTY}</Descriptions.Item>
-              <Descriptions.Item label="名称">{current.name || EMPTY}</Descriptions.Item>
-              <Descriptions.Item label="来源申请单">{current.onboardingApplicationId || EMPTY}</Descriptions.Item>
-              <Descriptions.Item label="授信额度">
-                {current.creditLimit == null ? <Tag>未设档位（不校验）</Tag> : fmtMoney(current.creditLimit)}
+              <Descriptions.Item label={t('common:m342')}><OrgStatusTag value={current.onboardingStatus} /></Descriptions.Item>
+              <Descriptions.Item label={t('common:m341')}>{current.code || EMPTY}</Descriptions.Item>
+              <Descriptions.Item label={t('common:m277')}>{current.name || EMPTY}</Descriptions.Item>
+              <Descriptions.Item label={t('common:m356')}>{current.onboardingApplicationId || EMPTY}</Descriptions.Item>
+              <Descriptions.Item label={t('common:m347')}>
+                {current.creditLimit == null ? <Tag>{t('common:m357')}</Tag> : fmtMoney(current.creditLimit)}
               </Descriptions.Item>
-              <Descriptions.Item label="禁用原因" span={2}>{current.disabledReason || EMPTY}</Descriptions.Item>
-              <Descriptions.Item label="禁用时间">{fmtTime(current.disabledAt)}</Descriptions.Item>
+              <Descriptions.Item label={t('common:m348')} span={2}>{current.disabledReason || EMPTY}</Descriptions.Item>
+              <Descriptions.Item label={t('common:m349')}>{fmtTime(current.disabledAt)}</Descriptions.Item>
             </Descriptions>
 
-            <b>授信额度占用</b>
+            <b>{t('common:m358')}</b>
             {credit ? (
               credit.creditLimit == null ? (
-                <div>该主体未设授信额度（历史主体未走入驻流程），入站不做额度校验。</div>
+                <div>{t('common:m359')}</div>
               ) : (
                 <Space direction="vertical" style={{ width: '100%' }}>
                   <Progress
@@ -334,47 +327,47 @@ export default function OrgManage() {
                     status={credit.overLimit ? 'exception' : credit.warn ? 'active' : 'normal'}
                   />
                   <Space wrap>
-                    <Tag>已占用 {fmtMoney(credit.usedValue)}</Tag>
-                    <Tag color="blue">上限 {fmtMoney(credit.creditLimit)}</Tag>
-                    <Tag color={credit.warn ? 'orange' : 'default'}>占用率 {fmtRatio(credit.usageRatio)}</Tag>
-                    <Tag>设备数 {credit.deviceCount ?? 0}</Tag>
-                    <Tag>档位 {credit.tierName || EMPTY}</Tag>
-                    {credit.overLimit && <Tag color="volcano">超额（降档所致，已切断新增，存量不强制回收）</Tag>}
+                    <Tag>{t('common:m360')}{fmtMoney(credit.usedValue)}</Tag>
+                    <Tag color="blue">{t('common:m361')}{fmtMoney(credit.creditLimit)}</Tag>
+                    <Tag color={credit.warn ? 'orange' : 'default'}>{t('common:m362')}{fmtRatio(credit.usageRatio)}</Tag>
+                    <Tag>{t('common:m363')}{credit.deviceCount ?? 0}</Tag>
+                    <Tag>{t('common:m364')}{credit.tierName || EMPTY}</Tag>
+                    {credit.overLimit && <Tag color="volcano">{t('common:m365')}</Tag>}
                   </Space>
                 </Space>
               )
             ) : <div>{EMPTY}</div>}
 
-            <b>保证金缴款记录</b>
+            <b>{t('common:m366')}</b>
             <Table
               rowKey="id"
               size="small"
               dataSource={deposits}
               pagination={false}
               columns={[
-                { title: '缴款单号', dataIndex: 'depositNo', width: 150 },
-                { title: '金额', dataIndex: 'amount', width: 120, render: (v, r) => fmtMoney(v, r.currency) },
-                { title: '状态', dataIndex: 'status', width: 110, render: (v) => <Tag>{v}</Tag> },
-                { title: '确认时间', dataIndex: 'confirmedAt', width: 160, render: (v) => fmtTime(v) },
+                { title: t('common:m367'), dataIndex: 'depositNo', width: 150 },
+                { title: t('common:m316'), dataIndex: 'amount', width: 120, render: (v, r) => fmtMoney(v, r.currency) },
+                { title: t('common:m8'), dataIndex: 'status', width: 110, render: (v) => <Tag>{v}</Tag> },
+                { title: t('common:m368'), dataIndex: 'confirmedAt', width: 160, render: (v) => fmtTime(v) },
               ]}
             />
 
-            <b>状态变更留痕</b>
+            <b>{t('common:m369')}</b>
             <Table
               rowKey="id"
               size="small"
               dataSource={logs}
               pagination={false}
               columns={[
-                { title: '动作', dataIndex: 'action', width: 100, render: (v) => <Tag>{v}</Tag> },
-                { title: '状态迁移', key: '_st', width: 160, render: (_, r) => `${r.fromStatus || '—'} → ${r.toStatus}` },
-                { title: '原因 / 备注', dataIndex: 'reason', render: (v) => v || EMPTY },
-                { title: '操作人', dataIndex: 'operatorId', width: 90, render: (v) => v ?? EMPTY },
-                { title: '时间', dataIndex: 'createdAt', width: 160, render: (v) => fmtTime(v) },
+                { title: t('common:m370'), dataIndex: 'action', width: 100, render: (v) => <Tag>{v}</Tag> },
+                { title: t('common:m371'), key: '_st', width: 160, render: (_, r) => `${r.fromStatus || '—'} → ${r.toStatus}` },
+                { title: t('common:m372'), dataIndex: 'reason', render: (v) => v || EMPTY },
+                { title: t('common:m373'), dataIndex: 'operatorId', width: 90, render: (v) => v ?? EMPTY },
+                { title: t('common:m35'), dataIndex: 'createdAt', width: 160, render: (v) => fmtTime(v) },
               ]}
             />
           </Space>
-        ) : <div>无数据</div>}
+        ) : <div>{t('common:m374')}</div>}
       </Drawer>
     </PageCard>
   );

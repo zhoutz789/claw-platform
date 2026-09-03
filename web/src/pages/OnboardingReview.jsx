@@ -12,6 +12,7 @@ import {
   getAdminApplication, listApplications, listPendingActivations, reviewApplication,
   retryActivation, setKycStatus, sweepExpiredApplications,
 } from '../api/onboarding';
+import { useTranslation } from 'react-i18next';
 
 /**
  * 入驻申请管理页（增量 C · 页面 4–5 · O34/O35/O16）。
@@ -22,7 +23,8 @@ import {
  *
  * 对接后端 AdminOnboardingController（/api/v1/admin/onboarding）。权限码 onboarding:review:manage。
  */
-export default function OnboardingReview() {
+export default function OnboardingReview() {  const { t } = useTranslation('common');
+
   const { message } = App.useApp();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -85,7 +87,7 @@ export default function OnboardingReview() {
   const doReview = async () => {
     const v = await reviewForm.validateFields().catch(() => ({}));
     if (action !== 'APPROVE' && !v.reason) {
-      message.error('驳回 / 退回时必须填写原因');
+      message.error(t('common:m419'));
       return;
     }
     setSubmitting(true);
@@ -99,7 +101,7 @@ export default function OnboardingReview() {
           reviewRemark: r.remark,
         })),
       });
-      message.success('审核已提交');
+      message.success(t('common:m420'));
       setDetailOpen(false);
       load();
       loadPending();
@@ -143,29 +145,29 @@ export default function OnboardingReview() {
   };
 
   const columns = [
-    { title: '申请单号', dataIndex: 'applicationNo', width: 170 },
+    { title: t('common:m421'), dataIndex: 'applicationNo', width: 170 },
     {
-      title: '主体类型', dataIndex: 'applicantType', width: 100,
+      title: t('common:m340'), dataIndex: 'applicantType', width: 100,
       render: (v) => <Tag color="blue">{APPLICANT_TYPES.find((x) => x.value === v)?.label || v}</Tag>,
     },
-    { title: '申请人', dataIndex: 'applicantName', width: 110, render: (v) => v || EMPTY },
-    { title: '联系电话', dataIndex: 'contactPhone', width: 130, render: (v) => v || EMPTY },
+    { title: t('common:m422'), dataIndex: 'applicantName', width: 110, render: (v) => v || EMPTY },
+    { title: t('common:m423'), dataIndex: 'contactPhone', width: 130, render: (v) => v || EMPTY },
     {
-      title: '状态', dataIndex: 'status', width: 130,
+      title: t('common:m8'), dataIndex: 'status', width: 130,
       render: (v) => <AppStatusTag value={v} />,
     },
-    { title: '合同版本', dataIndex: 'contractVersion', width: 100, render: (v) => v || EMPTY },
-    { title: '提交时间', dataIndex: 'submittedAt', width: 160, render: (v) => fmtTime(v) },
+    { title: t('common:m424'), dataIndex: 'contractVersion', width: 100, render: (v) => v || EMPTY },
+    { title: t('common:m425'), dataIndex: 'submittedAt', width: 160, render: (v) => fmtTime(v) },
     {
-      title: '操作', key: '_actions', width: 190, fixed: 'right',
+      title: t('common:m58'), key: '_actions', width: 190, fixed: 'right',
       render: (_, r) => (
         <Space size="small">
           <Perm code="onboarding:review:manage">
-            <Button size="small" type="link" onClick={() => openDetail(r.id)}>审核</Button>
+            <Button size="small" type="link" onClick={() => openDetail(r.id)}>{t('common:m426')}</Button>
           </Perm>
           {r.status === 'DEPOSIT_PAID' && (
             <Perm code="onboarding:review:manage">
-              <Button size="small" type="link" onClick={() => doRetry(r.id)}>重试激活</Button>
+              <Button size="small" type="link" onClick={() => doRetry(r.id)}>{t('common:m427')}</Button>
             </Perm>
           )}
         </Space>
@@ -177,43 +179,43 @@ export default function OnboardingReview() {
 
   return (
     <PageCard
-      title="入驻申请管理"
+      title={t('common:m428')}
       subtitle="按主体类型与状态筛选，审核 / 驳回（精确到材料项）/ 退回补正"
       reload={load}
       loading={loading}
       extra={(
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={doSweep}>缴款超时扫描</Button>
+          <Button icon={<ReloadOutlined />} onClick={doSweep}>{t('common:m429')}</Button>
         </Space>
       )}
     >
       {pendingCount > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <Tag color="red">有 {pendingCount} 条保证金已确认但激活未完成，请在列表中点「重试激活」</Tag>
+          <Tag color="red">{t('common:m430')}{pendingCount}{t('common:m431')}</Tag>
         </div>
       )}
 
       <Space wrap style={{ marginBottom: 12 }}>
-        <span>主体类型</span>
+        <span>{t('common:m340')}</span>
         <select
           className="ant-select-selector"
           style={{ height: 32, minWidth: 120 }}
           value={applicantType || ''}
           onChange={(e) => setApplicantType(e.target.value || undefined)}
         >
-          <option value="">全部</option>
+          <option value="">{t('common:m353')}</option>
           {APPLICANT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
         </select>
-        <span>状态</span>
+        <span>{t('common:m8')}</span>
         <select
           style={{ height: 32, minWidth: 140 }}
           value={status || ''}
           onChange={(e) => setStatus(e.target.value || undefined)}
         >
-          <option value="">全部</option>
+          <option value="">{t('common:m353')}</option>
           {APP_STATUS_FILTER.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
-        <Button onClick={load}>查询</Button>
+        <Button onClick={load}>{t('common:m354')}</Button>
       </Space>
 
       <Table
@@ -235,95 +237,89 @@ export default function OnboardingReview() {
         destroyOnClose
         extra={(
           <Space>
-            <Button icon={<CheckOutlined />} type="primary" loading={submitting} onClick={doReview}>
-              提交审核结论
-            </Button>
+            <Button icon={<CheckOutlined />} type="primary" loading={submitting} onClick={doReview}>{t('common:m432')}</Button>
           </Space>
         )}
       >
         {detailLoading ? (
-          <div>加载中…</div>
+          <div>{t('common:m79')}</div>
         ) : app ? (
           <Space direction="vertical" size={12} style={{ width: '100%' }}>
             <Descriptions bordered size="small" column={2}>
-              <Descriptions.Item label="申请单号">{app.applicationNo}</Descriptions.Item>
-              <Descriptions.Item label="主体类型">
+              <Descriptions.Item label={t('common:m421')}>{app.applicationNo}</Descriptions.Item>
+              <Descriptions.Item label={t('common:m340')}>
                 <Tag color="blue">{APPLICANT_TYPES.find((x) => x.value === app.applicantType)?.label}</Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="状态"><AppStatusTag value={app.status} orgStatus={detail.orgOnboardingStatus} /></Descriptions.Item>
-              <Descriptions.Item label="申请人">{app.applicantName || EMPTY}</Descriptions.Item>
-              <Descriptions.Item label="联系方式">{app.contactPhone || EMPTY}</Descriptions.Item>
-              <Descriptions.Item label="家庭地址">{app.homeAddress || EMPTY}</Descriptions.Item>
-              <Descriptions.Item label="身份证（脱敏）">{detail.idCardMasked || EMPTY}</Descriptions.Item>
-              <Descriptions.Item label="身份证认证">
+              <Descriptions.Item label={t('common:m8')}><AppStatusTag value={app.status} orgStatus={detail.orgOnboardingStatus} /></Descriptions.Item>
+              <Descriptions.Item label={t('common:m422')}>{app.applicantName || EMPTY}</Descriptions.Item>
+              <Descriptions.Item label={t('common:m433')}>{app.contactPhone || EMPTY}</Descriptions.Item>
+              <Descriptions.Item label={t('common:m434')}>{app.homeAddress || EMPTY}</Descriptions.Item>
+              <Descriptions.Item label={t('common:m435')}>{detail.idCardMasked || EMPTY}</Descriptions.Item>
+              <Descriptions.Item label={t('common:m436')}>
                 <Tag color={app.kycStatus === 'VERIFIED' ? 'green' : app.kycStatus === 'REJECTED' ? 'red' : 'orange'}>
                   {app.kycStatus}
                 </Tag>
                 <Space size="small">
-                  <Button size="small" type="link" onClick={() => doKyc('VERIFIED')}>置为已认证</Button>
-                  <Button size="small" type="link" danger onClick={() => doKyc('REJECTED')}>置为认证失败</Button>
+                  <Button size="small" type="link" onClick={() => doKyc('VERIFIED')}>{t('common:m437')}</Button>
+                  <Button size="small" type="link" danger onClick={() => doKyc('REJECTED')}>{t('common:m438')}</Button>
                 </Space>
               </Descriptions.Item>
-              <Descriptions.Item label="经营范围" span={2}>{app.businessScope || EMPTY}</Descriptions.Item>
-              <Descriptions.Item label="场地定位">
+              <Descriptions.Item label={t('common:m439')} span={2}>{app.businessScope || EMPTY}</Descriptions.Item>
+              <Descriptions.Item label={t('common:m440')}>
                 {app.lat != null && app.lng != null ? `${app.lat}, ${app.lng}` : EMPTY}
                 <div style={{ color: '#8c8c8c' }}>{app.geoAddress || ''}</div>
               </Descriptions.Item>
-              <Descriptions.Item label="所有权 / 租赁">{app.ownershipType || EMPTY}</Descriptions.Item>
-              <Descriptions.Item label="合同签署版本">
+              <Descriptions.Item label={t('common:m441')}>{app.ownershipType || EMPTY}</Descriptions.Item>
+              <Descriptions.Item label={t('common:m442')}>
                 {app.contractVersion || EMPTY}
                 <div style={{ color: '#8c8c8c' }}>
                   {detail.contract ? `${detail.contract.title}（签署时锁定）` : '历史数据无合同快照'}
                 </div>
               </Descriptions.Item>
-              <Descriptions.Item label="保证金档位">
+              <Descriptions.Item label={t('common:m443')}>
                 {detail.tier ? `${detail.tier.tierName} · ${detail.tier.depositAmount}` : EMPTY}
               </Descriptions.Item>
-              <Descriptions.Item label="驳回原因" span={2}>{app.rejectReason || EMPTY}</Descriptions.Item>
+              <Descriptions.Item label={t('common:m444')} span={2}>{app.rejectReason || EMPTY}</Descriptions.Item>
             </Descriptions>
 
-            <b>材料清单（逐项审核，驳回请填原因）</b>
+            <b>{t('common:m445')}</b>
             <Table
               rowKey="id"
               size="small"
               dataSource={detail.attachments || []}
               pagination={false}
               columns={[
-                { title: '材料项', dataIndex: 'attachType', width: 160 },
+                { title: t('common:m446'), dataIndex: 'attachType', width: 160 },
                 {
-                  title: '文件', dataIndex: 'fileUrl', width: 260,
-                  render: (v) => (v ? <a href={v} target="_blank" rel="noreferrer">查看 / 下载</a> : EMPTY),
+                  title: t('common:m447'), dataIndex: 'fileUrl', width: 260,
+                  render: (v) => (v ? <a href={v} target="_blank" rel="noreferrer">{t('common:m448')}</a> : EMPTY),
                 },
-                { title: '说明', dataIndex: 'remark', render: (v) => v || EMPTY },
+                { title: t('common:m211'), dataIndex: 'remark', render: (v) => v || EMPTY },
                 {
-                  title: '审核结论', dataIndex: 'reviewStatus', width: 100,
+                  title: t('common:m449'), dataIndex: 'reviewStatus', width: 100,
                   render: (v) => {
                     const color = v === 'PASSED' ? 'green' : v === 'REJECTED' ? 'red' : 'orange';
                     return <Tag color={color}>{v}</Tag>;
                   },
                 },
                 {
-                  title: '逐项结论', key: '_review', width: 280,
+                  title: t('common:m450'), key: '_review', width: 280,
                   render: (_, r) => (
                     <Space size="small">
                       <Button
                         size="small"
                         type={itemResults[r.id]?.status === 'PASSED' ? 'primary' : 'default'}
                         onClick={() => setItemResults((p) => ({ ...p, [r.id]: { ...p[r.id], status: 'PASSED' } }))}
-                      >
-                        通过
-                      </Button>
+                      >{t('common:m451')}</Button>
                       <Button
                         size="small"
                         danger={itemResults[r.id]?.status === 'REJECTED'}
                         onClick={() => setItemResults((p) => ({ ...p, [r.id]: { ...p[r.id], status: 'REJECTED' } }))}
-                      >
-                        驳回
-                      </Button>
+                      >{t('common:m452')}</Button>
                       <Input
                         size="small"
                         style={{ width: 150 }}
-                        placeholder="如：营业执照照片模糊"
+                        placeholder={t('common:m453')}
                         value={itemResults[r.id]?.remark || ''}
                         onChange={(e) => setItemResults((p) => ({
                           ...p, [r.id]: { ...p[r.id], remark: e.target.value },
@@ -335,7 +331,7 @@ export default function OnboardingReview() {
               ]}
             />
 
-            <b>审批时间轴</b>
+            <b>{t('common:m454')}</b>
             <Timeline
               items={(detail.logs || []).map((l) => ({
                 children: (
@@ -349,27 +345,27 @@ export default function OnboardingReview() {
               }))}
             />
 
-            <b>审核结论</b>
+            <b>{t('common:m449')}</b>
             <Form form={reviewForm} layout="vertical">
               <Form.Item name="action" initialValue="APPROVE">
                 <Radio.Group value={action} onChange={(e) => setAction(e.target.value)}>
-                  <Radio value="APPROVE">通过（生成缴款通知）</Radio>
-                  <Radio value="REJECT">驳回（到材料项）</Radio>
-                  <Radio value="RETURN">退回补正</Radio>
+                  <Radio value="APPROVE">{t('common:m455')}</Radio>
+                  <Radio value="REJECT">{t('common:m456')}</Radio>
+                  <Radio value="RETURN">{t('common:m457')}</Radio>
                 </Radio.Group>
               </Form.Item>
-              <Form.Item name="reason" label="审核意见（驳回 / 退回必填）">
-                <Input.TextArea rows={3} placeholder="如：营业执照照片模糊，请重新上传" />
+              <Form.Item name="reason" label={t('common:m458')}>
+                <Input.TextArea rows={3} placeholder={t('common:m459')} />
               </Form.Item>
             </Form>
             <Space>
-              <Button icon={<CheckOutlined />} type="primary" loading={submitting} onClick={doReview}>提交</Button>
-              <Button icon={<RedoOutlined />} onClick={() => setItemResults({})}>重置逐项结论</Button>
-              <Button icon={<CloseOutlined />} onClick={() => setDetailOpen(false)}>关闭</Button>
+              <Button icon={<CheckOutlined />} type="primary" loading={submitting} onClick={doReview}>{t('common:m460')}</Button>
+              <Button icon={<RedoOutlined />} onClick={() => setItemResults({})}>{t('common:m461')}</Button>
+              <Button icon={<CloseOutlined />} onClick={() => setDetailOpen(false)}>{t('common:m101')}</Button>
             </Space>
           </Space>
         ) : (
-          <div>无数据</div>
+          <div>{t('common:m374')}</div>
         )}
       </Drawer>
     </PageCard>

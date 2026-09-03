@@ -100,6 +100,10 @@ export const NAV = [
     children: [
       { key: 'task-drone', label: 'nav:item.task-drone', path: '/task-drone' },
       { key: 'task-rent', label: 'nav:item.task-rent', path: '/task-rent' },
+      { key: 'task-logi', label: 'nav:item.task-logi', path: '/task-logi' },
+      { key: 'task-ad', label: 'nav:item.task-ad', path: '/task-ad' },
+      { key: 'task-video', label: 'nav:item.task-video', path: '/task-video' },
+      { key: 'task-near', label: 'nav:item.task-near', path: '/task-near' },
     ],
   },
   // ——— 以下为 2026-08-29 恢复的旧四大中心 ———

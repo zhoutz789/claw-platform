@@ -9,6 +9,7 @@ import {
   listCustomerOrders, getRegistrationProgress, registerUnits,
   deleteRegistration, shipOrder,
 } from '../api/order';
+import { useTranslation } from 'react-i18next';
 
 const { Text, Paragraph, Title } = Typography;
 
@@ -23,7 +24,8 @@ const STATUS_COLOR = {
 };
 
 // 发货前逐台登记面板（接真实后端，替换原 mock）。
-export default function OrderManage() {
+export default function OrderManage() {  const { t } = useTranslation('common');
+
   const [searchParams, setSearchParams] = useSearchParams();
   const orderId = searchParams.get('orderId');
 
@@ -80,7 +82,7 @@ export default function OrderManage() {
       model: u.model,
       componentNosJson: JSON.stringify(u.components || []),
     }));
-    if (!units.length) { message.warning('请至少登记一台设备'); return; }
+    if (!units.length) { message.warning(t('common:m850')); return; }
     try {
       await registerUnits(orderId, regItem.id, { units });
       message.success(`已登记 ${units.length} 台设备`);
@@ -94,7 +96,7 @@ export default function OrderManage() {
   const onDelete = async (regId) => {
     try {
       await deleteRegistration(orderId, regId);
-      message.success('已删除登记（资产回滚）');
+      message.success(t('common:m851'));
       loadProgress(orderId);
     } catch (e) { message.error(`纠错失败：${e.message}`); }
   };
@@ -103,7 +105,7 @@ export default function OrderManage() {
     setShipping(true);
     try {
       await shipOrder(orderId);
-      message.success('发货成功');
+      message.success(t('common:m852'));
       loadProgress(orderId);
     } catch (e) { message.error(`发货失败：${e.message}`); }
     finally { setShipping(false); }
@@ -111,9 +113,9 @@ export default function OrderManage() {
 
   const itemColumns = [
     { title: 'SKU', dataIndex: 'skuId', width: 90 },
-    { title: '类型', dataIndex: 'assetType', width: 100, render: (v) => <Tag>{v}</Tag> },
+    { title: t('common:m36'), dataIndex: 'assetType', width: 100, render: (v) => <Tag>{v}</Tag> },
     {
-      title: '登记进度', width: 240,
+      title: t('common:m853'), width: 240,
       render: (_, it) => {
         const p = progress?.items?.find((x) => String(x.orderItemId) === String(it.orderItemId));
         const reg = p ? p.registered : 0;
@@ -128,27 +130,25 @@ export default function OrderManage() {
       },
     },
     {
-      title: '操作', width: 120,
+      title: t('common:m58'), width: 120,
       render: (_, it) => (
-        <Button size="small" type="primary" onClick={() => openReg({ id: it.orderItemId })}>
-          登记
-        </Button>
+        <Button size="small" type="primary" onClick={() => openReg({ id: it.orderItemId })}>{t('common:m854')}</Button>
       ),
     },
   ];
 
   const regColumns = [
     { title: '#', dataIndex: 'seq', width: 50 },
-    { title: '资产ID', dataIndex: 'assetId', width: 90 },
-    { title: '二维码', dataIndex: 'qrCode', width: 160, ellipsis: true },
-    { title: '车架号', dataIndex: 'vin', width: 120 },
-    { title: '电机号', dataIndex: 'motorNo', width: 120 },
-    { title: '状态', dataIndex: 'status', width: 110, render: (v) => <Tag color="blue">{v}</Tag> },
+    { title: t('common:m213'), dataIndex: 'assetId', width: 90 },
+    { title: t('common:m183'), dataIndex: 'qrCode', width: 160, ellipsis: true },
+    { title: t('common:m855'), dataIndex: 'vin', width: 120 },
+    { title: t('common:m856'), dataIndex: 'motorNo', width: 120 },
+    { title: t('common:m8'), dataIndex: 'status', width: 110, render: (v) => <Tag color="blue">{v}</Tag> },
     {
-      title: '操作', width: 90,
+      title: t('common:m58'), width: 90,
       render: (_, r) => (
-        <Popconfirm title="删除该登记（资产回滚 RETIRED）？" onConfirm={() => onDelete(r.id)}>
-          <Button size="small" danger>纠错</Button>
+        <Popconfirm title={t('common:m857')} onConfirm={() => onDelete(r.id)}>
+          <Button size="small" danger>{t('common:m858')}</Button>
         </Popconfirm>
       ),
     },
@@ -156,11 +156,11 @@ export default function OrderManage() {
 
   return (
     <PageCard
-      title="发货前逐台登记"
+      title={t('common:m859')}
       extra={(
         <Select
           showSearch
-          placeholder="选择客户订单"
+          placeholder={t('common:m860')}
           style={{ width: 320 }}
           value={orderId ? Number(orderId) : undefined}
           onChange={onPickOrder}
@@ -185,28 +185,26 @@ export default function OrderManage() {
             style={{ marginBottom: 14 }}
           />
           <Paragraph>
-            <Text strong>订单：</Text>{order.orderNo}　
-            <Text strong>状态：</Text><Tag color={STATUS_COLOR[order.status]}>{order.status}</Tag>　
-            <Text strong>买家：</Text>{order.buyerUserId}
+            <Text strong>{t('common:m861')}</Text>{order.orderNo}　
+            <Text strong>{t('common:m862')}</Text><Tag color={STATUS_COLOR[order.status]}>{order.status}</Tag>　
+            <Text strong>{t('common:m863')}</Text>{order.buyerUserId}
           </Paragraph>
 
-          <Card title="各 SKU 登记进度" size="small" style={{ marginBottom: 14 }}>
+          <Card title={t('common:m864')} size="small" style={{ marginBottom: 14 }}>
             <Table rowKey="orderItemId" dataSource={progress?.items || []} columns={itemColumns}
               pagination={false} size="middle" />
           </Card>
 
-          <Card title="已登记设备（资产列表）" size="small" style={{ marginBottom: 14 }}>
+          <Card title={t('common:m865')} size="small" style={{ marginBottom: 14 }}>
             <Table rowKey="id" dataSource={progress?.registrations || []} columns={regColumns}
               pagination={false} size="middle" />
           </Card>
 
           <Divider />
           <Button type="primary" size="large" disabled={!progress?.canShip}
-            loading={shipping} onClick={onShip}>
-            发货（登记齐全后放行）
-          </Button>
+            loading={shipping} onClick={onShip}>{t('common:m866')}</Button>
           {!progress?.canShip && (
-            <Text type="secondary" style={{ marginLeft: 12 }}>登记未齐全，不可发货。</Text>
+            <Text type="secondary" style={{ marginLeft: 12 }}>{t('common:m867')}</Text>
           )}
         </>
       )}
@@ -214,7 +212,7 @@ export default function OrderManage() {
       <Modal
         title={`逐台登记 · SKU ${regItem?.skuId}`} open={regOpen} width={760}
         onOk={submitReg} onCancel={() => setRegOpen(false)} destroyOnClose
-        okText="提交登记" cancelText="取消"
+        okText={t('common:m868')} cancelText={t('common:m96')}
       >
         <Form form={regForm} layout="vertical">
           <Form.List name="units">
@@ -223,51 +221,49 @@ export default function OrderManage() {
                 {units.map((unit) => (
                   <Card size="small" key={unit.key} style={{ marginBottom: 12 }}
                     title={`第 ${unit.name + 1} 台`}
-                    extra={<Button size="small" danger onClick={() => remove(unit.name)}>移除</Button>}>
+                    extra={<Button size="small" danger onClick={() => remove(unit.name)}>{t('common:m869')}</Button>}>
                     <Space wrap>
-                      <Form.Item label="二维码*" name={[unit.name, 'qrCode']} rules={[{ required: true, message: '请录入二维码' }]}>
-                        <Input placeholder="扫码 / 录入唯一二维码" style={{ width: 220 }} />
+                      <Form.Item label={t('common:m870')} name={[unit.name, 'qrCode']} rules={[{ required: true, message: t('common:m871') }]}>
+                        <Input placeholder={t('common:m872')} style={{ width: 220 }} />
                       </Form.Item>
-                      <Form.Item label="车架号" name={[unit.name, 'vin']}>
+                      <Form.Item label={t('common:m855')} name={[unit.name, 'vin']}>
                         <Input placeholder="VIN" style={{ width: 160 }} />
                       </Form.Item>
-                      <Form.Item label="车架号(主部件)" name={[unit.name, 'frameNo']}>
+                      <Form.Item label={t('common:m873')} name={[unit.name, 'frameNo']}>
                         <Input style={{ width: 140 }} />
                       </Form.Item>
-                      <Form.Item label="电机号" name={[unit.name, 'motorNo']}>
+                      <Form.Item label={t('common:m856')} name={[unit.name, 'motorNo']}>
                         <Input style={{ width: 140 }} />
                       </Form.Item>
-                      <Form.Item label="出厂序列号" name={[unit.name, 'serialNumber']}>
+                      <Form.Item label={t('common:m874')} name={[unit.name, 'serialNumber']}>
                         <Input style={{ width: 160 }} />
                       </Form.Item>
-                      <Form.Item label="型号" name={[unit.name, 'model']}>
+                      <Form.Item label={t('common:m136')} name={[unit.name, 'model']}>
                         <Input style={{ width: 140 }} />
                       </Form.Item>
                     </Space>
                     <Form.List name={[unit.name, 'components']}>
                       {(comps, { add: cAdd, remove: cRemove }) => (
                         <>
-                          <Text type="secondary">主部件编号（component_nos）：</Text>
+                          <Text type="secondary">{t('common:m875')}</Text>
                           {comps.map((c) => (
                             <Space key={c.key} style={{ display: 'flex', marginBottom: 6 }}>
                               <Form.Item name={[c.name, 'type']} rules={[{ required: true }]} style={{ marginBottom: 0 }}>
-                                <Select options={COMPONENT_TYPES} style={{ width: 160 }} placeholder="类型" />
+                                <Select options={COMPONENT_TYPES} style={{ width: 160 }} placeholder={t('common:m36')} />
                               </Form.Item>
-                              <Form.Item name={[c.name, 'no']} rules={[{ required: true, message: '请填编号' }]} style={{ marginBottom: 0 }}>
-                                <Input placeholder="编号" style={{ width: 200 }} />
+                              <Form.Item name={[c.name, 'no']} rules={[{ required: true, message: t('common:m876') }]} style={{ marginBottom: 0 }}>
+                                <Input placeholder={t('common:m877')} style={{ width: 200 }} />
                               </Form.Item>
-                              <Button danger size="small" onClick={() => cRemove(c.name)}>删</Button>
+                              <Button danger size="small" onClick={() => cRemove(c.name)}>{t('common:m767')}</Button>
                             </Space>
                           ))}
-                          <Button size="small" onClick={() => cAdd({ type: 'BATTERY', no: '' })}>+ 加主部件</Button>
+                          <Button size="small" onClick={() => cAdd({ type: 'BATTERY', no: '' })}>{t('common:m878')}</Button>
                         </>
                       )}
                     </Form.List>
                   </Card>
                 ))}
-                <Button type="dashed" block onClick={() => add({ components: [{ type: 'BATTERY', no: '' }] })}>
-                  + 再登记一台
-                </Button>
+                <Button type="dashed" block onClick={() => add({ components: [{ type: 'BATTERY', no: '' }] })}>{t('common:m879')}</Button>
               </>
             )}
           </Form.List>

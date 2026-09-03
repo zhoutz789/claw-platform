@@ -134,7 +134,8 @@
         "ptype": "Type",
         "path": "Route",
         "parent": "Parent",
-        "sort": "Sort"
+        "sort": "Sort",
+        "icon": "Icon"
       },
       "modal": {
         "titleAdd": "Add catalogue item",

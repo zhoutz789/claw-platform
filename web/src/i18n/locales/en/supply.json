@@ -488,7 +488,8 @@
       "ownerManufacturerId": "Owner Manufacturer",
       "holderStationId": "Holder Station",
       "inboundAt": "Inbound Time",
-      "updatedAt": "Updated At"
+      "updatedAt": "Updated At",
+      "count": "Count"
     },
     "station": {
       "total": "{count} units",

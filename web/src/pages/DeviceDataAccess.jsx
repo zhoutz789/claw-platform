@@ -3,6 +3,7 @@ import { Tabs, Form, InputNumber, Input, Select, Button, Table, Tag, Alert, Spac
 import { ApiOutlined, CloudUploadOutlined, DownloadOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import api from '../api';
+import { useTranslation } from 'react-i18next';
 
 const { Paragraph, Text } = Typography;
 
@@ -55,7 +56,8 @@ function toFaultsJson(text) {
   return arr.length ? JSON.stringify(arr) : null;
 }
 
-export default function DeviceDataAccess() {
+export default function DeviceDataAccess() {  const { t } = useTranslation('common');
+
   const [tab, setTab] = useState('manual');
   const [form] = Form.useForm();
   const [log, setLog] = useState([]);
@@ -106,9 +108,9 @@ export default function DeviceDataAccess() {
   };
 
   const presets = [
-    { label: '常规上报（资产+收益）', payload: { imei: 'IMEI-B001', speed: 20, soc: 80, soh: 95, temp: 30, humid: 55, faults: null, lat: 11.56, lng: 104.89 }, form: { imei: 'IMEI-B001', speed: 20, soc: 80, soh: 95, temp: 30, humid: 55, faults: '', lat: 11.56, lng: 104.89, deviceType: 'BATTERY_BMS' } },
-    { label: '电池低SOH（→退役）', payload: { imei: 'IMEI-B002', speed: 10, soc: 80, soh: 60, temp: 32, humid: 55, faults: null, lat: 11.56, lng: 104.89 }, form: { imei: 'IMEI-B002', speed: 10, soc: 80, soh: 60, temp: 32, humid: 55, faults: '', lat: 11.56, lng: 104.89, deviceType: 'BATTERY_BMS' } },
-    { label: '无人机低电量（→锁机）', payload: { imei: 'DRONE-IMEI-001', speed: 0, soc: 12, soh: 92, temp: 28, humid: 50, faults: null, lat: 11.57, lng: 104.90 }, form: { imei: 'DRONE-IMEI-001', speed: 0, soc: 12, soh: 92, temp: 28, humid: 50, faults: '', lat: 11.57, lng: 104.90, deviceType: 'DRONE_FCU' } },
+    { label: t('common:m619'), payload: { imei: 'IMEI-B001', speed: 20, soc: 80, soh: 95, temp: 30, humid: 55, faults: null, lat: 11.56, lng: 104.89 }, form: { imei: 'IMEI-B001', speed: 20, soc: 80, soh: 95, temp: 30, humid: 55, faults: '', lat: 11.56, lng: 104.89, deviceType: 'BATTERY_BMS' } },
+    { label: t('common:m620'), payload: { imei: 'IMEI-B002', speed: 10, soc: 80, soh: 60, temp: 32, humid: 55, faults: null, lat: 11.56, lng: 104.89 }, form: { imei: 'IMEI-B002', speed: 10, soc: 80, soh: 60, temp: 32, humid: 55, faults: '', lat: 11.56, lng: 104.89, deviceType: 'BATTERY_BMS' } },
+    { label: t('common:m621'), payload: { imei: 'DRONE-IMEI-001', speed: 0, soc: 12, soh: 92, temp: 28, humid: 50, faults: null, lat: 11.57, lng: 104.90 }, form: { imei: 'DRONE-IMEI-001', speed: 0, soc: 12, soh: 92, temp: 28, humid: 50, faults: '', lat: 11.57, lng: 104.90, deviceType: 'DRONE_FCU' } },
   ];
 
   // ---- CSV 批量导入 ----
@@ -169,12 +171,12 @@ export default function DeviceDataAccess() {
   };
 
   const logColumns = [
-    { title: '时间', dataIndex: 'ts', width: 170 },
-    { title: '联动方向', dataIndex: 'direction', width: 120, render: (d) => <Tag color={DIR_META[d]?.color}>{DIR_META[d]?.label}</Tag> },
-    { title: '触发类型', dataIndex: 'trigger', render: (v) => <Tag>{v}</Tag> },
-    { title: '下游影响', render: (_, r) => DIR_META[r.direction]?.downstream },
-    { title: '载荷', dataIndex: 'payload', render: (v) => v || <Text type="secondary">-</Text> },
-    { title: '状态', dataIndex: 'triggered', width: 110, render: (t) => t ? <Tag color="green">已触发</Tag> : <Tag>未达阈值</Tag> },
+    { title: t('common:m35'), dataIndex: 'ts', width: 170 },
+    { title: t('common:m622'), dataIndex: 'direction', width: 120, render: (d) => <Tag color={DIR_META[d]?.color}>{DIR_META[d]?.label}</Tag> },
+    { title: t('common:m623'), dataIndex: 'trigger', render: (v) => <Tag>{v}</Tag> },
+    { title: t('common:m624'), render: (_, r) => DIR_META[r.direction]?.downstream },
+    { title: t('common:m625'), dataIndex: 'payload', render: (v) => v || <Text type="secondary">-</Text> },
+    { title: t('common:m8'), dataIndex: 'triggered', width: 110, render: (t) => t ? <Tag color="green">{t('common:m626')}</Tag> : <Tag>{t('common:m627')}</Tag> },
   ];
 
   const contractCurl = `curl -X POST http://localhost:8080/api/v1/iot/telemetry \\
@@ -183,11 +185,11 @@ export default function DeviceDataAccess() {
        "humid":55,"faults":null,"lat":11.56,"lng":104.89}'`;
 
   return (
-    <PageCard title="物联网 / 设备数据接入" extra={<Tabs activeKey={tab} onChange={setTab} size="small" items={[
-      { key: 'manual', label: '手动录入' },
-      { key: 'csv', label: 'CSV 批量导入' },
-      { key: 'contract', label: '接入契约' },
-      { key: 'log', label: '四向联动日志' },
+    <PageCard title={t('common:m628')} extra={<Tabs activeKey={tab} onChange={setTab} size="small" items={[
+      { key: 'manual', label: t('common:m629') },
+      { key: 'csv', label: t('common:m630') },
+      { key: 'contract', label: t('common:m631') },
+      { key: 'log', label: t('common:m632') },
     ]} />}>
       <Alert type="info" showIcon style={{ marginBottom: 14 }}
         message="设备数据四类接入（手动 / CSV / API / MQTT）已全部打通；任一渠道上报后，平台自动驱动四向业务闭环：① 资产档案更新 ② 收益分账 ③ 风控告警 ④ 全生命周期。"
@@ -195,7 +197,7 @@ export default function DeviceDataAccess() {
 
       {tab === 'manual' && (
         <Space direction="vertical" style={{ width: '100%' }} size="middle">
-          <Card size="small" title="快速演示（一键触发不同联动）">
+          <Card size="small" title={t('common:m633')}>
             <Space wrap>
               {presets.map((p) => (
                 <Button key={p.label} icon={<ThunderboltOutlined />} onClick={() => runPreset(p)}>{p.label}</Button>
@@ -203,36 +205,36 @@ export default function DeviceDataAccess() {
             </Space>
           </Card>
 
-          <Card size="small" title="手动录入 / 编辑遥测并上报">
+          <Card size="small" title={t('common:m634')}>
             <Form form={form} layout="vertical" onFinish={submitManual} initialValues={{ deviceType: 'BATTERY_BMS', soc: 80, soh: 95, speed: 20, temp: 30, humid: 55, lat: 11.56, lng: 104.89 }}>
               <Space wrap>
-                <Form.Item label="设备 IMEI" name="imei" rules={[{ required: true, message: '必填' }]}><Input style={{ width: 200 }} placeholder="如 IMEI-B001 / DRONE-IMEI-001" /></Form.Item>
-                <Form.Item label="演示设备类型(本地模拟判定)" name="deviceType"><Select style={{ width: 160 }} options={DEVICE_TYPES} /></Form.Item>
-                <Form.Item label="电量 SOC %" name="soc"><InputNumber min={0} max={100} style={{ width: 120 }} /></Form.Item>
-                <Form.Item label="健康度 SOH %" name="soh"><InputNumber min={0} max={100} style={{ width: 120 }} /></Form.Item>
-                <Form.Item label="速度 km/h" name="speed"><InputNumber style={{ width: 120 }} /></Form.Item>
-                <Form.Item label="温度 ℃" name="temp"><InputNumber style={{ width: 120 }} /></Form.Item>
-                <Form.Item label="湿度 %" name="humid"><InputNumber style={{ width: 120 }} /></Form.Item>
-                <Form.Item label="纬度" name="lat"><InputNumber step={0.0001} style={{ width: 140 }} /></Form.Item>
-                <Form.Item label="经度" name="lng"><InputNumber step={0.0001} style={{ width: 140 }} /></Form.Item>
-                <Form.Item label="故障码(逗号分隔)" name="faults"><Input style={{ width: 200 }} placeholder="如 BMS_OVERTEMP" /></Form.Item>
+                <Form.Item label={t('common:m635')} name="imei" rules={[{ required: true, message: t('common:m133') }]}><Input style={{ width: 200 }} placeholder={t('common:m636')} /></Form.Item>
+                <Form.Item label={t('common:m637')} name="deviceType"><Select style={{ width: 160 }} options={DEVICE_TYPES} /></Form.Item>
+                <Form.Item label={t('common:m638')} name="soc"><InputNumber min={0} max={100} style={{ width: 120 }} /></Form.Item>
+                <Form.Item label={t('common:m639')} name="soh"><InputNumber min={0} max={100} style={{ width: 120 }} /></Form.Item>
+                <Form.Item label={t('common:m640')} name="speed"><InputNumber style={{ width: 120 }} /></Form.Item>
+                <Form.Item label={t('common:m641')} name="temp"><InputNumber style={{ width: 120 }} /></Form.Item>
+                <Form.Item label={t('common:m642')} name="humid"><InputNumber style={{ width: 120 }} /></Form.Item>
+                <Form.Item label={t('common:m643')} name="lat"><InputNumber step={0.0001} style={{ width: 140 }} /></Form.Item>
+                <Form.Item label={t('common:m644')} name="lng"><InputNumber step={0.0001} style={{ width: 140 }} /></Form.Item>
+                <Form.Item label={t('common:m645')} name="faults"><Input style={{ width: 200 }} placeholder={t('common:m646')} /></Form.Item>
               </Space>
-              <Button type="primary" htmlType="submit" icon={<ApiOutlined />}>上报遥测并触发联动</Button>
+              <Button type="primary" htmlType="submit" icon={<ApiOutlined />}>{t('common:m647')}</Button>
             </Form>
           </Card>
 
           {lastTelemetry && (
-            <Card size="small" title="上报结果（最新遥测）">
+            <Card size="small" title={t('common:m648')}>
               <pre style={{ margin: 0 }}>{JSON.stringify(lastTelemetry, null, 2)}</pre>
             </Card>
           )}
           {backendLinkage && backendLinkage.length > 0 && (
-            <Card size="small" title="后端审计（device_linkage_events 真实落库）">
+            <Card size="small" title={t('common:m649')}>
               <Table rowKey="id" size="small" pagination={false} dataSource={backendLinkage} columns={[
-                { title: '方向', dataIndex: 'direction', render: (d) => <Tag color={DIR_META[d]?.color}>{d}</Tag> },
-                { title: '触发', dataIndex: 'triggerType' },
-                { title: '载荷', dataIndex: 'payload' },
-                { title: '时间', dataIndex: 'triggeredAt' },
+                { title: t('common:m650'), dataIndex: 'direction', render: (d) => <Tag color={DIR_META[d]?.color}>{d}</Tag> },
+                { title: t('common:m651'), dataIndex: 'triggerType' },
+                { title: t('common:m625'), dataIndex: 'payload' },
+                { title: t('common:m35'), dataIndex: 'triggeredAt' },
               ]} />
             </Card>
           )}
@@ -243,13 +245,11 @@ export default function DeviceDataAccess() {
         <Space direction="vertical" style={{ width: '100%' }} size="middle">
           <Card size="small">
             <Space wrap>
-              <Button icon={<DownloadOutlined />} onClick={downloadCsvTemplate}>下载 CSV 模板</Button>
-              <Button icon={<CloudUploadOutlined />} onClick={() => document.getElementById('csv-input').click()}>选择 CSV 导入</Button>
+              <Button icon={<DownloadOutlined />} onClick={downloadCsvTemplate}>{t('common:m652')}</Button>
+              <Button icon={<CloudUploadOutlined />} onClick={() => document.getElementById('csv-input').click()}>{t('common:m653')}</Button>
               <input id="csv-input" type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={onCsv} />
             </Space>
-            <Paragraph type="secondary" style={{ marginTop: 10, marginBottom: 0 }}>
-              模板列：imei, deviceType, soc, soh, speed, temp, humid, faults, lat, lng。每行一次上报，批量触发四向联动。
-            </Paragraph>
+            <Paragraph type="secondary" style={{ marginTop: 10, marginBottom: 0 }}>{t('common:m654')}</Paragraph>
           </Card>
           {csvSummary && (
             <Alert type="success" showIcon message={`导入 ${csvSummary.total} 条，成功 ${csvSummary.ok} 条，累计触发联动 ${csvSummary.triggered} 次`} />
@@ -259,15 +259,15 @@ export default function DeviceDataAccess() {
 
       {tab === 'contract' && (
         <Space direction="vertical" style={{ width: '100%' }} size="middle">
-          <Card size="small" title="标准 API 对接（你们系统推 / 拉）">
+          <Card size="small" title={t('common:m655')}>
             <Typography>
-              <Paragraph><Text strong>POST /api/v1/iot/telemetry</Text> — 遥测上报（更新最新遥测 + 落轨迹点 + 驱动四向联动）</Paragraph>
-              <Paragraph><Text strong>GET /api/v1/assets/{'{assetId}'}/telemetry</Text> — 资产最新遥测</Paragraph>
-              <Paragraph><Text strong>GET /api/v1/assets/{'{assetId}'}/tracks?from=&to=</Text> — 资产轨迹</Paragraph>
-              <Paragraph><Text strong>GET /api/v1/assets/{'{assetId}'}/linkage?direction=</Text> — 资产联动事件审计（ASSET_UPDATE|REVENUE|RISK|LIFECYCLE）</Paragraph>
+              <Paragraph><Text strong>POST /api/v1/iot/telemetry</Text>{t('common:m656')}</Paragraph>
+              <Paragraph><Text strong>GET /api/v1/assets/{'{assetId}'}/telemetry</Text>{t('common:m657')}</Paragraph>
+              <Paragraph><Text strong>GET /api/v1/assets/{'{assetId}'}/tracks?from=&to=</Text>{t('common:m658')}</Paragraph>
+              <Paragraph><Text strong>GET /api/v1/assets/{'{assetId}'}/linkage?direction=</Text>{t('common:m659')}</Paragraph>
             </Typography>
             <Divider />
-            <Paragraph><Text strong>请求体（TelemetryReport）</Text></Paragraph>
+            <Paragraph><Text strong>{t('common:m660')}</Text></Paragraph>
             <pre style={{ background: 'var(--line)', padding: 12, borderRadius: 8 }}>{`{
   "imei": "IMEI-B001",
   "speed": 20.00, "soc": 80.00, "soh": 95.00,
@@ -275,20 +275,20 @@ export default function DeviceDataAccess() {
   "faults": null,          // JSON 数组字符串，如 ["BMS_OVERTEMP"]
   "lat": 11.56, "lng": 104.89
 }`}</pre>
-            <Paragraph><Text strong>cURL 示例</Text></Paragraph>
+            <Paragraph><Text strong>{t('common:m661')}</Text></Paragraph>
             <pre style={{ background: 'var(--line)', padding: 12, borderRadius: 8 }}>{contractCurl}</pre>
           </Card>
-          <Card size="small" title="MQTT / 设备网关实时上报（EMQX 已规划）">
+          <Card size="small" title={t('common:m662')}>
             <Typography>
-              <Paragraph>Broker 由环境变量注入，订阅主题默认 <Text code>claw/telemetry/+</Text>，Payload 为上述 JSON（字段同名）。</Paragraph>
-              <Paragraph>启用：<Text code>claw.iot.emqx.enabled=true</Text> + <Text code>CLAW_IOT_EMQX_BROKER_URL / USERNAME / PASSWORD / TOPIC</Text>。真实上报与 REST 共用 <Text code>IoTService.reportTelemetry</Text> 同一持久化与联动逻辑。</Paragraph>
+              <Paragraph>{t('common:m663')}<Text code>claw/telemetry/+</Text>{t('common:m664')}</Paragraph>
+              <Paragraph>{t('common:m665')}<Text code>claw.iot.emqx.enabled=true</Text> + <Text code>CLAW_IOT_EMQX_BROKER_URL / USERNAME / PASSWORD / TOPIC</Text>{t('common:m666')}<Text code>IoTService.reportTelemetry</Text>{t('common:m667')}</Paragraph>
             </Typography>
           </Card>
         </Space>
       )}
 
       {tab === 'log' && (
-        <Card size="small" title="四向联动演示日志">
+        <Card size="small" title={t('common:m668')}>
           <Alert type="warning" showIcon style={{ marginBottom: 12 }}
             message="演示态：下方为本地按后端相同阈值模拟的联动决策；真实后端连接后，资产联动审计来自 device_linkage_events 表（见「手动录入」中的后端审计）。" />
           <Table rowKey="id" size="small" pagination={{ pageSize: 12 }} dataSource={log} columns={logColumns} />

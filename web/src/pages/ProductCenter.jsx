@@ -98,7 +98,7 @@ export default function ProductCenter() {
       setAssets(a || []);
     }).catch(() => {
       if (alive) {
-        message.error('加载失败，已回落演示数据');
+        message.error(t('common:m1'));
         setProducts([]); setManufacturers([]); setAssets([]);
       }
     }).finally(() => { if (alive) setLoading(false); });
@@ -170,7 +170,7 @@ export default function ProductCenter() {
   const onApiChange = (i, v) => setEditFields((prev) => prev.map((f, j) => (j === i ? { ...f, api: !!v, apiSource: v } : f)));
 
   const saveProduct = () => {
-    if (!editName.trim()) { message.warning('请填写产品名称'); return; }
+    if (!editName.trim()) { message.warning(t('common:m2')); return; }
     const fields = editFields.filter((f) => f.name.trim()).map((f) => ({
       name: f.name.trim(), type: f.type, opts: f.type === 'select' ? f.opts : '', api: f.api, apiSource: f.api ? f.apiSource : '',
     }));
@@ -195,7 +195,7 @@ export default function ProductCenter() {
   const delProduct = (p) => {
     if (!window.confirm('删除产品将移除其全部字段定义与设备关联，确认？')) return;
     api.delete(`/v1/admin/manufacturer/products/${p.id}`)
-      .then(() => { message.success('已删除'); setProducts(products.filter((x) => x.id !== p.id)); })
+      .then(() => { message.success(t('common:m3')); setProducts(products.filter((x) => x.id !== p.id)); })
       .catch((e) => message.error('删除失败：' + e.message));
   };
 
@@ -316,17 +316,17 @@ export default function ProductCenter() {
       case 'overview':
         return (
           <div>
-            <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>概况 · {d.assetNo}</h3>
+            <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>{t('common:m4')}{d.assetNo}</h3>
             <div className="kv">
-              <div className="k">设备编号</div><div>{d.assetNo}<span style={{ color: '#8a9099' }}> #{d.id}</span></div>
-              <div className="k">所属商品</div>
+              <div className="k">{t('common:m5')}</div><div>{d.assetNo}<span style={{ color: '#8a9099' }}> #{d.id}</span></div>
+              <div className="k">{t('common:m6')}</div>
               <div><a onClick={gotoProduct} style={{ color: '#1677ff', cursor: 'pointer' }}>{(p && p.name) || '—'}</a></div>
-              <div className="k">产品信息</div><div>{(p && p.category) || '—'} · {(p && p.brand) || '—'} · {d.assetType || '—'}</div>
-              <div className="k">状态</div><div>{statusTag(d.status)}</div>
-              <div className="k">当前所有人</div><div>{d.ownerId != null ? '用户#' + d.ownerId : '平台(资产所有人)'}</div>
-              <div className="k">当前使用人</div><div>{d.userId != null ? '用户#' + d.userId : '—'}</div>
-              <div className="k">所在项目</div><div>{d.projectName || '—'}</div>
-              <div className="k">合格证号</div><div>{d.certNo || (p && p.shareCode) || '—'}</div>
+              <div className="k">{t('common:m7')}</div><div>{(p && p.category) || '—'} · {(p && p.brand) || '—'} · {d.assetType || '—'}</div>
+              <div className="k">{t('common:m8')}</div><div>{statusTag(d.status)}</div>
+              <div className="k">{t('common:m9')}</div><div>{d.ownerId != null ? '用户#' + d.ownerId : '平台(资产所有人)'}</div>
+              <div className="k">{t('common:m10')}</div><div>{d.userId != null ? '用户#' + d.userId : '—'}</div>
+              <div className="k">{t('common:m11')}</div><div>{d.projectName || '—'}</div>
+              <div className="k">{t('common:m12')}</div><div>{d.certNo || (p && p.shareCode) || '—'}</div>
             </div>
           </div>
         );
@@ -335,7 +335,7 @@ export default function ProductCenter() {
           .concat(af.map((f) => ({ k: f.apiSource, label: f.apiSource, val: liveVal(f.apiSource, d) })));
         return (
           <div>
-            <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>实时数据 · 数据与位置 <span style={{ fontSize: 10, background: '#e8f7ee', color: '#18a058', padding: '1px 6px', borderRadius: 4, marginLeft: 6 }}>LIVE</span></h3>
+            <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>{t('common:m13')}<span style={{ fontSize: 10, background: '#e8f7ee', color: '#18a058', padding: '1px 6px', borderRadius: 4, marginLeft: 6 }}>LIVE</span></h3>
             <div className="rt-grid">
               {items.map((it) => {
                 const ic = ICONS[it.k] || ['•', '#1677ff'];
@@ -348,35 +348,33 @@ export default function ProductCenter() {
                 );
               })}
             </div>
-            <div style={{ fontSize: 12, color: '#8a9099', margin: '12px 0 6px' }}>实时定位（地图）</div>
-            <div className="map-box"><div className="map-dot" style={{ left: '46%', top: '52%' }}></div>实时坐标：<span id="mapLoc">{telemetry && telemetry['定位'] ? telemetry['定位'] : (d.location || '—')}</span></div>
-            <p className="note">LIVE：每 2 秒刷新；接入 EMQX 位置上报 + 地图 SDK。</p>
+            <div style={{ fontSize: 12, color: '#8a9099', margin: '12px 0 6px' }}>{t('common:m14')}</div>
+            <div className="map-box"><div className="map-dot" style={{ left: '46%', top: '52%' }}></div>{t('common:m15')}<span id="mapLoc">{telemetry && telemetry['定位'] ? telemetry['定位'] : (d.location || '—')}</span></div>
+            <p className="note">{t('common:m16')}</p>
           </div>
         );
       }
       case 'track':
         return (
           <div>
-            <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>历史轨迹回放</h3>
+            <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>{t('common:m17')}</h3>
             <div className="map-box" style={{ minHeight: 280 }}>
               <div className="map-dot" style={{ left: '30%', top: '40%' }}></div>
               <div className="map-dot" style={{ left: '55%', top: '60%' }}></div>
-              <div className="map-dot" style={{ left: '70%', top: '35%' }}></div>
-              轨迹点占位（按时间轴回放）
-            </div>
-            <p className="note">调用 A 期历史位置接口 /api/v1/assets/{d.id}/tracks，支持时间轴拖拽回放。</p>
+              <div className="map-dot" style={{ left: '70%', top: '35%' }}></div>{t('common:m18')}</div>
+            <p className="note">{t('common:m19')}{d.id}{t('common:m20')}</p>
           </div>
         );
       case 'fence':
         return (
           <div>
-            <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>电子围栏设置（设备级 · 真实后端）</h3>
+            <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>{t('common:m21')}</h3>
             {/* U6：自动锁机待接通，保存围栏当前不会触发自动锁机 */}
             <Alert type="info" showIcon style={{ marginBottom: 10 }} message={t('drone:fence.autoLockNote')} />
             <Alert type="warning" showIcon style={{ marginBottom: 10 }}
               message={<span>{t('drone:fence.platformNote')} <Link to="/airspace-zones">{t('drone:fence.gotoAirspace')}</Link></span>} />
             <Space style={{ marginBottom: 10 }}>
-              <Button type="primary" icon={<PlusOutlined />} onClick={openFenceCreate}>新增围栏</Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={openFenceCreate}>{t('common:m22')}</Button>
             </Space>
             <Table
               rowKey="id" size="small" loading={fenceLoading} pagination={false}
@@ -416,18 +414,18 @@ export default function ProductCenter() {
         const ops = [['物流货运', '$30/单'], ['客运', '$25/趟'], ['公交', '$18/趟'], ['顺风车', '$12/单'], ['打的', '$40/趟'], ['广告', '$200/周']];
         return (
           <div>
-            <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>收益中心（与任务接口匹配创造收益）</h3>
+            <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>{t('common:m23')}</h3>
             <div className="task-grid">
               {ops.map((t) => (
                 <div className="task-card" key={t[0]}>
                   <div><b>{t[0]}</b></div>
                   <div className="earn">{t[1]}</div>
-                  <div className="note">按兴趣接单 / 按要求运营</div>
-                  <button className="btn sm" style={{ marginTop: 8 }} onClick={() => alert('进入「' + t[0] + '」接单（TaskPublish 任务发布域）')}>去接单</button>
+                  <div className="note">{t('common:m24')}</div>
+                  <button className="btn sm" style={{ marginTop: 8 }} onClick={() => alert('进入「' + t[0] + '」接单（TaskPublish 任务发布域）')}>{t('common:m25')}</button>
                 </div>
               ))}
             </div>
-            <p className="note">收益板块对接 TaskPublish 任务发布域，车辆/无人机按订单运营产生收益并进入分账（资产闭环）。</p>
+            <p className="note">{t('common:m26')}</p>
           </div>
         );
       }
@@ -435,33 +433,33 @@ export default function ProductCenter() {
         const rows = (curTrace && curTrace.maintenance) || [];
         return (
           <div>
-            <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>维修记录</h3>
+            <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>{t('common:m27')}</h3>
             {rows.length ? rows.map((m) => (
               <div key={m.id} style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 6, marginBottom: 8, cursor: 'pointer' }}
                 onClick={() => { setCurMaint(m); setMaintOpen(true); }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}><b>{m.id || m.servicedAt}</b><span className="tag orange">{m.cost != null ? '¥' + m.cost : '—'}</span></div>
-                <div className="note">{m.servicedAt} · {m.vendor || m.person || ''} · {(m.images ? m.images.length : 0)} 张图</div>
+                <div className="note">{m.servicedAt} · {m.vendor || m.person || ''} · {(m.images ? m.images.length : 0)}{t('common:m28')}</div>
               </div>
-            )) : <p className="note">暂无维修记录</p>}
-            <p className="note">点记录看维修过程详情与图片。</p>
+            )) : <p className="note">{t('common:m29')}</p>}
+            <p className="note">{t('common:m30')}</p>
           </div>
         );
       }
       case 'video':
         return (
           <div>
-            <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>录像记录</h3>
-            <p className="note">录像记录接入录像存储；点击下方进入录像数据管理。</p>
-            <button className="btn" onClick={() => navigate('/task-video')}>前往录像数据</button>
+            <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>{t('common:m31')}</h3>
+            <p className="note">{t('common:m32')}</p>
+            <button className="btn" onClick={() => navigate('/task-video')}>{t('common:m33')}</button>
           </div>
         );
       case 'transfer':
         return (
           <div>
-            <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>转让记录</h3>
+            <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>{t('common:m34')}</h3>
             {curTrace && curTrace.transfers && curTrace.transfers.length ? (
               <table>
-                <thead><tr><th>时间</th><th>类型</th><th>从</th><th>至</th></tr></thead>
+                <thead><tr><th>{t('common:m35')}</th><th>{t('common:m36')}</th><th>{t('common:m37')}</th><th>{t('common:m38')}</th></tr></thead>
                 <tbody>
                   {curTrace.transfers.map((t) => (
                     <tr key={t.id}>
@@ -473,26 +471,26 @@ export default function ProductCenter() {
                   ))}
                 </tbody>
               </table>
-            ) : <p className="note">暂无转让记录（C 期 TRANSFER 产权转移将记录于此）</p>}
+            ) : <p className="note">{t('common:m39')}</p>}
           </div>
         );
       case 'ops':
         return (
           <div>
-            <div className="warn-box">⚠ 远程控制请慎选，误操作可能影响在运资产安全。</div>
+            <div className="warn-box">{t('common:m40')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px dashed var(--border)' }}>
-                <span>远程锁机</span>
-                <button className="btn sm" onClick={() => api.post(`/v1/iot/devices/${d.assetNo}/command`, { cmd: 'LOCK' }).then(() => message.success('已下发锁机指令')).catch((e) => message.error('下发失败：' + e.message))}>下发锁机</button>
+                <span>{t('common:m41')}</span>
+                <button className="btn sm" onClick={() => api.post(`/v1/iot/devices/${d.assetNo}/command`, { cmd: 'LOCK' }).then(() => message.success(t('common:m42'))).catch((e) => message.error('下发失败：' + e.message))}>{t('common:m43')}</button>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px dashed var(--border)' }}>
-                <span>远程重启</span>
-                <button className="btn sm" onClick={() => api.post(`/v1/iot/devices/${d.assetNo}/command`, { cmd: 'RESTART' }).then(() => message.success('已下发重启指令')).catch((e) => message.error('下发失败：' + e.message))}>下发重启</button>
+                <span>{t('common:m44')}</span>
+                <button className="btn sm" onClick={() => api.post(`/v1/iot/devices/${d.assetNo}/command`, { cmd: 'RESTART' }).then(() => message.success(t('common:m45'))).catch((e) => message.error('下发失败：' + e.message))}>{t('common:m46')}</button>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px dashed var(--border)' }}>
-                <span>限速（km/h）</span>
+                <span>{t('common:m47')}</span>
                 <input style={{ width: 90, padding: 5, border: '1px solid var(--border)', borderRadius: 5 }} defaultValue={40}
-                  onChange={(e) => api.post(`/v1/iot/devices/${d.assetNo}/command`, { cmd: 'SPEED', value: e.target.value }).then(() => message.success('限速已下发')).catch((e) => message.error('下发失败：' + e.message))} />
+                  onChange={(e) => api.post(`/v1/iot/devices/${d.assetNo}/command`, { cmd: 'SPEED', value: e.target.value }).then(() => message.success(t('common:m48'))).catch((e) => message.error('下发失败：' + e.message))} />
               </div>
             </div>
           </div>
@@ -500,15 +498,15 @@ export default function ProductCenter() {
       case 'cert':
         return (
           <div>
-            <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>合格证</h3>
+            <h3 style={{ margin: '0 0 12px', fontSize: 15 }}>{t('common:m49')}</h3>
             <div className="kv">
-              <div className="k">合格证号</div><div>{d.certNo || (p && p.shareCode) || '—'}</div>
-              <div className="k">所属产品</div><div>{(p && p.name) || '—'}</div>
-              <div className="k">状态</div><div><span className="tag green">已签发</span></div>
+              <div className="k">{t('common:m12')}</div><div>{d.certNo || (p && p.shareCode) || '—'}</div>
+              <div className="k">{t('common:m50')}</div><div>{(p && p.name) || '—'}</div>
+              <div className="k">{t('common:m8')}</div><div><span className="tag green">{t('common:m51')}</span></div>
             </div>
             <div className="toolbar" style={{ marginTop: 16 }}>
-              <button className="btn" onClick={() => message.success('导出合格证 PDF（对接合格证服务）')}>导出合格证(PDF)</button>
-              <button className="btn ghost" onClick={() => navigate('/certificate')}>合格证管理</button>
+              <button className="btn" onClick={() => message.success(t('common:m52'))}>{t('common:m53')}</button>
+              <button className="btn ghost" onClick={() => navigate('/certificate')}>{t('common:m54')}</button>
             </div>
           </div>
         );
@@ -526,7 +524,7 @@ export default function ProductCenter() {
     const keyField = af[0];
     return (
       <table>
-        <thead><tr><th>设备名称</th><th>当前位置</th><th>当前所有人</th><th>当前使用人</th><th>状态</th><th>关键字段</th><th>所在项目</th><th>操作</th></tr></thead>
+        <thead><tr><th>{t('common:m55')}</th><th>{t('common:m56')}</th><th>{t('common:m9')}</th><th>{t('common:m10')}</th><th>{t('common:m8')}</th><th>{t('common:m57')}</th><th>{t('common:m11')}</th><th>{t('common:m58')}</th></tr></thead>
         <tbody>
           {list.length ? list.map((d) => (
             <tr key={d.id} style={{ cursor: 'pointer' }} onClick={() => openDev(d)}>
@@ -539,13 +537,13 @@ export default function ProductCenter() {
               <td>{d.projectName || '—'}</td>
               <td>
                 <div className="row-ops" onClick={(e) => e.stopPropagation()}>
-                  <button className="btn ghost sm" onClick={() => message.info('转让（TRANSFER/SHARE/AUTHORIZE）')}>转让</button>
-                  <button className="btn ghost sm" onClick={() => message.info('共享（SHARE 需 stationId）')}>共享</button>
-                  <button className="btn ghost sm" onClick={() => message.info('授权（AUTHORIZE）')}>授权</button>
+                  <button className="btn ghost sm" onClick={() => message.info(t('common:m59'))}>{t('common:m60')}</button>
+                  <button className="btn ghost sm" onClick={() => message.info(t('common:m61'))}>{t('common:m62')}</button>
+                  <button className="btn ghost sm" onClick={() => message.info(t('common:m63'))}>{t('common:m64')}</button>
                 </div>
               </td>
             </tr>
-          )) : <tr><td colSpan={8} className="note">无匹配设备</td></tr>}
+          )) : <tr><td colSpan={8} className="note">{t('common:m65')}</td></tr>}
         </tbody>
       </table>
     );
@@ -553,28 +551,28 @@ export default function ProductCenter() {
 
   const renderEditFields = () => (
     <div>
-      <div className="field-head"><span>字段名</span><span>类型</span><span>选项(select用,逗号)</span><span>实时API绑定</span><span></span></div>
+      <div className="field-head"><span>{t('common:m66')}</span><span>{t('common:m36')}</span><span>{t('common:m67')}</span><span>{t('common:m68')}</span><span></span></div>
       {editFields.map((f, i) => (
         <div className="field-row" key={i}>
-          <input placeholder="字段名" value={f.name} onChange={(e) => setEditFields((prev) => prev.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
+          <input placeholder={t('common:m66')} value={f.name} onChange={(e) => setEditFields((prev) => prev.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
           <select value={f.type} onChange={(e) => setEditFields((prev) => prev.map((x, j) => (j === i ? { ...x, type: e.target.value } : x)))}>
-            <option value="text">文本</option><option value="number">数字</option><option value="select">下拉</option>
+            <option value="text">{t('common:m69')}</option><option value="number">{t('common:m70')}</option><option value="select">{t('common:m71')}</option>
           </select>
-          <input placeholder="选项,逗号" value={f.opts || ''} onChange={(  e) => setEditFields((prev) => prev.map((x, j) => (j === i ? { ...x, opts: e.target.value } : x)))} />
+          <input placeholder={t('common:m72')} value={f.opts || ''} onChange={(  e) => setEditFields((prev) => prev.map((x, j) => (j === i ? { ...x, opts: e.target.value } : x)))} />
           <select value={f.apiSource || ''} onChange={(e) => onApiChange(i, e.target.value)}>
-            <option value="">不绑定</option>
+            <option value="">{t('common:m73')}</option>
             {ALL_API.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
           <button className="btn sm danger" onClick={() => setEditFields((prev) => prev.filter((_, j) => j !== i))}>×</button>
         </div>
       ))}
-      <button className="btn ghost sm" onClick={addField}>+ 添加字段</button>
+      <button className="btn ghost sm" onClick={addField}>{t('common:m74')}</button>
     </div>
   );
 
   return (
-    <PageCard title="产品中心"
-      extra={<span style={{ fontSize: 12, color: '#8a9099' }}>列表/查询/新建/编辑/删除 → 点产品看设备 → 点设备进功能菜单（左：菜单页 / 右：白底图+实时数据 / 菜单内容）</span>}>
+    <PageCard title={t('common:m75')}
+      extra={<span style={{ fontSize: 12, color: '#8a9099' }}>{t('common:m76')}</span>}>
       <style>{`
         .btn{background:var(--primary,#1677ff);color:#fff;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:13px;}
         .btn.ghost{background:#fff;color:var(--primary,#1677ff);border:1px solid var(--primary,#1677ff);}
@@ -641,24 +639,24 @@ export default function ProductCenter() {
       `}</style>
 
       <div className="toolbar">
-        <input className="search" placeholder="查询产品（名称/类别/品牌）" value={q} onChange={(e) => setQ(e.target.value)} />
-        <button className="btn" onClick={() => openEdit(null)}><PlusOutlined /> 新建产品</button>
+        <input className="search" placeholder={t('common:m77')} value={q} onChange={(e) => setQ(e.target.value)} />
+        <button className="btn" onClick={() => openEdit(null)}><PlusOutlined />{t('common:m78')}</button>
       </div>
 
-      {loading ? <p className="note">加载中…</p> : (
+      {loading ? <p className="note">{t('common:m79')}</p> : (
         <div id="prodList">
           {filteredProducts.length ? filteredProducts.map((p) => (
             <div className="prod-item" key={p.id} onClick={() => openDevList(p)}>
               <div>
                 <b>{p.name}</b>
-                <div className="note">{p.category || '—'} · {p.brand || '—'} · {devicesOf(p.id).length} 台设备 · {apiFields(p).length} 个实时字段</div>
+                <div className="note">{p.category || '—'} · {p.brand || '—'} · {devicesOf(p.id).length}{t('common:m80')}{apiFields(p).length}{t('common:m81')}</div>
               </div>
               <div className="row-ops" onClick={(e) => e.stopPropagation()}>
-                <button className="btn ghost sm" onClick={() => openEdit(p)}><EditOutlined /> 编辑</button>
-                <button className="btn sm danger" onClick={() => delProduct(p)}><DeleteOutlined /> 删除</button>
+                <button className="btn ghost sm" onClick={() => openEdit(p)}><EditOutlined />{t('common:m82')}</button>
+                <button className="btn sm danger" onClick={() => delProduct(p)}><DeleteOutlined />{t('common:m83')}</button>
               </div>
             </div>
-          )) : <p className="note">无匹配产品</p>}
+          )) : <p className="note">{t('common:m84')}</p>}
         </div>
       )}
 
@@ -667,24 +665,24 @@ export default function ProductCenter() {
         <div className="mask" onClick={(e) => { if (e.target === e.currentTarget) setEditOpen(false); }}>
           <div className="modal">
             <h3>{editId ? '编辑产品' : '新建产品'}</h3>
-            <div style={{ marginBottom: 12 }}><label>产品名称</label><input id="pName" style={{ width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 6 }} value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="如：光伏储能一体机 X1" /></div>
-            <div style={{ marginBottom: 12 }}><label>位置上报间隔（秒）</label><input type="number" style={{ width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 6 }} value={editInterval} onChange={(e) => setEditInterval(+e.target.value || 30)} /></div>
-            <div style={{ marginBottom: 12 }}><label>类别</label><input style={{ width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 6 }} value={editCategory} onChange={(e) => setEditCategory(e.target.value)} placeholder="如：光伏 / 电池 / 无人机" /></div>
-            <div style={{ marginBottom: 12 }}><label>品牌</label><input style={{ width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 6 }} value={editBrand} onChange={(e) => setEditBrand(e.target.value)} placeholder="品牌方名称" /></div>
-            <div style={{ marginBottom: 12 }}><label>资产类型</label>
+            <div style={{ marginBottom: 12 }}><label>{t('common:m85')}</label><input id="pName" style={{ width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 6 }} value={editName} onChange={(e) => setEditName(e.target.value)} placeholder={t('common:m86')} /></div>
+            <div style={{ marginBottom: 12 }}><label>{t('common:m87')}</label><input type="number" style={{ width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 6 }} value={editInterval} onChange={(e) => setEditInterval(+e.target.value || 30)} /></div>
+            <div style={{ marginBottom: 12 }}><label>{t('common:m88')}</label><input style={{ width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 6 }} value={editCategory} onChange={(e) => setEditCategory(e.target.value)} placeholder={t('common:m89')} /></div>
+            <div style={{ marginBottom: 12 }}><label>{t('common:m90')}</label><input style={{ width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 6 }} value={editBrand} onChange={(e) => setEditBrand(e.target.value)} placeholder={t('common:m91')} /></div>
+            <div style={{ marginBottom: 12 }}><label>{t('common:m92')}</label>
               <select style={{ width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 6 }} value={editAssetType} onChange={(e) => setEditAssetType(e.target.value)}>
-                <option value="">请选择</option>
+                <option value="">{t('common:m93')}</option>
                 <option value="VEHICLE">VEHICLE</option><option value="BATTERY">BATTERY</option><option value="DRONE">DRONE</option><option value="CHARGER">CHARGER</option>
               </select></div>
-            <div style={{ marginBottom: 12 }}><label>制造商</label>
+            <div style={{ marginBottom: 12 }}><label>{t('common:m94')}</label>
               <select style={{ width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 6 }} value={editManufacturerId || ''} onChange={(e) => setEditManufacturerId(e.target.value ? +e.target.value : null)}>
                 {manufacturers.map((m) => <option key={m.id} value={m.id}>{m.name || ('厂商#' + m.id)}</option>)}
               </select></div>
             <div>
-              <label>产品字段定义（类似类别管理 · 增删改查；可勾选「实时API绑定」并选数据源，绑定后该字段在详情实时数据刷新）</label>
+              <label>{t('common:m95')}</label>
               {renderEditFields()}
             </div>
-            <div className="modal-foot"><button className="btn ghost" onClick={() => setEditOpen(false)}>取消</button><button className="btn" onClick={saveProduct}>保存</button></div>
+            <div className="modal-foot"><button className="btn ghost" onClick={() => setEditOpen(false)}>{t('common:m96')}</button><button className="btn" onClick={saveProduct}>{t('common:m97')}</button></div>
           </div>
         </div>
       )}
@@ -695,15 +693,14 @@ export default function ProductCenter() {
           <div className="modal" style={{ width: 980 }}>
             <h3>{'产品设备 · ' + (curProduct ? curProduct.name : '')}</h3>
             {curProduct && (
-              <div className="note" style={{ marginBottom: 10 }}>
-                产品信息：{curProduct.name}（{curProduct.category || '—'} · {curProduct.brand || '—'}）　实时字段：{(apiFields(curProduct).map((f) => f.apiSource).join('、') || '—')}
+              <div className="note" style={{ marginBottom: 10 }}>{t('common:m98')}{curProduct.name}（{curProduct.category || '—'} · {curProduct.brand || '—'}{t('common:m99')}{(apiFields(curProduct).map((f) => f.apiSource).join('、') || '—')}
               </div>
             )}
             <div className="toolbar" style={{ marginTop: 10 }}>
-              <input className="search" placeholder="查询设备（名称/位置/所有人/项目）" value={devListQ} onChange={(e) => setDevListQ(e.target.value)} />
+              <input className="search" placeholder={t('common:m100')} value={devListQ} onChange={(e) => setDevListQ(e.target.value)} />
             </div>
             {renderDevList()}
-            <div className="modal-foot"><button className="btn" onClick={closeDevList}>关闭</button></div>
+            <div className="modal-foot"><button className="btn" onClick={closeDevList}>{t('common:m101')}</button></div>
           </div>
         </div>
       )}
@@ -713,15 +710,15 @@ export default function ProductCenter() {
         <div className="dev-mask" onClick={(e) => { if (e.target === e.currentTarget) closeDev(); }}>
           <div className="dev-panel">
             <div className="dev-head">
-              <div><b>设备详情</b> · <span>{curDev.assetNo}</span></div>
+              <div><b>{t('common:m102')}</b> · <span>{curDev.assetNo}</span></div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn ghost sm" onClick={() => setMngOpen(true)}>菜单管理</button>
-                <button className="btn ghost sm" onClick={closeDev}>关闭</button>
+                <button className="btn ghost sm" onClick={() => setMngOpen(true)}>{t('common:m103')}</button>
+                <button className="btn ghost sm" onClick={closeDev}>{t('common:m101')}</button>
               </div>
             </div>
             <div className="dev-wrap">
               <aside className="dev-nav">
-                <div className="nt">功能菜单</div>
+                <div className="nt">{t('common:m104')}</div>
                 <ul>
                   {MENUS.filter((m) => menuVisible[m.key] !== false).map((m) => (
                     <li key={m.key} className={devRight === m.key ? 'active' : ''} onClick={() => setDevRight(m.key)}>{m.label}</li>
@@ -730,19 +727,19 @@ export default function ProductCenter() {
               </aside>
               <div className="dev-main">
                 <div className="dev-top">
-                  <div className="white-img" onClick={gotoProduct} title="点击查看商品链接">
+                  <div className="white-img" onClick={gotoProduct} title={t('common:m105')}>
                     <div className="ph">🖼️</div>
-                    <div>白底图 · 点我看商品</div>
+                    <div>{t('common:m106')}</div>
                   </div>
-                  <div className="rt-entry" onClick={() => setDevRight('rt')} title="进入实时数据与位置">
+                  <div className="rt-entry" onClick={() => setDevRight('rt')} title={t('common:m107')}>
                     <div className="ic">📊</div>
                     <div>
                       <div className="v">{telemetry && telemetry.SOC != null ? telemetry.SOC + '%' : '—'}</div>
-                      <div className="l">实时数据 → 数据与位置</div>
+                      <div className="l">{t('common:m108')}</div>
                     </div>
-                    <div className="arrow">进入 ›</div>
+                    <div className="arrow">{t('common:m109')}</div>
                   </div>
-                  <button className="btn ghost sm" style={{ alignSelf: 'flex-start' }} onClick={() => setMngOpen(true)}>菜单管理</button>
+                  <button className="btn ghost sm" style={{ alignSelf: 'flex-start' }} onClick={() => setMngOpen(true)}>{t('common:m103')}</button>
                 </div>
                 <div className="dev-content">{renderDevContent()}</div>
               </div>
@@ -755,7 +752,7 @@ export default function ProductCenter() {
       {mngOpen && (
         <div className="mask" onClick={(e) => { if (e.target === e.currentTarget) setMngOpen(false); }}>
           <div className="modal" style={{ width: 420 }}>
-            <h3>菜单管理（隐藏不用的功能）</h3>
+            <h3>{t('common:m110')}</h3>
             <div>
               {MENUS.map((m) => (
                 <div key={m.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px dashed #e5e7eb' }}>
@@ -765,7 +762,7 @@ export default function ProductCenter() {
                 </div>
               ))}
             </div>
-            <div className="modal-foot"><button className="btn" onClick={() => setMngOpen(false)}>完成</button></div>
+            <div className="modal-foot"><button className="btn" onClick={() => setMngOpen(false)}>{t('common:m111')}</button></div>
           </div>
         </div>
       )}
@@ -774,18 +771,18 @@ export default function ProductCenter() {
       {maintOpen && curMaint && (
         <div className="mask" onClick={(e) => { if (e.target === e.currentTarget) setMaintOpen(false); }}>
           <div className="modal" style={{ width: 520 }}>
-            <h3>维修记录详情</h3>
+            <h3>{t('common:m112')}</h3>
             <div className="kv">
-              <div className="k">记录ID</div><div>{curMaint.id || curMaint.servicedAt}</div>
-              <div className="k">时间</div><div>{curMaint.servicedAt}</div>
-              <div className="k">维修人</div><div>{curMaint.person || curMaint.vendor || '—'}</div>
-              <div className="k">费用</div><div><span className="tag orange">{curMaint.cost != null ? '¥' + curMaint.cost : '—'}</span></div>
+              <div className="k">{t('common:m113')}</div><div>{curMaint.id || curMaint.servicedAt}</div>
+              <div className="k">{t('common:m35')}</div><div>{curMaint.servicedAt}</div>
+              <div className="k">{t('common:m114')}</div><div>{curMaint.person || curMaint.vendor || '—'}</div>
+              <div className="k">{t('common:m115')}</div><div><span className="tag orange">{curMaint.cost != null ? '¥' + curMaint.cost : '—'}</span></div>
             </div>
-            <div style={{ marginTop: 14 }}><label>维修过程</label>
+            <div style={{ marginTop: 14 }}><label>{t('common:m116')}</label>
               <div style={{ background: '#fafbfc', border: '1px solid #e5e7eb', borderRadius: 6, padding: 10 }}>{curMaint.process || curMaint.note || '—'}</div></div>
-            <div style={{ marginTop: 10 }}><label>维修图片（{(curMaint.images ? curMaint.images.length : 0)} 张）</label>
-              <div>{(curMaint.images && curMaint.images.length) ? curMaint.images.map((_, i) => <span className="thumb" key={i}>图{i + 1}</span>) : <span className="note">无图片</span>}</div></div>
-            <div className="modal-foot"><button className="btn" onClick={() => setMaintOpen(false)}>关闭</button></div>
+            <div style={{ marginTop: 10 }}><label>{t('common:m117')}{(curMaint.images ? curMaint.images.length : 0)}{t('common:m118')}</label>
+              <div>{(curMaint.images && curMaint.images.length) ? curMaint.images.map((_, i) => <span className="thumb" key={i}>{t('common:m119')}{i + 1}</span>) : <span className="note">{t('common:m120')}</span>}</div></div>
+            <div className="modal-foot"><button className="btn" onClick={() => setMaintOpen(false)}>{t('common:m101')}</button></div>
           </div>
         </div>
       )}
@@ -805,7 +802,7 @@ export default function ProductCenter() {
           <Form form={fenceForm} layout="vertical" initialValues={{ fenceType: 'RADIUS', triggerAction: 'ALERT', status: 'ENABLED' }}>
             <Form.Item name="name" label={t('drone:fence.form.name')}
               rules={[{ required: true, message: t('form.required', { label: t('drone:fence.form.name') }) }]}>
-              <Input placeholder="如：站点A作业区" />
+              <Input placeholder={t('common:m121')} />
             </Form.Item>
             <Form.Item name="fenceType" label={t('drone:fence.form.fenceType')} rules={[{ required: true }]}>
               <Select options={[

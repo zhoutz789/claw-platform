@@ -14,6 +14,7 @@ import {
   getDraft, getOnboardingContent, listDepositTiers, listMaterials, listMyApplications,
   replaceAttachments, saveDraft, submitApplication, submitVoucher,
 } from '../api/onboarding';
+import { useTranslation } from 'react-i18next';
 
 /**
  * 入驻申请页（增量 C · 页面 1–3）：入驻说明 + 申请表单 Drawer + 我的入驻进度。
@@ -24,7 +25,8 @@ import {
  *
  * 对接后端 OnboardingController（/api/v1/onboarding）。权限码 onboarding:apply:self。
  */
-export default function OnboardingApply() {
+export default function OnboardingApply() {  const { t } = useTranslation('common');
+
   const { message, modal } = App.useApp();
 
   const [applicantType, setApplicantType] = useState('STATION');
@@ -103,11 +105,11 @@ export default function OnboardingApply() {
     const siteCodes = ['LAND_CERT', 'OWNERSHIP_LEASE', 'SIGNBOARD', 'SITE_PHOTO', 'LAND_INTRO', 'LOCATION'];
     const planCodes = ['COOPERATION_PLAN'];
     const groups = [
-      { title: '主体信息', items: [] },
-      { title: '资质证照', items: [] },
-      { title: '场地信息', items: [] },
-      { title: '合作计划', items: [] },
-      { title: '协议签署', items: [] },
+      { title: t('common:m669'), items: [] },
+      { title: t('common:m670'), items: [] },
+      { title: t('common:m671'), items: [] },
+      { title: t('common:m672'), items: [] },
+      { title: t('common:m673'), items: [] },
     ];
     materials.forEach((m) => {
       if (textCodes.includes(m.materialCode)) groups[0].items.push(m);
@@ -155,7 +157,7 @@ export default function OnboardingApply() {
       if (applicationId) {
         await replaceAttachments(applicationId, { attachType: materialCode, fileUrls: [...(files[materialCode] || []), url] });
       }
-      message.success('上传成功');
+      message.success(t('common:m674'));
     } catch (e) {
       message.error(`上传失败：${e.message}`);
     }
@@ -189,7 +191,7 @@ export default function OnboardingApply() {
     try {
       const d = await saveDraft(buildPayload(v));
       setApplicationId(d?.id || applicationId);
-      message.success('草稿已保存');
+      message.success(t('common:m675'));
     } catch (e) {
       message.error(`保存草稿失败：${e.message}`);
     } finally {
@@ -202,18 +204,18 @@ export default function OnboardingApply() {
     try {
       v = await form.validateFields();
     } catch {
-      message.error('请先补全必填项');
+      message.error(t('common:m676'));
       return;
     }
     if (!agreed) {
-      message.error('请先阅读并勾选同意入驻协议');
+      message.error(t('common:m677'));
       return;
     }
     setSubmitting(true);
     try {
       const d = await submitApplication(buildPayload(v));
       setApplicationId(d?.id || applicationId);
-      message.success('申请已提交，请等待平台初审');
+      message.success(t('common:m678'));
       setDrawerOpen(false);
       loadMine();
     } catch (e) {
@@ -227,7 +229,7 @@ export default function OnboardingApply() {
   const doVoucher = (row) => {
     let url = '';
     modal.confirm({
-      title: '上传缴款凭证',
+      title: t('common:m679'),
       width: 520,
       content: (
         <div style={{ marginTop: 12 }}>
@@ -242,47 +244,47 @@ export default function OnboardingApply() {
               } catch (err) { onError(err); }
             }}
           >
-            <Button icon={<UploadOutlined />}>选择凭证文件（JPG/PNG/PDF，≤10MB）</Button>
+            <Button icon={<UploadOutlined />}>{t('common:m680')}</Button>
           </Upload>
         </div>
       ),
-      okText: '提交凭证',
-      cancelText: '取消',
+      okText: t('common:m681'),
+      cancelText: t('common:m96'),
       onOk: async () => {
         if (!url) {
-          message.error('请先上传凭证文件');
+          message.error(t('common:m682'));
           return Promise.reject(new Error('no-file'));
         }
         await submitVoucher(row.id, { voucherUrl: url, amount: row.depositAmount });
-        message.success('凭证已提交，等待财务确认到账');
+        message.success(t('common:m683'));
         loadMine();
       },
     });
   };
 
   const columns = [
-    { title: '申请单号', dataIndex: 'applicationNo', width: 170 },
+    { title: t('common:m421'), dataIndex: 'applicationNo', width: 170 },
     {
-      title: '主体类型', dataIndex: 'applicantType', width: 100,
+      title: t('common:m340'), dataIndex: 'applicantType', width: 100,
       render: (v) => <Tag color="blue">{APPLICANT_TYPES.find((x) => x.value === v)?.label || v}</Tag>,
     },
-    { title: '申请人', dataIndex: 'applicantName', width: 110, render: (v) => v || EMPTY },
+    { title: t('common:m422'), dataIndex: 'applicantName', width: 110, render: (v) => v || EMPTY },
     {
-      title: '状态', dataIndex: 'status', width: 120,
+      title: t('common:m8'), dataIndex: 'status', width: 120,
       render: (v, r) => <AppStatusTag value={v} orgStatus={r.orgOnboardingStatus} />,
     },
-    { title: '合同版本', dataIndex: 'contractVersion', width: 100, render: (v) => v || EMPTY },
-    { title: '驳回原因', dataIndex: 'rejectReason', render: (v) => v || EMPTY },
-    { title: '提交时间', dataIndex: 'submittedAt', width: 160, render: (v) => fmtTime(v) },
+    { title: t('common:m424'), dataIndex: 'contractVersion', width: 100, render: (v) => v || EMPTY },
+    { title: t('common:m444'), dataIndex: 'rejectReason', render: (v) => v || EMPTY },
+    { title: t('common:m425'), dataIndex: 'submittedAt', width: 160, render: (v) => fmtTime(v) },
     {
-      title: '操作', key: '_actions', width: 150,
+      title: t('common:m58'), key: '_actions', width: 150,
       render: (_, r) => (
         <Space size="small">
           {r.status === 'APPROVED' && (
-            <Button size="small" type="link" onClick={() => doVoucher(r)}>上传凭证</Button>
+            <Button size="small" type="link" onClick={() => doVoucher(r)}>{t('common:m684')}</Button>
           )}
           {(r.status === 'DRAFT' || r.status === 'RETURNED' || r.status === 'REJECTED') && (
-            <Button size="small" type="link" onClick={openApply}>继续填写</Button>
+            <Button size="small" type="link" onClick={openApply}>{t('common:m685')}</Button>
           )}
         </Space>
       ),
@@ -295,7 +297,7 @@ export default function OnboardingApply() {
 
   return (
     <PageCard
-      title="入驻申请"
+      title={t('common:m686')}
       subtitle="查看合作要点与合同条款，在线提交入驻申请并跟踪审批进度"
       reload={loadMine}
       loading={listLoading}
@@ -315,15 +317,15 @@ export default function OnboardingApply() {
             <Space direction="vertical" size={8} style={{ width: '100%' }}>
               <Space wrap>
                 <b>{content.title}</b>
-                <Tag color="blue">版本 {content.version}</Tag>
-                <Tag>语言 {content.lang}</Tag>
-                {content.publishedAt && <Tag color="green">生效于 {fmtTime(content.publishedAt, 'YYYY-MM-DD')}</Tag>}
+                <Tag color="blue">{t('common:m687')}{content.version}</Tag>
+                <Tag>{t('common:m688')}{content.lang}</Tag>
+                {content.publishedAt && <Tag color="green">{t('common:m689')}{fmtTime(content.publishedAt, 'YYYY-MM-DD')}</Tag>}
               </Space>
               {content.contractFileUrl && (
                 <Space>
                   <FileTextOutlined />
-                  <a href={content.contractFileUrl} target="_blank" rel="noreferrer">在线预览签章合同</a>
-                  <a href={content.contractFileUrl} download>下载</a>
+                  <a href={content.contractFileUrl} target="_blank" rel="noreferrer">{t('common:m690')}</a>
+                  <a href={content.contractFileUrl} download>{t('common:m691')}</a>
                 </Space>
               )}
               {/* 富文本合作要点：内容由平台在「入驻说明与合同」页维护（后端富文本编辑器产出），
@@ -334,23 +336,21 @@ export default function OnboardingApply() {
               />
             </Space>
           ) : (
-            <Empty description="该类主体尚未发布入驻说明" />
+            <Empty description={t('common:m692')} />
           )}
           <Perm code="onboarding:apply:self">
-            <Button type="primary" icon={<PlusOutlined />} style={{ marginTop: 12 }} onClick={openApply}>
-              申请入驻
-            </Button>
+            <Button type="primary" icon={<PlusOutlined />} style={{ marginTop: 12 }} onClick={openApply}>{t('common:m693')}</Button>
           </Perm>
         </Card>
 
-        <Card size="small" title="我的入驻进度" extra={(
+        <Card size="small" title={t('common:m694')} extra={(
           <Space>
             <select
               style={{ height: 32, minWidth: 140 }}
               value={statusFilter || ''}
               onChange={(e) => setStatusFilter(e.target.value || null)}
             >
-              <option value="">全部状态</option>
+              <option value="">{t('common:m695')}</option>
               {APP_STATUS_FILTER.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </Space>
@@ -376,8 +376,8 @@ export default function OnboardingApply() {
         destroyOnClose
         extra={(
           <Space>
-            <Button icon={<SaveOutlined />} loading={saving} onClick={doSaveDraft}>保存草稿</Button>
-            <Button type="primary" icon={<SendOutlined />} loading={submitting} onClick={doSubmit}>提交申请</Button>
+            <Button icon={<SaveOutlined />} loading={saving} onClick={doSaveDraft}>{t('common:m696')}</Button>
+            <Button type="primary" icon={<SendOutlined />} loading={submitting} onClick={doSubmit}>{t('common:m697')}</Button>
           </Space>
         )}
       >
@@ -423,7 +423,7 @@ export default function OnboardingApply() {
                       } catch (e) { onError(e); }
                     }}
                   >
-                    <div><PlusOutlined /><div style={{ marginTop: 4 }}>上传</div></div>
+                    <div><PlusOutlined /><div style={{ marginTop: 4 }}>{t('common:m404')}</div></div>
                   </Upload>
                   <div style={{ color: '#8c8c8c', fontSize: 12 }}>
                     {m.hint || (m.inputType === 'IMAGES'
@@ -438,13 +438,13 @@ export default function OnboardingApply() {
                 <Form.Item key={m.materialCode} label={`${m.materialName}（必填）`} required>
                   <Space wrap>
                     <Form.Item name="lat" noStyle>
-                      <InputNumber placeholder="纬度" precision={6} style={{ width: 160 }} />
+                      <InputNumber placeholder={t('common:m643')} precision={6} style={{ width: 160 }} />
                     </Form.Item>
                     <Form.Item name="lng" noStyle>
-                      <InputNumber placeholder="经度" precision={6} style={{ width: 160 }} />
+                      <InputNumber placeholder={t('common:m644')} precision={6} style={{ width: 160 }} />
                     </Form.Item>
                     <Form.Item name="geoAddress" noStyle>
-                      <Input placeholder="定位反查地址" style={{ width: 260 }} />
+                      <Input placeholder={t('common:m698')} style={{ width: 260 }} />
                     </Form.Item>
                   </Space>
                   <div style={{ color: '#8c8c8c', fontSize: 12 }}>
@@ -469,11 +469,11 @@ export default function OnboardingApply() {
           })}
 
           {step === 1 && (
-            <Form.Item name="ownershipType" label="所有权 / 租赁">
+            <Form.Item name="ownershipType" label={t('common:m441')}>
               <Select
                 allowClear
                 style={{ width: 200 }}
-                options={[{ value: 'OWNED', label: '自有' }, { value: 'LEASED', label: '租赁' }]}
+                options={[{ value: 'OWNED', label: t('common:m699') }, { value: 'LEASED', label: t('common:m581') }]}
               />
             </Form.Item>
           )}
@@ -482,8 +482,8 @@ export default function OnboardingApply() {
             <>
               <Form.Item
                 name="depositTierId"
-                label="保证金档位"
-                rules={[{ required: true, message: '请选择保证金档位' }]}
+                label={t('common:m443')}
+                rules={[{ required: true, message: t('common:m700') }]}
               >
                 <Select
                   style={{ width: 420 }}
@@ -495,16 +495,15 @@ export default function OnboardingApply() {
                 />
               </Form.Item>
               <Descriptions size="small" column={1} bordered style={{ marginBottom: 12 }}>
-                <Descriptions.Item label="签署合同版本">
+                <Descriptions.Item label={t('common:m701')}>
                   {content ? `${content.title} · ${content.version}` : EMPTY}
                 </Descriptions.Item>
               </Descriptions>
-              <Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)}>
-                我已阅读并同意《{content?.title || '入驻合作协议'}》（版本 {content?.version || EMPTY}）
+              <Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)}>{t('common:m702')}{content?.title || '入驻合作协议'}{t('common:m703')}{content?.version || EMPTY}）
               </Checkbox>
               {content?.contractFileUrl && (
                 <div style={{ marginTop: 8 }}>
-                  <a href={content.contractFileUrl} target="_blank" rel="noreferrer">查看签章合同扫描件</a>
+                  <a href={content.contractFileUrl} target="_blank" rel="noreferrer">{t('common:m704')}</a>
                 </div>
               )}
             </>
@@ -512,13 +511,11 @@ export default function OnboardingApply() {
         </Form>
 
         <Space style={{ marginTop: 16 }}>
-          <Button disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>上一步</Button>
+          <Button disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>{t('common:m705')}</Button>
           <Button
             disabled={step >= stepGroups.length - 1}
             onClick={() => setStep((s) => Math.min(stepGroups.length - 1, s + 1))}
-          >
-            下一步
-          </Button>
+          >{t('common:m706')}</Button>
         </Space>
       </Drawer>
     </PageCard>

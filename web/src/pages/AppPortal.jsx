@@ -3,6 +3,7 @@ import { Card, Segmented, Tag, Modal, Descriptions, Button, Alert, Space, messag
 import { ScanOutlined } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import api from '../api';
+import { useTranslation } from 'react-i18next';
 
 const ROLE_ENTRY = [
   { ic: '🏪', t: '入驻商家' }, { ic: '🛠️', t: '服务站管理' }, { ic: '🤝', t: '资产租赁' },
@@ -16,7 +17,8 @@ const STATUS_LABEL = {
 
 // 统一 App 门户：「我的资产」接真实 /v1/assets；详情接 /v1/assets/{id} + 收益接 /v1/admin/manufacturer/assets/{id}/trace；
 // 「绑定新设备」接 POST /v1/assets/{id}/bind。定位/能力后端无 → 显示待接入。
-export default function AppPortal() {
+export default function AppPortal() {  const { t } = useTranslation('common');
+
   const [role, setRole] = useState('owner');
   const [bind, setBind] = useState(false);
   const [sel, setSel] = useState(null); // 选中的资产 id
@@ -56,10 +58,10 @@ export default function AppPortal() {
   // 绑定新设备：POST /v1/assets/{id}/bind
   const doBind = async () => {
     const q = bindInput.trim();
-    if (!q) { message.warning('请输入资产ID或编号'); return; }
+    if (!q) { message.warning(t('common:m940')); return; }
     const target = assets.find((a) => String(a.id) === q || a.assetNo === q);
     const id = target ? target.id : (Number(q) ? Number(q) : null);
-    if (!id) { message.error('未找到对应资产'); return; }
+    if (!id) { message.error(t('common:m941')); return; }
     setBindLoading(true);
     try {
       await api.post(`/v1/assets/${id}/bind`, {
@@ -82,17 +84,17 @@ export default function AppPortal() {
   };
 
   return (
-    <PageCard title="App 角色门户（统一 App 入口预览）" extra={
+    <PageCard title={t('common:m942')} extra={
       <Segmented value={role} onChange={setRole}
-        options={[{ label: '产权人视角', value: 'owner' }, { label: '承租人视角', value: 'tenant' }]} />
+        options={[{ label: t('common:m943'), value: 'owner' }, { label: t('common:m944'), value: 'tenant' }]} />
     }>
       <Alert type="info" showIcon style={{ marginBottom: 14 }}
         message="工作站 + 用户端整合在一个 App；我的页按角色展示入口，资产菜单展示设备全部信息。扫码绑定仅一次，再绑需产权转移；租赁仅给产权人勾选权限。" />
 
       <div style={phone}>
-        <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>我的<small style={{ fontSize: 10, color: 'var(--muted)' }}> · Claw 资产与服务中心</small></div>
+        <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>{t('common:m582')}<small style={{ fontSize: 10, color: 'var(--muted)' }}>{t('common:m945')}</small></div>
         <Divider style={{ margin: '8px 0' }} />
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>角色服务入口</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>{t('common:m946')}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
           {ROLE_ENTRY.map((e) => (
             <div key={e.t} style={{ textAlign: 'center', padding: 8, borderRadius: 10, background: 'var(--brand-soft)' }}>
@@ -101,35 +103,35 @@ export default function AppPortal() {
             </div>
           ))}
         </div>
-        <div style={{ fontSize: 12, color: 'var(--muted)', margin: '12px 0 6px' }}>我的资产（点击查看详情）</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', margin: '12px 0 6px' }}>{t('common:m947')}</div>
         {loading ? <div style={{ textAlign: 'center', padding: 16 }}><Spin /></div> : assets.length === 0 ? (
-          <Empty description="暂无真实资产" />
+          <Empty description={t('common:m948')} />
         ) : assets.map((d) => (
           <div key={d.id} onClick={() => openDetail(d.id)} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 10, marginBottom: 8, cursor: 'pointer' }}>
             <div style={{ fontWeight: 700 }}>{d.assetNo}</div>
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>{STATUS_LABEL[d.status] || d.status} · #{d.id}</div>
-            <Space wrap size={4} style={{ marginTop: 4 }}><Tag color="blue">类型: {d.assetType}</Tag></Space>
+            <Space wrap size={4} style={{ marginTop: 4 }}><Tag color="blue">{t('common:m949')}{d.assetType}</Tag></Space>
           </div>
         ))}
-        <Button type="primary" block icon={<ScanOutlined />} style={{ marginTop: 6 }} onClick={() => setBind(true)}>＋ 绑定新设备</Button>
+        <Button type="primary" block icon={<ScanOutlined />} style={{ marginTop: 6 }} onClick={() => setBind(true)}>{t('common:m950')}</Button>
       </div>
 
       <Modal open={!!sel} title={`设备详情 · ${detail?.asset?.assetNo || sel}`} onCancel={() => setSel(null)} footer={null}>
         {detailLoading ? <div style={{ textAlign: 'center', padding: 16 }}><Spin /></div> : detail ? (
           <>
             <Descriptions column={1} size="small" bordered>
-              <Descriptions.Item label="状态"><Tag color="blue">{STATUS_LABEL[detail.asset.status] || detail.asset.status}</Tag></Descriptions.Item>
-              <Descriptions.Item label="资产编号">{detail.asset.assetNo}</Descriptions.Item>
-              <Descriptions.Item label="实时定位">—（待接入）</Descriptions.Item>
-              <Descriptions.Item label="能力标签">—（待接入）</Descriptions.Item>
+              <Descriptions.Item label={t('common:m8')}><Tag color="blue">{STATUS_LABEL[detail.asset.status] || detail.asset.status}</Tag></Descriptions.Item>
+              <Descriptions.Item label={t('common:m168')}>{detail.asset.assetNo}</Descriptions.Item>
+              <Descriptions.Item label={t('common:m951')}>{t('common:m188')}</Descriptions.Item>
+              <Descriptions.Item label={t('common:m184')}>{t('common:m188')}</Descriptions.Item>
             </Descriptions>
-            <h4 style={{ margin: '12px 0 8px' }}>收益模块（{isOwner ? '完整' : '承租受限'}）</h4>
+            <h4 style={{ margin: '12px 0 8px' }}>{t('common:m952')}{isOwner ? '完整' : '承租受限'}）</h4>
             {!isOwner ? (
               <Alert type="warning" showIcon message="承租人视角：收益/产权隐藏，仅可见实时定位与自身使用轨迹。" />
             ) : detail.trace ? (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-                  <span>累计收益</span>
+                  <span>{t('common:m953')}</span>
                   <span style={{ color: 'var(--brand)' }}>¥{detail.trace.totalRevenue ?? '—'}</span>
                 </div>
                 <List size="small" dataSource={detail.trace.vehicleOps || []}
@@ -142,23 +144,23 @@ export default function AppPortal() {
                   )} />
               </>
             ) : (
-              <Empty description="暂无收益数据（后端待接入）" />
+              <Empty description={t('common:m954')} />
             )}
           </>
-        ) : <Empty description="无详情" />}
+        ) : <Empty description={t('common:m955')} />}
       </Modal>
 
-      <Modal open={bind} title="绑定新设备" onCancel={() => setBind(false)} footer={null}>
+      <Modal open={bind} title={t('common:m956')} onCancel={() => setBind(false)} footer={null}>
         <div style={{ textAlign: 'center', padding: 16, border: '2px dashed var(--line)', borderRadius: 12, marginBottom: 12 }}>
           <ScanOutlined style={{ fontSize: 40, color: 'var(--brand)' }} />
-          <div style={{ color: 'var(--muted)', marginTop: 6 }}>扫描设备二维码 / 输入唯一编号</div>
+          <div style={{ color: 'var(--muted)', marginTop: 6 }}>{t('common:m957')}</div>
         </div>
         <Alert type="warning" showIcon style={{ marginBottom: 12 }}
           message="绑定只能一次；再绑定需产权转移。新用户付款设备当前价值即获所有权，原用户丧失一切权利。" />
         <Space style={{ width: '100%' }} wrap>
-          <Input style={{ maxWidth: 200 }} placeholder="资产ID 或 编号" value={bindInput} onChange={(e) => setBindInput(e.target.value)} />
-          <Input style={{ maxWidth: 160 }} placeholder="站点ID(可选)" addonBefore="站点" value={bindStation} onChange={(e) => setBindStation(e.target.value)} />
-          <Button type="primary" loading={bindLoading} onClick={doBind}>扫码 / 付款绑定</Button>
+          <Input style={{ maxWidth: 200 }} placeholder={t('common:m958')} value={bindInput} onChange={(e) => setBindInput(e.target.value)} />
+          <Input style={{ maxWidth: 160 }} placeholder={t('common:m959')} addonBefore={t('common:m512')} value={bindStation} onChange={(e) => setBindStation(e.target.value)} />
+          <Button type="primary" loading={bindLoading} onClick={doBind}>{t('common:m960')}</Button>
         </Space>
       </Modal>
     </PageCard>

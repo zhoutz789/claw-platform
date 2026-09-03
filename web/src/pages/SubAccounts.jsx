@@ -10,6 +10,7 @@ import {
   createSubAccount, disableSubAccount, enableSubAccount, getSubAccountGrant, getSubAccountMe,
   grantSubAccount, listPermissionCatalog, listSubAccounts, revokeSubAccount,
 } from '../api/onboarding';
+import { useTranslation } from 'react-i18next';
 
 /**
  * 子账号管理页（增量 C · 页面 10 · O28–O30 / Q11）。
@@ -26,7 +27,8 @@ import {
  *
  * 对接后端 AdminSubAccountController（/api/v1/org/sub-accounts）。权限码 org:subaccount:manage。
  */
-export default function SubAccounts() {
+export default function SubAccounts() {  const { t } = useTranslation('common');
+
   const { message, modal } = App.useApp();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -79,38 +81,36 @@ export default function SubAccounts() {
   const openCreate = () => {
     let payload = { userId: null, displayName: '' };
     modal.confirm({
-      title: '新建子账号',
+      title: t('common:m902'),
       width: 480,
       content: (
         <div style={{ marginTop: 12 }}>
           <input
             className="ant-input"
             style={{ marginBottom: 8 }}
-            placeholder="子账号登录用户的 ID（claw.users.id）"
+            placeholder={t('common:m903')}
             onChange={(e) => { payload.userId = e.target.value ? Number(e.target.value) : null; }}
           />
           <input
             className="ant-input"
-            placeholder="展示名（如：店长 · 张三）"
+            placeholder={t('common:m904')}
             onChange={(e) => { payload.displayName = e.target.value; }}
           />
-          <div style={{ marginTop: 8, color: '#8c8c8c', fontSize: 12 }}>
-            同一主体下同一用户只能添加一次；子账号不可再开子账号。
-          </div>
+          <div style={{ marginTop: 8, color: '#8c8c8c', fontSize: 12 }}>{t('common:m905')}</div>
         </div>
       ),
-      okText: '创建',
-      cancelText: '取消',
+      okText: t('common:m906'),
+      cancelText: t('common:m96'),
       onOk: async () => {
         if (!payload.userId) {
-          message.error('请填写子账号用户 ID');
+          message.error(t('common:m907'));
           return Promise.reject(new Error('no-user'));
         }
         await createSubAccount({
           userId: payload.userId,
           displayName: payload.displayName || undefined,
         });
-        message.success('子账号已创建，请为其授权');
+        message.success(t('common:m908'));
         load();
       },
     });
@@ -157,45 +157,45 @@ export default function SubAccounts() {
 
   const columns = [
     { title: 'ID', dataIndex: 'id', width: 70 },
-    { title: '登录用户 ID', dataIndex: 'userId', width: 110 },
-    { title: '展示名', dataIndex: 'displayName', width: 160, render: (v) => v || EMPTY },
-    { title: '手机号', dataIndex: 'phone', width: 130, render: (v) => v || EMPTY },
+    { title: t('common:m909'), dataIndex: 'userId', width: 110 },
+    { title: t('common:m910'), dataIndex: 'displayName', width: 160, render: (v) => v || EMPTY },
+    { title: t('common:m911'), dataIndex: 'phone', width: 130, render: (v) => v || EMPTY },
     {
-      title: '状态', dataIndex: 'status', width: 100,
+      title: t('common:m8'), dataIndex: 'status', width: 100,
       render: (v) => <Tag color={v === 'ACTIVE' ? 'green' : 'red'}>{v === 'ACTIVE' ? '启用' : '已停用'}</Tag>,
     },
-    { title: '创建时间', dataIndex: 'createdAt', width: 160, render: (v) => fmtTime(v) },
+    { title: t('common:m279'), dataIndex: 'createdAt', width: 160, render: (v) => fmtTime(v) },
     {
-      title: '操作', key: '_actions', width: 260, fixed: 'right',
+      title: t('common:m58'), key: '_actions', width: 260, fixed: 'right',
       render: (_, r) => (
         <Space size="small">
           <Perm code="org:subaccount:manage">
-            <Button size="small" type="link" icon={<KeyOutlined />} onClick={() => openGrant(r)}>授权</Button>
+            <Button size="small" type="link" icon={<KeyOutlined />} onClick={() => openGrant(r)}>{t('common:m64')}</Button>
           </Perm>
           <Perm code="org:subaccount:manage">
             {r.status === 'ACTIVE' ? (
-              <Popconfirm title="停用后该子账号将无法登录，操作日志保留。确认？" onConfirm={async () => {
+              <Popconfirm title={t('common:m912')} onConfirm={async () => {
                 await disableSubAccount(r.id);
-                message.success('已停用');
+                message.success(t('common:m913'));
                 load();
               }}>
-                <Button size="small" type="link" danger icon={<StopOutlined />}>停用</Button>
+                <Button size="small" type="link" danger icon={<StopOutlined />}>{t('common:m914')}</Button>
               </Popconfirm>
             ) : (
               <Button size="small" type="link" onClick={async () => {
                 await enableSubAccount(r.id);
-                message.success('已启用，请重新授权');
+                message.success(t('common:m915'));
                 load();
-              }}>启用</Button>
+              }}>{t('common:m350')}</Button>
             )}
           </Perm>
           <Perm code="org:subaccount:manage">
-            <Popconfirm title="撤销该子账号的全部授权？" onConfirm={async () => {
+            <Popconfirm title={t('common:m916')} onConfirm={async () => {
               await revokeSubAccount(r.id);
-              message.success('授权已撤销');
+              message.success(t('common:m917'));
               load();
             }}>
-              <Button size="small" type="link" danger>撤销授权</Button>
+              <Button size="small" type="link" danger>{t('common:m918')}</Button>
             </Popconfirm>
           </Perm>
         </Space>
@@ -205,7 +205,7 @@ export default function SubAccounts() {
 
   return (
     <PageCard
-      title="子账号管理"
+      title={t('common:m919')}
       subtitle="为协作成员开子账号，授予全部或部分功能（企业协作）"
       reload={load}
       loading={loading}
@@ -217,9 +217,7 @@ export default function SubAccounts() {
             onClick={openCreate}
             disabled={Boolean(me?.viaSubAccount)}
             title={me?.viaSubAccount ? '子账号不可再开子账号（Q11）' : ''}
-          >
-            新建子账号
-          </Button>
+          >{t('common:m902')}</Button>
         </Perm>
       )}
     >
@@ -233,7 +231,7 @@ export default function SubAccounts() {
       )}
       {me?.principalType && (
         <div style={{ marginBottom: 12 }}>
-          <Tag color="blue">所属主体：{me.principalType}#{me.principalId}</Tag>
+          <Tag color="blue">{t('common:m920')}{me.principalType}#{me.principalId}</Tag>
           <Tag>{me.viaSubAccount ? '子账号身份' : '主账号身份'}</Tag>
         </div>
       )}
@@ -257,13 +255,13 @@ export default function SubAccounts() {
         destroyOnClose
         extra={(
           <Perm code="org:subaccount:manage">
-            <Button type="primary" loading={submitting} onClick={doGrant}>保存授权</Button>
+            <Button type="primary" loading={submitting} onClick={doGrant}>{t('common:m921')}</Button>
           </Perm>
         )}
       >
         <Space direction="vertical" size={12} style={{ width: '100%' }}>
           <Space wrap>
-            <span>授权方式</span>
+            <span>{t('common:m922')}</span>
             <select
               style={{ height: 32, minWidth: 140 }}
               value={mode}
@@ -300,7 +298,7 @@ export default function SubAccounts() {
 
           {grantInfo?.effectivePermissions?.length > 0 && (
             <div>
-              <b>当前生效权限（{grantInfo.effectivePermissions.length} 项）</b>
+              <b>{t('common:m923')}{grantInfo.effectivePermissions.length}{t('common:m924')}</b>
               <div style={{ maxHeight: 140, overflow: 'auto', marginTop: 6 }}>
                 <Space wrap size={[4, 4]}>
                   {grantInfo.effectivePermissions.map((c) => <Tag key={c}>{c}</Tag>)}

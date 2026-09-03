@@ -5,6 +5,7 @@ import {
 import { LinkOutlined, SwapOutlined } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import api from '../api';
+import { useTranslation } from 'react-i18next';
 
 const { Text, Paragraph } = Typography;
 
@@ -21,7 +22,8 @@ const TRANSFER_TYPES = [
 ];
 
 // 绑定 / 产权：扫码绑定（仅一次）→ 产权转移（现值核算）→ 租赁（受限权限）
-export default function BindOwnership() {
+export default function BindOwnership() {  const { t } = useTranslation('common');
+
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [deviceId, setDeviceId] = useState(null);
@@ -91,72 +93,67 @@ export default function BindOwnership() {
 
   // ③ 租赁权限矩阵（权限模型概念，静态保留）
   const leaseMatrix = [
-    { fn: '开关 / 使用', lessee: <Tag color="green">✓ 授权</Tag>, note: '产权人勾选授予' },
-    { fn: '实时定位', lessee: <Tag color="green">✓ 授权</Tag>, note: '实时可见，不隐藏' },
-    { fn: '历史轨迹', lessee: <Tag color="blue">仅本人使用期</Tag>, note: '其余历史隐藏' },
-    { fn: '收益数据', lessee: <Tag color="red">✗ 隐藏</Tag>, note: '仅产权人可见' },
-    { fn: '产权 / 转让', lessee: <Tag color="red">✗ 禁止</Tag>, note: '仅产权人' },
+    { fn: '开关 / 使用', lessee: <Tag color="green">{t('common:m961')}</Tag>, note: '产权人勾选授予' },
+    { fn: '实时定位', lessee: <Tag color="green">{t('common:m961')}</Tag>, note: '实时可见，不隐藏' },
+    { fn: '历史轨迹', lessee: <Tag color="blue">{t('common:m962')}</Tag>, note: '其余历史隐藏' },
+    { fn: '收益数据', lessee: <Tag color="red">{t('common:m963')}</Tag>, note: '仅产权人可见' },
+    { fn: '产权 / 转让', lessee: <Tag color="red">{t('common:m964')}</Tag>, note: '仅产权人' },
   ];
 
   return (
-    <PageCard title="绑定 / 产权"
+    <PageCard title={t('common:m965')}
       extra={dev ? (
         <Select value={deviceId} style={{ width: 280 }} onChange={setDeviceId}
           options={assets.map((d) => ({ label: `${d.assetNo} · #${d.id}`, value: d.id }))} />
       ) : null}>
       {!dev ? (
-        loading ? <Spin /> : <Empty description="暂无真实资产" />
+        loading ? <Spin /> : <Empty description={t('common:m948')} />
       ) : (
         <>
           <Alert type="info" showIcon style={{ marginBottom: 16 }}
             message="绑定规则：扫码 / 输唯一编号绑定，仅一次；再绑需产权转移；新用户付款系统核算的当前价值即获所有权，原用户丧失一切权利；租赁仅获产权人勾选权限。现值依赖真实购入成本，后端暂无 costPrice 字段，故以资产状态与建档时间展示。" />
 
           {/* ① 扫码绑定 */}
-          <Card style={{ marginBottom: 16 }} title="① 用户添加新设备（绑定）">
-            <Paragraph type="secondary" style={{ fontSize: 12, marginTop: 0 }}>
-              扫码设备二维码 / 输入唯一编号 → 绑定（全局唯一，仅一次）。当前选中：<Text strong>{dev.assetNo}</Text> #{dev.id}
+          <Card style={{ marginBottom: 16 }} title={t('common:m966')}>
+            <Paragraph type="secondary" style={{ fontSize: 12, marginTop: 0 }}>{t('common:m967')}<Text strong>{dev.assetNo}</Text> #{dev.id}
             </Paragraph>
             <Space style={{ width: '100%' }} wrap>
               <Input prefix={<LinkOutlined />} style={{ maxWidth: 320 }} value={dev.assetNo} disabled />
-              <Input style={{ maxWidth: 180 }} placeholder="站点ID(可选)" addonBefore="站点"
+              <Input style={{ maxWidth: 180 }} placeholder={t('common:m959')} addonBefore={t('common:m512')}
                 value={stationId} onChange={(e) => setStationId(e.target.value)} />
-              <Button type="primary" loading={binding} onClick={doBind}>绑定设备</Button>
-              <Text type="secondary">仅一次；再绑需产权转移</Text>
+              <Button type="primary" loading={binding} onClick={doBind}>{t('common:m968')}</Button>
+              <Text type="secondary">{t('common:m969')}</Text>
             </Space>
           </Card>
 
           {/* ② 产权转移 */}
-          <Card style={{ marginBottom: 16 }} title="② 产权转移（再绑定）">
-            <Paragraph type="secondary" style={{ fontSize: 12, marginTop: 0 }}>
-              新用户支付设备当前价值 → 扫码 + 付款即拥有所有权
-            </Paragraph>
+          <Card style={{ marginBottom: 16 }} title={t('common:m970')}>
+            <Paragraph type="secondary" style={{ fontSize: 12, marginTop: 0 }}>{t('common:m971')}</Paragraph>
             <Alert type="warning" showIcon style={{ margin: '8px 0 12px' }}
               message="现值核算依赖真实购入成本——后端资产当前暂无 costPrice 字段，无法核算现值。当前展示资产状态与建档时间：" />
             <Descriptions column={1} size="small" style={{ marginBottom: 12 }}>
-              <Descriptions.Item label="资产状态">{statusTag(dev.status)}</Descriptions.Item>
-              <Descriptions.Item label="建档时间">{dev.createdAt || '—'}</Descriptions.Item>
-              <Descriptions.Item label="当前产权人">{dev.ownerId != null ? `用户#${dev.ownerId}` : '平台'}</Descriptions.Item>
+              <Descriptions.Item label={t('common:m972')}>{statusTag(dev.status)}</Descriptions.Item>
+              <Descriptions.Item label={t('common:m169')}>{dev.createdAt || '—'}</Descriptions.Item>
+              <Descriptions.Item label={t('common:m973')}>{dev.ownerId != null ? `用户#${dev.ownerId}` : '平台'}</Descriptions.Item>
             </Descriptions>
             <Space wrap>
-              <Text>新产权人ID：</Text>
-              <Input style={{ width: 120 }} value={newOwnerId} onChange={(e) => setNewOwnerId(e.target.value)} placeholder="如 2" />
-              <Text>转移类型：</Text>
+              <Text>{t('common:m974')}</Text>
+              <Input style={{ width: 120 }} value={newOwnerId} onChange={(e) => setNewOwnerId(e.target.value)} placeholder={t('common:m975')} />
+              <Text>{t('common:m976')}</Text>
               <Select style={{ width: 200 }} value={transferType} onChange={setTransferType}
                 options={TRANSFER_TYPES.map((t) => ({ label: t, value: t }))} />
-              <Button type="primary" loading={transferring} onClick={doTransfer}>支付获得所有权</Button>
+              <Button type="primary" loading={transferring} onClick={doTransfer}>{t('common:m977')}</Button>
             </Space>
           </Card>
 
           {/* ③ 租赁权限矩阵 */}
-          <Card title="③ 租赁（受限权限）">
-            <Paragraph type="secondary" style={{ fontSize: 12, marginTop: 0 }}>
-              承租人仅获产权人勾选的功能权限，其余信息无权查看
-            </Paragraph>
+          <Card title={t('common:m978')}>
+            <Paragraph type="secondary" style={{ fontSize: 12, marginTop: 0 }}>{t('common:m979')}</Paragraph>
             <Table rowKey="fn" pagination={false} dataSource={leaseMatrix}
               columns={[
-                { title: '功能', dataIndex: 'fn' },
-                { title: '承租人可见 / 可操作', dataIndex: 'lessee' },
-                { title: '说明', dataIndex: 'note' },
+                { title: t('common:m194'), dataIndex: 'fn' },
+                { title: t('common:m980'), dataIndex: 'lessee' },
+                { title: t('common:m211'), dataIndex: 'note' },
               ]} />
           </Card>
         </>

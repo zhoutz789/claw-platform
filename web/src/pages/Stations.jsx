@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { Table, Input, Button, Space, Tag, App } from 'antd';
 import PageCard from '../components/PageCard';
 import api from '../api';
+import { useTranslation } from 'react-i18next';
 
 // 金边中心坐标，用于"附近站点"演示
 const PHNOM_PENH = { lat: 11.5564, lng: 104.9282 };
 
-export default function Stations() {
+export default function Stations() {  const { t } = useTranslation('common');
+
   const { message } = App.useApp();
   const [sku, setSku] = useState('');
   const [rows, setRows] = useState([]);
@@ -49,15 +51,15 @@ export default function Stations() {
 
   const cols = [
     { title: 'ID', dataIndex: 'id' },
-    { title: '站点编码', dataIndex: 'code' },
-    { title: '名称', dataIndex: 'name' },
-    { title: '区域', dataIndex: 'area' },
-    { title: '城市', dataIndex: 'city' },
-    { title: '营业时间', dataIndex: 'openHours' },
-    { title: '距离(km)', dataIndex: 'distKm', render: (v) => (v == null ? '-' : Number(v).toFixed(1)) },
-    { title: '库存', dataIndex: 'totalStock' },
+    { title: t('common:m891'), dataIndex: 'code' },
+    { title: t('common:m277'), dataIndex: 'name' },
+    { title: t('common:m892'), dataIndex: 'area' },
+    { title: t('common:m893'), dataIndex: 'city' },
+    { title: t('common:m894'), dataIndex: 'openHours' },
+    { title: t('common:m895'), dataIndex: 'distKm', render: (v) => (v == null ? '-' : Number(v).toFixed(1)) },
+    { title: t('common:m896'), dataIndex: 'totalStock' },
     {
-      title: '电池型号',
+      title: t('common:m897'),
       dataIndex: 'categories',
       render: (v) =>
         Array.isArray(v) ? v.map((c) => <Tag key={c}>{c}</Tag>) : '-',
@@ -66,21 +68,19 @@ export default function Stations() {
 
   return (
     <PageCard
-      title="换电站点"
+      title={t('common:m898')}
       loading={loading}
       extra={
         <Space>
           <Input
-            placeholder="按 SKU 搜索站点 / 电池"
+            placeholder={t('common:m899')}
             value={sku}
             onChange={(e) => setSku(e.target.value)}
             onPressEnter={onSearch}
             style={{ width: 240 }}
           />
-          <Button type="primary" onClick={onSearch}>
-            搜索
-          </Button>
-          <Button onClick={loadNearby}>附近站点</Button>
+          <Button type="primary" onClick={onSearch}>{t('common:m900')}</Button>
+          <Button onClick={loadNearby}>{t('common:m901')}</Button>
         </Space>
       }
     >

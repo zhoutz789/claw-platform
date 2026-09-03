@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { message, Spin } from 'antd';
 import PageCard from '../components/PageCard';
 import api from '../api';
+import { useTranslation } from 'react-i18next';
 
 /* 严格还原 increment3-d-goods-wizard.html 原型 */
 const RATE = 4100; // 1 USD ≈ 4100 KHR（柬埔寨本币，汇率可配置）
@@ -16,7 +17,8 @@ const STEP_DEFS = [{ n: '选产品/类别' }, { n: '选品牌' }, { n: '标题/�
 
 const TINY_SRC = 'https://cdn.jsdelivr.net/npm/tinymce@6.8.3/tinymce.min.js';
 
-export default function ProductWizard() {
+export default function ProductWizard() {  const { t } = useTranslation('common');
+
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const editId = params.get('editId');
@@ -57,7 +59,7 @@ export default function ProductWizard() {
           desc: g.detail || '', catVals: {},
         }));
       }
-    }).catch(() => { if (alive) { message.error('加载产品/厂家失败'); setProducts([]); setManufacturers([]); } })
+    }).catch(() => { if (alive) { message.error(t('common:m736')); setProducts([]); setManufacturers([]); } })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [editId]);
@@ -68,7 +70,7 @@ export default function ProductWizard() {
     const s = document.createElement('script');
     s.src = TINY_SRC; s.referrerPolicy = 'origin';
     s.onload = () => { tinyReady.current = true; cb(); };
-    s.onerror = () => message.error('TinyMCE 加载失败（CDN 不可达），富文本降级为纯文本');
+    s.onerror = () => message.error(t('common:m737'));
     document.head.appendChild(s);
   };
   const initTiny = () => {
@@ -102,8 +104,8 @@ export default function ProductWizard() {
     const cat = curCat();
     const missing = cat ? cat.props.filter((p) => p.req && !form.catVals[p.name]).map((p) => p.name) : [];
     if (missing.length) { message.warning('类别必填属性未填：' + missing.join('、')); return; }
-    if (!form.title.trim()) { message.warning('请填写商品标题'); return; }
-    if (!form.manufacturerId) { message.warning('请选择厂家'); return; }
+    if (!form.title.trim()) { message.warning(t('common:m738')); return; }
+    if (!form.manufacturerId) { message.warning(t('common:m739')); return; }
     setSubmitting(true);
     const body = {
       manufacturerId: form.manufacturerId,
@@ -178,34 +180,34 @@ export default function ProductWizard() {
     if (step === 0) {
       return (
         <>
-          <div className="fr"><label>选择产品（A 期 products 表）</label>
+          <div className="fr"><label>{t('common:m740')}</label>
             <select value={form.productId} onChange={(e) => { const p = products.find((x) => String(x.id) === e.target.value); setF({ productId: e.target.value, product: p ? p.name : '', manufacturerId: p ? p.manufacturerId : form.manufacturerId, category: p ? (p.category || '') : form.category }); }}>
-              <option value="">-- 请选择 --</option>
+              <option value="">{t('common:m741')}</option>
               {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select></div>
-          <div className="fr"><label>商品类别（系统单独设定，任何人不可更改；在「类别管理」统一维护，此处仅引用）</label>
+          <div className="fr"><label>{t('common:m742')}</label>
             <select value={form.category} onChange={(e) => setF({ category: e.target.value, catVals: {} })}>
-              <option value="">-- 请选择 --</option>
+              <option value="">{t('common:m741')}</option>
               {CATEGORIES.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
             </select></div>
-          <div className="af">{form.product ? <><b>产品基本属性已自动带出</b>（product_template_fields）：额定功率 / 电池容量 / 防护等级 等。</> : '选择产品后，基本属性将自动带出。'}{form.category ? <><br /><b>类别【{form.category}】已关联</b>，下一步将在标题下一览填写其 {curCat().props.length} 项基本属性。</> : null}</div>
+          <div className="af">{form.product ? <><b>{t('common:m743')}</b>{t('common:m744')}</> : '选择产品后，基本属性将自动带出。'}{form.category ? <><br /><b>{t('common:m745')}{form.category}{t('common:m746')}</b>{t('common:m747')}{curCat().props.length}{t('common:m748')}</> : null}</div>
         </>
       );
     }
     if (step === 1) {
       return (
         <>
-          <div className="fr"><label>品牌</label>
+          <div className="fr"><label>{t('common:m90')}</label>
             <select value={form.brand} onChange={(e) => setF({ brand: e.target.value })}>
-              <option value="">-- 请选择 --</option>
+              <option value="">{t('common:m741')}</option>
               {BRANDS.map((b) => <option key={b} value={b}>{b}</option>)}
             </select></div>
-          <div className="fr"><label>厂家（后端 manufacturer）</label>
+          <div className="fr"><label>{t('common:m749')}</label>
             <select value={form.manufacturerId || ''} onChange={(e) => setF({ manufacturerId: e.target.value ? Number(e.target.value) : null })}>
-              <option value="">-- 请选择 --</option>
+              <option value="">{t('common:m741')}</option>
               {manufacturers.map((m) => <option key={m.id} value={m.id}>{m.name || ('厂商#' + m.id)}</option>)}
             </select></div>
-          <p className="note">品牌来自「品牌方入驻」模块；厂家为后端真实 manufacturer。</p>
+          <p className="note">{t('common:m750')}</p>
         </>
       );
     }
@@ -213,25 +215,25 @@ export default function ProductWizard() {
       const cat = curCat();
       return (
         <>
-          <div className="fr"><label>商品标题（≤30 字）</label>
-            <input maxLength={30} value={form.title} onChange={(e) => setF({ title: e.target.value })} placeholder="如 光伏储能一体机 X1 标准版" />
+          <div className="fr"><label>{t('common:m751')}</label>
+            <input maxLength={30} value={form.title} onChange={(e) => setF({ title: e.target.value })} placeholder={t('common:m752')} />
             <span className="counter">{form.title.length}/30</span></div>
-          <div className="fr"><label>主图（最多 10 张，非必填，用于列表/详情展示）</label>
+          <div className="fr"><label>{t('common:m753')}</label>
             <div className="upload">
-              {form.mainImgs.map((_, i) => <div key={i} className="up-box filled">图{i + 1}</div>)}
-              {form.mainImgs.length < 10 && <div className="up-box" onClick={addImg}>+ 上传</div>}
+              {form.mainImgs.map((_, i) => <div key={i} className="up-box filled">{t('common:m119')}{i + 1}</div>)}
+              {form.mainImgs.length < 10 && <div className="up-box" onClick={addImg}>{t('common:m754')}</div>}
             </div></div>
-          <div className="fr"><label>白底图（1 张，非必填，用于透明底展示）</label>
+          <div className="fr"><label>{t('common:m755')}</label>
             <div className="upload"><div className={'up-box' + (form.whiteImg ? ' filled' : '')} onClick={() => setF({ whiteImg: !form.whiteImg })}>{form.whiteImg ? '已上传' : '+ 白底图'}</div></div></div>
           {cat ? (
-            <div className="fr"><label>类别基本属性（淘宝式 · 「{cat.name}」系统设定不可更改，仅填写值）</label>
-              <div className="cat-attr"><h5>{cat.name} · 共 {cat.props.length} 项（标 * 必填）</h5>
+            <div className="fr"><label>{t('common:m756')}{cat.name}{t('common:m757')}</label>
+              <div className="cat-attr"><h5>{cat.name}{t('common:m758')}{cat.props.length}{t('common:m759')}</h5>
                 {cat.props.map((p, i) => (
                   <div className="fr" key={i} style={{ marginBottom: 10 }}>
                     <label>{p.name}{p.req ? ' *' : ''} {p.type === 'select' ? '(下拉)' : ''}</label>
                     {p.type === 'select' ? (
                       <select value={form.catVals[p.name] || ''} onChange={(e) => setForm((f) => ({ ...f, catVals: { ...f.catVals, [p.name]: e.target.value } }))}>
-                        <option value="">--请选择--</option>
+                        <option value="">{t('common:m760')}</option>
                         {(p.opts || []).map((o) => <option key={o} value={o}>{o}</option>)}
                       </select>
                     ) : (
@@ -241,24 +243,24 @@ export default function ProductWizard() {
                 ))}
               </div>
             </div>
-          ) : <div className="af">第一步选择类别后，此处显示该类别基本属性供填写。</div>}
-          <div className="fr"><label>销售属性 / SKU（每个 SKU 可传图便于识别，非必填；价格以美元计价并自动换算本币）</label>
+          ) : <div className="af">{t('common:m761')}</div>}
+          <div className="fr"><label>{t('common:m762')}</label>
             <div>
               {form.skus.map((s, i) => (
                 <div className="sku-row" key={i}>
-                  <input placeholder="规格名" style={{ width: 140 }} value={s.name} onChange={(e) => setSku(i, { name: e.target.value })} />
+                  <input placeholder={t('common:m763')} style={{ width: 140 }} value={s.name} onChange={(e) => setSku(i, { name: e.target.value })} />
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <input placeholder="价格 USD" style={{ width: 110 }} value={s.price} onChange={(e) => { setSku(i, { price: e.target.value }); setTimeout(updKhr, 0, i); }} />
+                    <input placeholder={t('common:m764')} style={{ width: 110 }} value={s.price} onChange={(e) => { setSku(i, { price: e.target.value }); setTimeout(updKhr, 0, i); }} />
                     <span className="khr" id={'khr' + i}>{s.price ? ('≈ ' + (Number(s.price) * RATE).toLocaleString() + ' KHR') : ''}</span>
                   </div>
-                  <input placeholder="数量" style={{ width: 70 }} value={s.qty} onChange={(e) => setSku(i, { qty: e.target.value })} />
-                  <div className={'up-box sm' + (s.img ? ' filled' : '')} onClick={() => setSku(i, { img: !s.img })} title="SKU 图片(非必填)">{s.img ? '图' : '+图'}</div>
-                  <button className="btn ghost sm" onClick={() => delSku(i)}>删</button>
+                  <input placeholder={t('common:m765')} style={{ width: 70 }} value={s.qty} onChange={(e) => setSku(i, { qty: e.target.value })} />
+                  <div className={'up-box sm' + (s.img ? ' filled' : '')} onClick={() => setSku(i, { img: !s.img })} title={t('common:m766')}>{s.img ? '图' : '+图'}</div>
+                  <button className="btn ghost sm" onClick={() => delSku(i)}>{t('common:m767')}</button>
                 </div>
               ))}
             </div>
-            <button className="btn ghost sm" onClick={addSku}>+ 添加 SKU</button></div>
-          <div className="fr"><label>商品详情（TinyMCE 富文本，开源免费，便于编辑产品信息）</label>
+            <button className="btn ghost sm" onClick={addSku}>{t('common:m768')}</button></div>
+          <div className="fr"><label>{t('common:m769')}</label>
             <textarea id="fDesc" defaultValue={form.desc} style={{ width: '100%' }} /></div>
         </>
       );
@@ -266,21 +268,21 @@ export default function ProductWizard() {
     // step 3
     return (
       <>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}><input type="checkbox" checked={form.live} onChange={(e) => setF({ live: e.target.checked })} /> 开启直播挂载</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}><input type="checkbox" checked={form.share} onChange={(e) => setF({ share: e.target.checked })} /> 允许分享 / 分销</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}><input type="checkbox" checked={form.review} onChange={(e) => setF({ review: e.target.checked })} /> 开启评价</div>
-        <div style={{ background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 6, padding: '10px 12px', fontSize: 12, color: '#ad6800', marginTop: 8 }}>评论 / 评价组件本期为<b>预留位</b>（设计文档⑥）。</div>
-        <div className="af" style={{ marginTop: 12 }}><b>发布摘要</b><br />产品：{form.product || '—'}　类别：{form.category || '—'}　品牌：{form.brand || '—'}<br />标题：{form.title || '—'}　SKU：{form.skus.filter((s) => s.name).length}（含数量/图片）　详情：已编辑 {form.desc && form.desc.length > 20 ? '是' : '否'}　类别属性已填：{Object.keys(form.catVals).filter((k) => form.catVals[k]).length} 项</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}><input type="checkbox" checked={form.live} onChange={(e) => setF({ live: e.target.checked })} />{t('common:m770')}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}><input type="checkbox" checked={form.share} onChange={(e) => setF({ share: e.target.checked })} />{t('common:m771')}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}><input type="checkbox" checked={form.review} onChange={(e) => setF({ review: e.target.checked })} />{t('common:m772')}</div>
+        <div style={{ background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 6, padding: '10px 12px', fontSize: 12, color: '#ad6800', marginTop: 8 }}>{t('common:m773')}<b>{t('common:m774')}</b>{t('common:m775')}</div>
+        <div className="af" style={{ marginTop: 12 }}><b>{t('common:m776')}</b><br />{t('common:m777')}{form.product || '—'}{t('common:m778')}{form.category || '—'}{t('common:m779')}{form.brand || '—'}<br />{t('common:m780')}{form.title || '—'}　SKU：{form.skus.filter((s) => s.name).length}{t('common:m781')}{form.desc && form.desc.length > 20 ? '是' : '否'}{t('common:m782')}{Object.keys(form.catVals).filter((k) => form.catVals[k]).length}{t('common:m783')}</div>
       </>
     );
   };
 
   return (
-    <PageCard title={editId ? '编辑商品（向导）' : '发布商品（向导）'} extra={<span className="note">SKU 含数量/图片、美元计价自动换算本币；类别属性在标题下；详情用 TinyMCE</span>}>
+    <PageCard title={editId ? '编辑商品（向导）' : '发布商品（向导）'} extra={<span className="note">{t('common:m784')}</span>}>
       <style>{css}</style>
       <Spin spinning={loading}>
         <div className="wiz">
-          <h3 style={{ margin: '0 0 16px' }}>{editId ? '编辑商品' : '发布商品'} <span className="note">（引导式 · 第 1–4 步）</span></h3>
+          <h3 style={{ margin: '0 0 16px' }}>{editId ? '编辑商品' : '发布商品'} <span className="note">{t('common:m785')}</span></h3>
           <div className="steps">
             {STEP_DEFS.map((s, i) => (
               <div key={i} className={'stp' + (i === step ? ' active' : (i < step ? ' done' : ''))}>
@@ -291,9 +293,9 @@ export default function ProductWizard() {
           </div>
           {renderStep()}
           <div className="wiz-foot">
-            <button className="btn ghost" onClick={() => navigate('/goods-list')}>取消</button>
+            <button className="btn ghost" onClick={() => navigate('/goods-list')}>{t('common:m96')}</button>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn ghost" disabled={step === 0} onClick={prev}>上一步</button>
+              <button className="btn ghost" disabled={step === 0} onClick={prev}>{t('common:m705')}</button>
               <button className="btn" disabled={submitting} onClick={next}>{step === 3 ? (submitting ? '提交中…' : '提交') : '下一步'}</button>
             </div>
           </div>

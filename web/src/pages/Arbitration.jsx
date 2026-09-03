@@ -3,6 +3,7 @@ import { Tag, Modal, Form, Input, InputNumber, Button, message } from 'antd';
 import CrudTable from '../components/CrudTable';
 import api from '../api';
 import { DISPUTE_TYPE } from '../enums';
+import { useTranslation } from 'react-i18next';
 
 const columns = [
   { title: 'ID', dataIndex: 'id', width: 70 },
@@ -30,7 +31,8 @@ const fields = [
   { name: 'claimAmount', label: '索赔金额', type: 'number', precision: 2 },
 ];
 
-export default function Arbitration() {
+export default function Arbitration() {  const { t } = useTranslation('common');
+
   const [arbitOpen, setArbitOpen] = useState(false);
   const [target, setTarget] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -47,20 +49,20 @@ export default function Arbitration() {
     setSubmitting(true);
     try {
       await api.post(`/v1/admin/custody/disputes/${target.id}/arbitrate`, v);
-      message.success('仲裁裁决已提交');
+      message.success(t('common:m925'));
       setArbitOpen(false);
     } catch (e) { message.error(`仲裁失败：${e.message}`); }
     finally { setSubmitting(false); }
   };
 
   const extraRowActions = (r) => (
-    <Button size="small" type="link" onClick={() => openArbitrate(r)}>仲裁</Button>
+    <Button size="small" type="link" onClick={() => openArbitrate(r)}>{t('common:m926')}</Button>
   );
 
   return (
     <>
       <CrudTable
-        title="争议仲裁"
+        title={t('common:m927')}
         subtitle="产权争议登记与仲裁裁决"
         endpoint="/v1/admin/custody/disputes"
         columns={columns}
@@ -70,9 +72,9 @@ export default function Arbitration() {
       />
       <Modal title={`仲裁裁决 · #${target ? target.id : ''}`} open={arbitOpen} onOk={submitArbitrate} confirmLoading={submitting} onCancel={() => setArbitOpen(false)} destroyOnClose>
         <Form form={form} layout="vertical" style={{ marginTop: 12 }}>
-          <Form.Item name="arbitratorId" label="仲裁人ID" rules={[{ required: true }]}><InputNumber style={{ width: '100%' }} /></Form.Item>
-          <Form.Item name="awardedAmount" label="裁定金额" rules={[{ required: true }]}><InputNumber style={{ width: '100%' }} precision={2} /></Form.Item>
-          <Form.Item name="resolution" label="裁决说明" rules={[{ required: true }]}><Input.TextArea rows={3} /></Form.Item>
+          <Form.Item name="arbitratorId" label={t('common:m928')} rules={[{ required: true }]}><InputNumber style={{ width: '100%' }} /></Form.Item>
+          <Form.Item name="awardedAmount" label={t('common:m929')} rules={[{ required: true }]}><InputNumber style={{ width: '100%' }} precision={2} /></Form.Item>
+          <Form.Item name="resolution" label={t('common:m930')} rules={[{ required: true }]}><Input.TextArea rows={3} /></Form.Item>
         </Form>
       </Modal>
     </>
