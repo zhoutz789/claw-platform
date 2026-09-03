@@ -9,7 +9,7 @@ import { Perm } from '../components/Perm';
 import {
   EnumTag, EMPTY, fmtTime, useSupplyOptions,
 } from '../components/supplyShared';
-import { getCertificateByDevice, getInventoryByDevice, listInventory } from '../api/supplyChain';
+import { getCertificateByDevice, getInventoryByDevice, listInventory, listMyInventory } from '../api/supplyChain';
 import { DEVICE_LIFECYCLE_LABEL } from '../enums';
 
 /**
@@ -27,6 +27,8 @@ export default function StationConsignment() {
   const [stationId, setStationId] = useState(undefined);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
+  // 模块三 · 自动作用域：未手选站点时，走 /me 取本站在库寄售（零手选出数）。
+  const [autoView, setAutoView] = useState(null);
 
   // 占有权详情弹窗
   const [detailOpen, setDetailOpen] = useState(false);
@@ -38,8 +40,16 @@ export default function StationConsignment() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const d = await listInventory({ stationId, ownershipType: 'CONSIGNED' });
-      setRows(Array.isArray(d) ? d : []);
+      if (stationId != null) {
+        // 手选站点：回落既有 listInventory（增强筛选）
+        const d = await listInventory({ stationId, ownershipType: 'CONSIGNED' });
+        setRows(Array.isArray(d) ? d : []);
+      } else {
+        // 未手选：自动作用域，取本站在库寄售（模块三 · M3-2）
+        const v = await listMyInventory({ withRows: true });
+        setAutoView(v);
+        setRows(v.current || []);
+      }
     } catch (e) {
       message.error(t('msg.loadFailed', { msg: e.message }));
       setRows([]);

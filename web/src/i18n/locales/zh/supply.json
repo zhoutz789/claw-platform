@@ -454,5 +454,60 @@
       "zoneCreated": "区块已创建",
       "boothCreated": "铺位已创建"
     }
+  },
+  "inventoryOverview": {
+    "title": "库存总览",
+    "subtitle": "角色感知双视图：现有库存 / 服务站库存；上级看下级全部，管理员看全部 + 统计报表（M3-1/2/3）",
+    "tab": {
+      "current": "现有库存",
+      "station": "服务站库存",
+      "stats": "统计报表"
+    },
+    "scope": {
+      "PLATFORM": "平台管理员",
+      "MANUFACTURER": "厂家",
+      "STATION": "服务站",
+      "MERCHANT": "商家",
+      "NONE": "未绑定主体"
+    },
+    "banner": {
+      "platform": "全平台",
+      "manufacturer": "厂家",
+      "station": "服务站",
+      "subordinate": "下属服务站 {count} 个",
+      "none": "当前账号未绑定业务主体，请前往主体绑定后再查看库存"
+    },
+    "col": {
+      "id": "库存ID",
+      "assetId": "资产ID",
+      "deviceId": "设备ID",
+      "serialNumber": "序列号",
+      "productId": "商品",
+      "ownershipType": "货权",
+      "currentStatus": "流通状态",
+      "ownerManufacturerId": "货权厂家",
+      "holderStationId": "持有服务站",
+      "inboundAt": "入站时间",
+      "updatedAt": "更新时间"
+    },
+    "station": {
+      "total": "共 {count} 台",
+      "empty": "暂无寄售库存",
+      "loadingRows": "展开该服务站后加载明细"
+    },
+    "stats": {
+      "total": "设备总数",
+      "ownedByMfg": "厂家自有",
+      "consigned": "寄售库存",
+      "atFactory": "在厂未下发",
+      "consignedRatio": "寄售占比",
+      "byStatus": "生命周期状态分布",
+      "byStation": "站点分布 Top50",
+      "byManufacturer": "厂家分布",
+      "fullTotal": "已买断 {full} · 覆盖站点 {station} · 覆盖厂家 {mfg}",
+      "empty": "点击「统计报表」加载全平台统计"
+    },
+    "truncated": "结果已截断（单视图上限 {limit} 行），请细化筛选条件",
+    "empty": "暂无数据"
   }
 }

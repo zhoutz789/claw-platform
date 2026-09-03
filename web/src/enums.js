@@ -106,6 +106,15 @@ export const OWNERSHIP_TYPE_LABEL = {
   FULL: 'supply:enum.ownership.FULL',
 };
 
+// 库存作用域等级（模块三 · InventoryScope.ScopeLevel），文案走 i18n。
+export const SCOPE_LEVEL_LABEL = {
+  PLATFORM: 'supply:inventoryOverview.scope.PLATFORM',
+  MANUFACTURER: 'supply:inventoryOverview.scope.MANUFACTURER',
+  STATION: 'supply:inventoryOverview.scope.STATION',
+  MERCHANT: 'supply:inventoryOverview.scope.MERCHANT',
+  NONE: 'supply:inventoryOverview.scope.NONE',
+};
+
 /** 设备生命周期 7 状态（R4，与 LifecycleStatus 一致）。 */
 export const DEVICE_LIFECYCLE_STATUS = opts([
   'PRODUCING', 'IN_FACTORY', 'IN_TRANSIT', 'AT_STATION', 'SOLD', 'IN_USER_PROJECT', 'RECALLED',

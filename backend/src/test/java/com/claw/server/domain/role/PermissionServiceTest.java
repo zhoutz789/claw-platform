@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.SetOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.HashSet;
 import java.util.List;
@@ -63,10 +64,14 @@ class PermissionServiceTest {
     private SetOperations<String, String> setOperations;
 
     private PermissionService newService() {
-        return new PermissionService(userRoleRepository, packageRepository, aclRepository,
+        PermissionService svc = new PermissionService(userRoleRepository, packageRepository, aclRepository,
                 roleRepository, subAccountRepository, subAccountGrantRepository,
                 subAccountGrantItemRepository, templatePermissionRepository,
-                redisTemplate, new ObjectMapper());
+                new ObjectMapper());
+        // StringRedisTemplate 主代码已改为可选字段注入（@Autowired(required=false)），
+        // 此处用反射注入 mock，以验证 Redis 降级 / 缓存命中 / evict 行为。
+        ReflectionTestUtils.setField(svc, "redisTemplate", redisTemplate);
+        return svc;
     }
 
     private Role role(Long id, String grants) {

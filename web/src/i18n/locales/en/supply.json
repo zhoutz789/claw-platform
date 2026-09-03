@@ -454,5 +454,60 @@
       "zoneCreated": "Zone created",
       "boothCreated": "Booth created"
     }
+  },
+  "inventoryOverview": {
+    "title": "Inventory Overview",
+    "subtitle": "Role-aware dual view: current stock / station stock; parent sees all children, admin sees all + reports (M3-1/2/3)",
+    "tab": {
+      "current": "Current Stock",
+      "station": "Station Stock",
+      "stats": "Statistics"
+    },
+    "scope": {
+      "PLATFORM": "Platform Admin",
+      "MANUFACTURER": "Manufacturer",
+      "STATION": "Station",
+      "MERCHANT": "Merchant",
+      "NONE": "Unbound Principal"
+    },
+    "banner": {
+      "platform": "All platforms",
+      "manufacturer": "Manufacturer",
+      "station": "Station",
+      "subordinate": "{count} subordinate stations",
+      "none": "This account is not bound to any business principal. Please bind a principal to view inventory"
+    },
+    "col": {
+      "id": "Inventory ID",
+      "assetId": "Asset ID",
+      "deviceId": "Device ID",
+      "serialNumber": "Serial Number",
+      "productId": "Product",
+      "ownershipType": "Ownership",
+      "currentStatus": "Lifecycle Status",
+      "ownerManufacturerId": "Owner Manufacturer",
+      "holderStationId": "Holder Station",
+      "inboundAt": "Inbound Time",
+      "updatedAt": "Updated At"
+    },
+    "station": {
+      "total": "{count} units",
+      "empty": "No consignment stock",
+      "loadingRows": "Expand to load details"
+    },
+    "stats": {
+      "total": "Total Devices",
+      "ownedByMfg": "Owned by Manufacturer",
+      "consigned": "Consigned",
+      "atFactory": "At Factory (Not Dispatched)",
+      "consignedRatio": "Consigned Ratio",
+      "byStatus": "Lifecycle Status Distribution",
+      "byStation": "Station Distribution Top50",
+      "byManufacturer": "Manufacturer Distribution",
+      "fullTotal": "Full-owned {full} · Stations {station} · Manufacturers {mfg}",
+      "empty": "Click \"Statistics\" to load platform-wide stats"
+    },
+    "truncated": "Results truncated (single-view limit {limit} rows). Please refine filters",
+    "empty": "No data"
   }
 }

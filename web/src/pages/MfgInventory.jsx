@@ -10,7 +10,7 @@ import {
   EnumTag, EMPTY, fmtTime, useSupplyOptions,
 } from '../components/supplyShared';
 import {
-  getCertificateByDevice, listInventory, shipToStation,
+  getCertificateByDevice, listInventory, listMyInventory, shipToStation,
 } from '../api/supplyChain';
 import {
   DEVICE_LIFECYCLE_LABEL, OWNERSHIP_TYPE, OWNERSHIP_TYPE_LABEL,
@@ -34,6 +34,8 @@ export default function MfgInventory() {
   const [manufacturerId, setManufacturerId] = useState(undefined);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
+  // 模块三 · 自动作用域：未手选厂家时，走 /me 取当前绑定厂家的双视图（零手选出数）。
+  const [autoView, setAutoView] = useState(null);
 
   // 发货到站弹窗
   const [shipOpen, setShipOpen] = useState(false);
@@ -48,8 +50,19 @@ export default function MfgInventory() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const d = await listInventory({ manufacturerId, ownershipType: tab });
-      setRows(Array.isArray(d) ? d : []);
+      if (manufacturerId != null) {
+        // 手选厂家：回落既有 listInventory（增强筛选）
+        const d = await listInventory({ manufacturerId, ownershipType: tab });
+        setRows(Array.isArray(d) ? d : []);
+      } else {
+        // 未手选：自动作用域，取当前绑定厂家的双视图（模块三 · M3-2）
+        const v = await listMyInventory({ withRows: true });
+        setAutoView(v);
+        // 现有库存 Tab → view.current（OWNED_BY_MFG）；寄售库存 Tab → 下属服务站扁平化
+        setRows(tab === 'CONSIGNED'
+          ? (v.subordinateStations || []).flatMap((g) => g.rows || [])
+          : (v.current || []));
+      }
     } catch (e) {
       message.error(t('msg.loadFailed', { msg: e.message }));
       setRows([]);

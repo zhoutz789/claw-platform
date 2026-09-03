@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -56,7 +57,8 @@ public class PermissionService {
     private final com.claw.server.domain.subaccount.SubAccountGrantItemRepository subAccountGrantItemRepository;
     private final RoleTemplatePermissionRepository templatePermissionRepository;
     /** Redis 可选：本地未配置 / 不可达时保持 null，全程降级直查 DB。 */
-    private final StringRedisTemplate redisTemplate;
+    @Autowired(required = false)
+    private StringRedisTemplate redisTemplate;
     /** Spring Boot 自动装配的 ObjectMapper 实例。 */
     private final ObjectMapper objectMapper;
 

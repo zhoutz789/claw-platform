@@ -113,8 +113,8 @@ export default function AdminLayout() {
   }, []);
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Sider width={240} style={{ background: 'var(--surface)', borderRight: '1px solid var(--line)' }}>
+    <Layout style={{ height: '100vh', overflow: 'hidden' }}>
+      <Sider width={240} style={{ background: 'var(--surface)', borderRight: '1px solid var(--line)', overflow: 'auto' }}>
         <div
           style={{
             display: 'flex', alignItems: 'center', gap: 10, padding: '20px 20px 16px',
@@ -148,7 +148,7 @@ export default function AdminLayout() {
         />
       </Sider>
 
-      <Layout>
+      <Layout style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
         {mockMode && (
           <div
             style={{
@@ -216,7 +216,7 @@ export default function AdminLayout() {
           </Space>
         </Header>
 
-        <Content style={{ margin: 16, padding: 16, background: 'transparent' }}>
+        <Content style={{ margin: 16, padding: 16, background: 'transparent', flex: 1, height: 0, overflow: 'auto' }}>
           <ErrorBoundary resetKey={location.pathname}>
             {routeAllowed ? <Outlet /> : <ForbiddenPage menuKey={selected} />}
           </ErrorBoundary>

@@ -79,6 +79,20 @@ export const listInventory = ({ manufacturerId, stationId, ownershipType } = {})
 
 export const getInventoryByDevice = (deviceId) => api.get(`/v1/admin/inventory/device/${deviceId}`);
 
+/** 角色作用域库存双视图（模块三 · M3-1/2/3）：现有库存 + 按站分组的寄售库存。 */
+export const listMyInventory = ({
+  manufacturerId, stationId, status, ownershipType, includeStats, withRows, limit,
+} = {}) =>
+  api.get('/v1/admin/inventory/me', {
+    params: cleanParams({
+      manufacturerId, stationId, status, ownershipType, includeStats, withRows, limit,
+    }),
+  });
+
+/** 库存统计报表（模块三 · M3-4，管理员/厂家）。 */
+export const getInventoryStats = ({ manufacturerId, stationId } = {}) =>
+  api.get('/v1/admin/inventory/stats', { params: cleanParams({ manufacturerId, stationId }) });
+
 /** 发货至服务站：建立寄售占有权（Q2 占有权转移点）。 */
 export const shipToStation = (body) => api.post('/v1/admin/inventory/ship', body);
 
@@ -221,6 +235,8 @@ export default {
   reprintCertificate,
   listInventory,
   getInventoryByDevice,
+  listMyInventory,
+  getInventoryStats,
   shipToStation,
   listTransfers,
   getTransfer,

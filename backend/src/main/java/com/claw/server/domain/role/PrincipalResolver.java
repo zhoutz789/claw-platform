@@ -6,11 +6,13 @@ import com.claw.server.domain.subaccount.SubAccount;
 import com.claw.server.domain.subaccount.SubAccountRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,7 +50,8 @@ public class PrincipalResolver {
     private final PrincipalBindingRepository bindingRepository;
     private final SubAccountRepository subAccountRepository;
     /** Redis 可选：未配置 / 不可达时全程降级直查 DB。 */
-    private final StringRedisTemplate redisTemplate;
+    @Autowired(required = false)
+    private StringRedisTemplate redisTemplate;
 
     /** 解析当前登录账号的主体。 */
     @Transactional(readOnly = true)
@@ -128,6 +131,43 @@ public class PrincipalResolver {
     @Transactional(readOnly = true)
     public Optional<PrincipalRef> resolveByType(Long userId, PrincipalType type) {
         return resolve(userId).filter(ref -> ref.type() == type);
+    }
+
+    /**
+     * 解析指定账号的【全部】主体绑定（多绑定账号返回多个，子账号回溯只算一个）。
+     *
+     * <p>与 {@link #resolve(Long)} 不同：{@code resolve} 按 MANUFACTURER → STATION → MERCHANT
+     * 固定优先级只返回第一个；本方法返回该账号名下<b>所有</b>主体绑定（主账号多绑定 +
+     * 子账号回溯到的 owner 主体），供作用域计算消费，避免「既是厂家又是服务站」的账号
+     * 被错误收窄到单一类型（影响 {@code OrgWritableGuard.assertApplicantCanApply}）。
+     *
+     * <p>⚠️ 本方法<b>不复用</b> {@code principal:{userId}} 单值缓存（其结构为
+     * {@code TYPE:id:0/1}，无法承载多值），直查 DB。库存页为低频读，可接受。
+     * 既有的 {@code resolve/compute/resolveByType} 一律不改，避免影响既有链路。
+     */
+    @Transactional(readOnly = true)
+    public List<PrincipalRef> resolveAll(Long userId) {
+        if (userId == null) {
+            return List.of();
+        }
+        List<PrincipalRef> refs = new ArrayList<>();
+        for (PrincipalBinding b : bindingRepository.findByUserId(userId)) {
+            try {
+                PrincipalType t = PrincipalType.of(b.getPrincipalType());
+                refs.add(new PrincipalRef(t, b.getPrincipalId(), false));
+            } catch (RuntimeException e) {
+                log.warn("主体绑定 principal_type 非法，跳过：userId={} type={}", userId, b.getPrincipalType());
+            }
+        }
+        // 子账号回溯：补充 owner 主体（若尚未在主账号绑定里出现）
+        subAccountRepository.findTopByUserIdAndStatus(userId, "ACTIVE").ifPresent(sa -> {
+            PrincipalRef ref = toRef(sa);
+            if (ref != null && refs.stream()
+                    .noneMatch(r -> r.type() == ref.type() && r.principalId().equals(ref.principalId()))) {
+                refs.add(ref);
+            }
+        });
+        return refs;
     }
 
     private PrincipalRef toRef(SubAccount sa) {
