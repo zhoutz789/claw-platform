@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Tree, Table, Modal, Form, Input, InputNumber, Select, Button, Card,
-  Descriptions, Tag, Space, Spin, Empty, message,
+  Descriptions, Tag, Space, Spin, Empty, message, Row, Col,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined,
@@ -230,9 +230,10 @@ export default function ProjectManagement() {  const { t } = useTranslation('com
 
   return (
     <PageCard title={t('common:m270')} extra={<span style={{ fontSize: 12, color: '#8a9099' }}>{t('common:m271')}</span>}>
-      <div style={{ display: 'flex', gap: 16, minHeight: 480 }}>
+      <Row gutter={[16, 16]}>
         {/* 左栏：项目树 */}
-        <div style={{ width: 280, flex: 'none', borderRight: '1px solid #f0f0f0', paddingRight: 12 }}>
+        <Col xs={24} md={{ flex: '280px' }} style={{ minHeight: 480 }}>
+          <div style={{ borderRight: '1px solid #f0f0f0', paddingRight: 12 }}>
           <div style={{ marginBottom: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <Button type="primary" size="small" icon={<PlusOutlined />} onClick={openAddRoot}>{t('common:m272')}</Button>
             <Button size="small" icon={<PlusOutlined />} disabled={!selectedNode} onClick={openAddChild}>{t('common:m273')}</Button>
@@ -251,10 +252,11 @@ export default function ProjectManagement() {  const { t } = useTranslation('com
               />
             ) : <Empty description={t('common:m274')} />}
           </Spin>
-        </div>
+          </div>
+        </Col>
 
         {/* 右栏：详情 */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <Col xs={24} md={{ flex: '1 1 0' }} style={{ minWidth: 0 }}>
           {!selectedNode ? (
             <Empty description={t('common:m275')} style={{ marginTop: 80 }} />
           ) : (
@@ -302,8 +304,8 @@ export default function ProjectManagement() {  const { t } = useTranslation('com
               </Space>
             </Spin>
           )}
-        </div>
-      </div>
+        </Col>
+      </Row>
 
       {/* 项目新建/编辑弹窗 */}
       <Modal

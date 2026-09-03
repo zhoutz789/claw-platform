@@ -33,6 +33,8 @@ export default function TaskPublish({ mode }) {
   const [missionsLoading, setMissionsLoading] = useState(false);
   const [assets, setAssets] = useState([]);
   const [assetsLoading, setAssetsLoading] = useState(false);
+  const [missionsError, setMissionsError] = useState(null);
+  const [assetsError, setAssetsError] = useState(null);
 
   // 无人机发布
   const [droneForm] = Form.useForm();
@@ -44,8 +46,9 @@ export default function TaskPublish({ mode }) {
   useEffect(() => {
     let alive = true;
     setMissionsLoading(true);
+    setMissionsError(null);
     listMissions({}).then((d) => { if (alive) setMissions(d || []); })
-      .catch((e) => { if (alive) { message.error('加载无人机作业失败：' + e.message); setMissions([]); } })
+      .catch((e) => { if (alive) { const m = '加载无人机作业失败：' + e.message; message.error(m); setMissions([]); setMissionsError(m); } })
       .finally(() => { if (alive) setMissionsLoading(false); });
     return () => { alive = false; };
   }, []);
@@ -53,8 +56,9 @@ export default function TaskPublish({ mode }) {
   useEffect(() => {
     let alive = true;
     setAssetsLoading(true);
+    setAssetsError(null);
     api.get('/v1/assets').then((a) => { if (alive) setAssets(a || []); })
-      .catch((e) => { if (alive) { message.error('加载真实资产失败：' + e.message); setAssets([]); } })
+      .catch((e) => { if (alive) { const m = '加载真实资产失败：' + e.message; message.error(m); setAssets([]); setAssetsError(m); } })
       .finally(() => { if (alive) setAssetsLoading(false); });
     return () => { alive = false; };
   }, []);
@@ -256,6 +260,14 @@ export default function TaskPublish({ mode }) {
     <PageCard title={`任务发布 · ${tab.label}`}>
       <Alert type="info" showIcon style={{ marginBottom: 14 }}
         message="各功能模块均设「任务大厅」：需求方发布任务，附近车辆 / 设备按能力标签 + 地理位置匹配并自主接单。涵盖物流、客运（公交 / 打的 / 顺风车，货运归入物流）、广告自媒体、录像数据、资产出租、无人机低空作业。" />
+      {missionsError && (
+        <Alert type="error" showIcon closable style={{ marginBottom: 12 }}
+          message={missionsError} onClose={() => setMissionsError(null)} />
+      )}
+      {assetsError && (
+        <Alert type="error" showIcon closable style={{ marginBottom: 12 }}
+          message={assetsError} onClose={() => setAssetsError(null)} />
+      )}
       {tab.children}
     </PageCard>
   );

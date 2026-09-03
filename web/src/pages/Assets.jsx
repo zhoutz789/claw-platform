@@ -2,6 +2,7 @@ import { Table, Tag, Button } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useFetch } from '../hooks';
 import PageCard from '../components/PageCard';
+import { ScopeBanner, useCurrentScope } from '../components/inventoryShared';
 import api from '../api';
 import dayjs from 'dayjs';
 
@@ -17,6 +18,7 @@ export default function Assets() {
   const { data, loading, reload } = useFetch(() => api.get('/v1/assets?page=0&size=50'));
   const navigate = useNavigate();
   const rows = data || [];
+  const scope = useCurrentScope();
   const cols = [
     { title: 'ID', dataIndex: 'id' },
     { title: '类型', dataIndex: 'assetType', render: (v) => <Tag>{v}</Tag> },
@@ -42,6 +44,7 @@ export default function Assets() {
   ];
   return (
     <PageCard title="资产 / 电池列表" reload={reload} loading={loading}>
+      <ScopeBanner scope={scope} />
       <Table rowKey="id" columns={cols} dataSource={rows} pagination={{ pageSize: 10 }} />
     </PageCard>
   );

@@ -6,6 +6,7 @@ import api from '../api';
 import { SWAP_STATUS, RENTAL_ORDER_STATUS } from '../enums';
 import { listCustomerOrders } from '../api/order';
 import { useTranslation } from 'react-i18next';
+import { ScopeBanner, useCurrentScope } from '../components/inventoryShared';
 
 const swapColumns = [
   { title: 'ID', dataIndex: 'id', width: 70 },
@@ -138,8 +139,11 @@ export function CustomerOrdersPanel() {  const { t } = useTranslation('common');
 }
 
 export default function Orders() {  const { t } = useTranslation('common');
+  const scope = useCurrentScope();
 
   return (
+    <>
+    <ScopeBanner scope={scope} />
     <Tabs defaultActiveKey="swap" items={[
       {
         key: 'swap', label: t('common:m888'),
@@ -162,5 +166,6 @@ export default function Orders() {  const { t } = useTranslation('common');
         children: <CustomerOrdersPanel />,
       },
     ]} />
+    </>
   );
 }

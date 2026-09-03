@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Tabs, Card, Form, Select, Input, InputNumber, Button, Space, Table, message, Modal, Popconfirm } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import CrudTable from '../components/CrudTable';
+import { ScopeBanner, useCurrentScope } from '../components/inventoryShared';
 import { useFetch } from '../hooks';
 import api from '../api';
 import {
@@ -51,6 +52,7 @@ const orderFields = (pf, sf) => {
 };
 
 export default function Manufacturer() {  const { t } = useTranslation('common');
+  const scope = useCurrentScope();
 
   const { data: manufacturers } = useFetch(() => api.get('/v1/admin/manufacturer/manufacturers'));
   const { data: products } = useFetch(() => api.get('/v1/admin/manufacturer/products'));
@@ -98,6 +100,7 @@ export default function Manufacturer() {  const { t } = useTranslation('common')
 
   return (
     <>
+    <ScopeBanner scope={scope} />
     <Tabs defaultActiveKey="manufacturers" items={[
       { key: 'manufacturers', label: t('common:m981'), children: <CrudTable title={t('common:m981')} subtitle="专业组织公司 / 工厂（由平台维护）" endpoint="/v1/admin/manufacturer/manufacturers" columns={[
         { title: t('common:m341'), dataIndex: 'code' }, { title: t('common:m277'), dataIndex: 'name' }, { title: t('common:m836'), dataIndex: 'contact' }, { title: t('common:m998'), dataIndex: 'country' }, { title: t('common:m8'), dataIndex: 'status' },

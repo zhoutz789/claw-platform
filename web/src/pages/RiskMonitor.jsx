@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Tabs, Table, Button, Modal, Form, Input, InputNumber, Select, Tag, message, Space } from 'antd';
+import { Tabs, Table, Button, Modal, Form, Input, InputNumber, Select, Tag, message, Space, Alert, Empty } from 'antd';
 import CrudTable from '../components/CrudTable';
 import api from '../api';
 import { RISK_METRIC_TYPE, RISK_MONITOR_STATUS, FUND_STATUS } from '../enums';
@@ -37,6 +37,7 @@ const monitorFields = [
 function InsuranceFundPanel() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -44,7 +45,11 @@ function InsuranceFundPanel() {
 
   const load = () => {
     setLoading(true);
-    api.get('/v1/admin/risk/insurance-fund').then(setData).catch((e) => message.error(e.message)).finally(() => setLoading(false));
+    setError(null);
+    api.get('/v1/admin/risk/insurance-fund')
+      .then(setData)
+      .catch((e) => { setError(e.message); message.error(e.message); })
+      .finally(() => setLoading(false));
   };
   useEffect(load, []);
 
@@ -85,7 +90,12 @@ function InsuranceFundPanel() {
 
   return (
     <>
-      <Table rowKey="id" loading={loading} dataSource={data} columns={columns} pagination={false} size="middle" />
+      {error && (
+        <Alert type="error" showIcon closable style={{ marginBottom: 12 }}
+          message={error} onClose={() => setError(null)} />
+      )}
+      <Table rowKey="id" loading={loading} dataSource={data} columns={columns} pagination={false} size="middle"
+        locale={{ emptyText: <Empty description="暂无保险基金池数据" /> }} />
       <Modal title="调整保险基金" open={open} onOk={submit} confirmLoading={submitting} onCancel={() => setOpen(false)} destroyOnClose>
         <Form form={form} layout="vertical" style={{ marginTop: 12 }}>
           <Form.Item name="totalBalance" label="总余额" rules={[{ required: true }]}><InputNumber style={{ width: '100%' }} precision={2} /></Form.Item>

@@ -5,11 +5,12 @@
 //   2. ScopeBanner —— 作用域提示条（显示主体 / 下属站点数 / 未绑定引导）。
 //
 // 列字段严格对齐后端 InventoryRowView（字段名与实体一致，H-7 后不含货值三字段）。
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert } from 'antd';
 import { EnumTag, EMPTY, fmtTime, useSupplyOptions } from './supplyShared';
 import { enumLabel, OWNERSHIP_TYPE_LABEL, DEVICE_LIFECYCLE_LABEL, SCOPE_LEVEL_LABEL } from '../enums';
+import { getSubAccountMe } from '../api/onboarding';
 
 /**
  * 库存明细表列工厂（三页共用，唯一列定义来源）。
@@ -171,4 +172,37 @@ export function ScopeBanner({ scope, manufacturerName, stationName }) {
   );
 }
 
-export default { useInventoryColumns, ScopeBanner };
+/**
+ * 取当前登录主体的数据作用域（PLATFORM / MANUFACTURER / STATION），
+ * 供 ScopeBanner 展示「当前可见数据范围（随角色切换）」。
+ *
+ * 数据源：现有 /v1/org/sub-accounts/me（返回当前主体的 principalType / principalId），
+ * 与 SubAccounts 页使用的「当前登录身份」同源，零新增后端接口。
+ * 任何异常（网络故障、权限不足、未返回主体）均降级为 null —— ScopeBanner 在
+ * scope 为 null 时不渲染，页面零破坏、零白屏、零额外报错提示。
+ *
+ * @returns {Object|null} 形如 { scopeLevel, principalId, subordinateStationIds: [] }
+ */
+export function useCurrentScope() {
+  const [scope, setScope] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    getSubAccountMe()
+      .then((me) => {
+        if (!alive || !me || !me.principalType) {
+          if (alive) setScope(null);
+          return;
+        }
+        setScope({
+          scopeLevel: me.principalType,
+          principalId: me.principalId,
+          subordinateStationIds: [],
+        });
+      })
+      .catch(() => { if (alive) setScope(null); });
+    return () => { alive = false; };
+  }, []);
+  return scope;
+}
+
+export default { useInventoryColumns, ScopeBanner, useCurrentScope };

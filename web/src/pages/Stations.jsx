@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Table, Input, Button, Space, Tag, App } from 'antd';
 import PageCard from '../components/PageCard';
+import { ScopeBanner, useCurrentScope } from '../components/inventoryShared';
 import api from '../api';
 import { useTranslation } from 'react-i18next';
 
@@ -10,6 +11,7 @@ const PHNOM_PENH = { lat: 11.5564, lng: 104.9282 };
 export default function Stations() {  const { t } = useTranslation('common');
 
   const { message } = App.useApp();
+  const scope = useCurrentScope();
   const [sku, setSku] = useState('');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -84,6 +86,7 @@ export default function Stations() {  const { t } = useTranslation('common');
         </Space>
       }
     >
+      <ScopeBanner scope={scope} />
       <Table rowKey="id" loading={loading} columns={cols} dataSource={rows} pagination={{ pageSize: 10 }} />
     </PageCard>
   );

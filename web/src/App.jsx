@@ -5,7 +5,6 @@ import { loadPermissions } from './permStore';
 import { ForbiddenPage, RequirePermRoute } from './components/Perm';
 import Login from './pages/Login';
 import AdminLayout from './layout/AdminLayout';
-import Dashboard from './pages/Dashboard';
 import Workbench from './pages/Workbench';
 import Orders from './pages/Orders';
 import Stations from './pages/Stations';

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Table, Button, Modal, Form, Input, InputNumber, Select, Space, Tag, Popconfirm, message, Card } from 'antd';
+import { Table, Button, Modal, Form, Input, InputNumber, Select, Space, Tag, Popconfirm, message, Card, Alert } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import api from '../api';
@@ -49,6 +49,7 @@ export default function CrudTable({
   const { t, i18n } = useTranslation();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null); // null=新增, record=编辑
   const [submitting, setSubmitting] = useState(false);
@@ -58,11 +59,14 @@ export default function CrudTable({
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await api.get(endpoint, { params: query });
       setData(Array.isArray(res) ? res : []);
     } catch (e) {
-      message.error(t('msg.loadFailed', { msg: e.message }));
+      const msg = t('msg.loadFailed', { msg: e.message });
+      message.error(msg);
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -174,6 +178,10 @@ export default function CrudTable({
           </Perm>
         )}
       </div>
+      {error && (
+        <Alert type="error" showIcon closable style={{ marginBottom: 12 }}
+          message={error} onClose={() => setError(null)} />
+      )}
       <Table
         rowKey={rowKey}
         loading={loading}

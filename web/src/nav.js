@@ -55,6 +55,7 @@ export const NAV = [
     children: [
       { key: 'goods-list', label: 'nav:item.goods-list', path: '/goods-list' },
       { key: 'product-wizard', label: 'nav:item.product-wizard', path: '/product-wizard' },
+      { key: 'product-publish', label: '商品发布', path: '/product-publish' },
       { key: 'brand-onboarding', label: 'nav:item.brand-onboarding', path: '/brand-onboarding' },
       { key: 'manufacturer', label: 'nav:item.manufacturer', path: '/manufacturer' },
       { key: 'order-manage', label: 'nav:item.order-manage', path: '/order-manage' },
