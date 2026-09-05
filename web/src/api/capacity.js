@@ -1,9 +1,9 @@
 // 缺口⑥「我的容量预订」+ 缺口②「服务站合约管理」前端接口封装。
 //
 // 全部对接 claw-platform/backend 的真实 Controller：
-//   CapacityPlanAdminController   /api/v1/admin/capacity/plans
-//   CapacitySubscribeController    /api/v1/capacity/subscribe | /subscriptions | /plans/open | /rebates
-//   StationContractAdminController /api/v1/admin/station-contracts/*
+//   AdminCapacityController         /api/v1/admin/capacity/plans
+//   CapacityController              /api/v1/capacity/subscribe | /subscriptions | /plans/open | /rebates
+//   AdminStationContractController  /api/v1/admin/station-contracts/*
 // 风格与 station.js / supplyChain.js 保持一致：直接基于 src/api.js 的 axios 实例。
 import api from '../api.js';
 
