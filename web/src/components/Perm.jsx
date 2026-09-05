@@ -14,7 +14,7 @@
 import { useTranslation } from 'react-i18next';
 import { Button, Result } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { hasPerm, hasAnyPerm, hasAllPerm, isAllGranted } from '../permStore';
+import { hasPerm, hasAnyPerm, hasAllPerm, isAllGranted, usePermVersion } from '../permStore';
 
 /**
  * 把入参规范成数组。
@@ -70,6 +70,9 @@ export function Perm({ code, any, all, menuKey, children, fallback = null }) {
  * @returns {React.ReactNode}
  */
 export function RequirePermRoute({ code, any, all, menuKey, children }) {
+  // 订阅 permStore 变更：首帧权限集通常为空（loadPermissions() 尚未返回），
+  // 若不订阅，加载完成后不会重新求值，页面会永久停在 403（与 usePerm 写法保持一致）。
+  usePermVersion();
   return computeAllowed({ code, any, all, menuKey })
     ? children
     : <ForbiddenPage menuKey={menuKey} />;

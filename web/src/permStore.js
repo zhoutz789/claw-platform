@@ -13,7 +13,7 @@
 //
 // 权限码约定：{resource}:{action}，如 asset:create / asset:update / asset:delete / asset:export；
 // 菜单可见性用 menu:{navKey}；超级管理员持有通配符 "*"。
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import api from './api';
 import { isAuthed } from './auth';
 import { setRemoteNav } from './menuStore';
@@ -187,13 +187,30 @@ export function hasAllPerm(codes = []) {
 // ---- React hooks ----
 
 /**
+ * 版本号快照（供 useSyncExternalStore 使用）。
+ * 必须是「纯读 + 返回原始值」的函数：version 为 number，天然满足
+ * getSnapshot 的「同一状态下返回同一值」要求，不会引发重复渲染循环。
+ * @returns {number} 当前版本号
+ */
+function getVersion() {
+  return version;
+}
+
+/**
  * 订阅权限状态变更的强制重渲染 hook（无需返回值，仅用于触发重渲染）。
+ *
+ * 采用 useSyncExternalStore 而非 useState + useEffect，原因（对应首屏卡 403 的竞态）：
+ *   1. useEffect 是**被动 effect**，React 18 会把它交给 Scheduler 异步调度；
+ *      主线程繁忙（首屏大量模块求值 / 渲染）时可能被推迟。
+ *   2. loadPermissions() 在 App 的 PermissionBootstrap 里发后即忘，
+ *      其 emit() 若早于订阅建立就会永久丢失 —— 组件再也不会重新求值（永久 403）。
+ *   3. useSyncExternalStore 在 commit 阶段**同步**建立订阅，并在订阅后
+ *      立即回读快照比对，从而保证「render → subscribe」之间发生的变更不会漏掉。
+ *
  * @returns {number} 当前版本号
  */
 export function usePermVersion() {
-  const [, force] = useState(0);
-  useEffect(() => subscribe(() => force((v) => v + 1)), []);
-  return version;
+  return useSyncExternalStore(subscribe, getVersion, getVersion);
 }
 
 /**

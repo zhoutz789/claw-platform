@@ -7,6 +7,7 @@ import com.claw.server.common.security.AuthContext;
 import com.claw.server.domain.role.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,6 +39,13 @@ public class AdminPermissionController {
     private final PermissionService permissionService;
     private final RoleGrantService roleGrantService;
 
+    /**
+     * 仅开发态生效（与 JwtAuthFilter 同源开关）：全量放行权限快照。
+     * 生产默认 false，正常分支逻辑不受影响。
+     */
+    @Value("${claw.security.dev-open-access:false}")
+    private boolean devOpenAccess;
+
     /** 菜单权限码前缀：menu:{navKey} —— navKey 与前端 web/src/nav.js 的菜单 key 一一对应。 */
     private static final String MENU_CODE_PREFIX = "menu:";
     /** 权限目录里「菜单」节点的 ptype（另一个取值是 BUTTON，不进导航树）。 */
@@ -56,6 +64,11 @@ public class AdminPermissionController {
         Long uid = AuthContext.currentUserId();
         if (uid == null) {
             throw BizException.of(40301, "error.permission.denied");
+        }
+        // 开发态短路：下发通配符权限，前端 permStore.hasPerm() 见 "*" 即放行，菜单走全量。
+        if (devOpenAccess) {
+            Set<String> devAll = Set.of(PermissionService.WILDCARD);
+            return ApiResult.ok(new MineResp(uid, List.of("PLATFORM_ADMIN"), devAll, myMenu(devAll)));
         }
         Set<String> permissions = permissionService.effectivePermissions(uid);
         List<String> roles = roleGrantService.listActive(uid).stream().map(RoleView::roleCode).toList();
