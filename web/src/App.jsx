@@ -33,6 +33,8 @@ import Recovery from './pages/Recovery';
 import Insurance from './pages/Insurance';
 import Operator from './pages/Operator';
 import SharedPool from './pages/SharedPool';
+import CapacityBooking from './pages/CapacityBooking';
+import StationContracts from './pages/StationContracts';
 import ProductIot from './pages/ProductIot';
 import ProductCenter from './pages/ProductCenter';
 import ProjectManagement from './pages/ProjectManagement';
@@ -123,6 +125,8 @@ export default function App() {
           <Route path="insurance" element={<Insurance />} />
           <Route path="operator" element={<Operator />} />
           <Route path="shared-pool" element={<SharedPool />} />
+          <Route path="capacity-booking" element={<CapacityBooking />} />
+          <Route path="station-contracts" element={<StationContracts />} />
           <Route path="swap-orders" element={<SwapOrders />} />
           <Route path="ledger" element={<Ledger />} />
           <Route path="users" element={<Users />} />

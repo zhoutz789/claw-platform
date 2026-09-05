@@ -92,6 +92,8 @@
     "onboarding-deposit-tiers": "保证金档位",
     "onboarding-deposit-confirm": "保证金缴纳确认",
     "org-manage": "组织管理",
-    "sub-accounts": "子账号管理"
+    "sub-accounts": "子账号管理",
+    "capacity-booking": "我的容量预订",
+    "station-contracts": "服务站合约管理"
   }
 }

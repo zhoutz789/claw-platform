@@ -92,6 +92,8 @@
     "onboarding-deposit-tiers": "Deposit Tiers",
     "onboarding-deposit-confirm": "Deposit Confirmation",
     "org-manage": "Organization Governance",
-    "sub-accounts": "Sub Accounts"
+    "sub-accounts": "Sub Accounts",
+    "capacity-booking": "My Capacity Booking",
+    "station-contracts": "Station Contracts"
   }
 }

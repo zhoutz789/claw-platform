@@ -231,6 +231,7 @@ export const ROUTES = [
   '/workbench', '/dashboard',
   '/orders', '/stations', '/assets', '/asset-trace', '/manufacturer', '/recovery', '/insurance',
   '/operator', '/shared-pool', '/swap-orders', '/ledger', '/users', '/complaints', '/deposits',
+  '/capacity-booking', '/station-contracts',
   '/settlements', '/payments', '/reconciliations', '/countries', '/risk', '/alerts', '/custody',
   '/arbitration', '/profit', '/fee', '/roles', '/permission', '/settings', '/product-iot',
   '/product-center', '/project-management', '/certificate', '/bind-ownership', '/device-data-access',
