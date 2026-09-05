@@ -30,7 +30,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * <p>对接周老板验收口径：
  * <ul>
  *   <li>客户搜车型 → 找附近有该 SKU 现货的站点；或逛附近站点挑现货；</li>
- *   <li>投资者认购车辆后投放站点成为现货（智能分配/指定站点）。</li>
+ *   <li>资产投放至站点成为现货（智能分配/指定站点）。</li>
  * </ul>
  */
 @Service

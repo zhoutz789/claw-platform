@@ -18,4 +18,10 @@ public final class ComplianceRequests {
             @NotNull @Positive BigDecimal monthlyIncome,   // 月净收入
             String evidence) {                             // 复核依据 JSON
     }
+
+    /** 文案合规扫描：扫描营销/承诺类文本是否含禁止表述（合规文案护栏）。 */
+    public record TextCheck(
+            String text,       // 待扫描文案
+            String scene) {    // 业务场景（CAPACITY_PLAN/PRODUCT_LISTING/STATION_AD…），仅留痕
+    }
 }

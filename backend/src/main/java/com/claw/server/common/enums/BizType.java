@@ -13,10 +13,6 @@ public enum BizType {
     DEPOSIT_HOLD,
     /** 基金计提（换电基金/电池基金）。 */
     FUND_ACCRUAL,
-    /** 分期月付（投资者 80% / 风险准备金 10% / 平台 10% 拆分）。 */
-    INSTALLMENT,
-    /** 资产认购结算（投资者全款购买厂家产品）。 */
-    SUBSCRIPTION,
     /** 退款。 */
     REFUND,
     /** 提现（ABA 出金，账本扣减）。 */

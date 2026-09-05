@@ -18,6 +18,8 @@ public class BizException extends RuntimeException {
     public static final int DEPOSIT_INSUFFICIENT = 20002;
     /** DTI 超限（月供+换电预估 > 验证净收入 50%，负责任信贷强制校验） */
     public static final int DTI_EXCEEDED = 20003;
+    /** 合规文案护栏拦截（营销/承诺类文案含禁止表述，HTTP 422 不可处理实体） */
+    public static final int COMPLIANCE_TEXT_REJECTED = 42200;
     /** 资产状态机非法迁移 */
     public static final int ILLEGAL_ASSET_STATUS = 30001;
     /** 资源不存在（角色/资产/用户等通用） */
