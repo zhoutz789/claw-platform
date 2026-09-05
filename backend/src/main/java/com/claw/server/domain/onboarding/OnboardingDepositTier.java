@@ -9,7 +9,7 @@ import java.time.Instant;
 /**
  * 入驻保证金档位（对应 claw.onboarding_deposit_tiers，V60）。
  *
- * <p>Q1 拍板 3 档：5,000 / 20,000 / 50,000；Q2b 授信额度 = 保证金 × 倍率（默认 3），
+ * <p>Q1 拍板 3 档：5,000 / 20,000 / 50,000；Q2b 授信额度 = 保证金 × 倍率（默认 4，周老板 2026-09-06 修正），
  * 额度含义 =「该主体可持有的寄售设备名义货值上限」（非现金授信、非贷款）。
  *
  * <p><b>倍率可配，禁止硬编码</b>：档位级 {@code credit_multiplier}，
@@ -48,7 +48,7 @@ public class OnboardingDepositTier {
     /** 授信倍率（可配，非硬编码）。 */
     @Column(name = "credit_multiplier", nullable = false, precision = 8, scale = 4)
     @Builder.Default
-    private BigDecimal creditMultiplier = new BigDecimal("3.0000");
+    private BigDecimal creditMultiplier = new BigDecimal("4.0000");
 
     /** 绝对额度覆盖值；为 NULL 时按 deposit_amount × credit_multiplier 计算。 */
     @Column(name = "credit_limit_override", precision = 16, scale = 2)

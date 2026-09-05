@@ -5,6 +5,7 @@ import com.claw.server.common.enums.OnboardingStatus;
 import com.claw.server.common.enums.PrincipalType;
 import com.claw.server.common.event.OutboxPublisher;
 import com.claw.server.common.security.AuthContext;
+import com.claw.server.domain.contract.ContractService;
 import com.claw.server.domain.credit.CreditLimitService;
 import com.claw.server.domain.manufacturer.Manufacturer;
 import com.claw.server.domain.manufacturer.ManufacturerRepository;
@@ -72,6 +73,7 @@ public class OnboardingActivationService {
     private final SystemConfigRepository systemConfigRepository;
     private final OutboxPublisher outboxPublisher;
     private final ObjectMapper objectMapper;
+    private final ContractService contractService;
 
     /**
      * 激活（独立事务，失败只回滚激活动作本身）。
@@ -231,6 +233,10 @@ public class OnboardingActivationService {
                 }
                 s.setDepositTierId(tierId);
                 s.setCreditLimit(creditLimit);
+                // 签约：生成 3 年期服务站合约（幂等，重试激活复用已有进行中合约）
+                BigDecimal contractDeposit = tierRepository.findById(tierId)
+                        .map(OnboardingDepositTier::getDepositAmount).orElse(null);
+                contractService.createOnActivation(s.getId(), tierId, contractDeposit, creditLimit);
                 s.setUpdatedAt(Instant.now());
                 stationRepository.save(s);
             }

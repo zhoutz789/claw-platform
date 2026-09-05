@@ -132,7 +132,7 @@ class CreditLimitServiceTest {
     void defaultMultiplier_fallsBackWhenConfigMissing() {
         when(systemConfigRepository.findByConfigKeyAndDeletedFalse("ONBOARDING_CREDIT_MULTIPLIER_DEFAULT"))
                 .thenReturn(Optional.empty());
-        assertEquals(0, new BigDecimal("3").compareTo(creditLimitService.defaultMultiplier()));
+        assertEquals(0, new BigDecimal("4").compareTo(creditLimitService.defaultMultiplier()));
     }
 
     // ---------- 2) 历史站点未设额度 → 放行 ----------

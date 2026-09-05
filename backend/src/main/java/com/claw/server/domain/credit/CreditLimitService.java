@@ -106,8 +106,8 @@ public class CreditLimitService {
                 })
                 .filter(v -> v != null && v.signum() > 0)
                 .orElseGet(() -> {
-                    log.warn("system_config.ONBOARDING_CREDIT_MULTIPLIER_DEFAULT 缺失或非法，回退兜底值 3");
-                    return new BigDecimal("3");
+                    log.warn("system_config.ONBOARDING_CREDIT_MULTIPLIER_DEFAULT 缺失或非法，回退兜底值 4（周老板 2026-09-06 倍率修正）");
+                    return new BigDecimal("4");
                 });
     }
 
