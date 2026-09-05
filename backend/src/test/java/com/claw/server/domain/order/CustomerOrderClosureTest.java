@@ -19,6 +19,7 @@ import com.claw.server.domain.sharedpool.RevenueSettlement;
 import com.claw.server.domain.sharedpool.SharedPoolEntry;
 import com.claw.server.domain.sharedpool.SharedPoolService;
 import com.claw.server.domain.sharedpool.*;
+import com.claw.server.domain.capacity.CapacityBookingService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -62,6 +63,7 @@ class CustomerOrderClosureTest {
     @Mock private RevenueSplitRuleRepository splitRuleRepository;
     @Mock private AssetOwnershipRepository ownershipRepository;
     @Mock private RevenueSettlementRepository settlementRepository;
+    @Mock private CapacityBookingService capacityBookingService;
 
     @InjectMocks private CustomerOrderService orderService;
 
@@ -285,7 +287,8 @@ class CustomerOrderClosureTest {
         when(settlementRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SharedPoolService realPool = new SharedPoolService(poolEntryRepository, rentalOrderRepository,
-                usageSessionRepository, splitRuleRepository, ownershipRepository, settlementRepository);
+                usageSessionRepository, splitRuleRepository, ownershipRepository, settlementRepository,
+                capacityBookingService);
 
         AssetOwnership ownership = realPool.establishOwnership(10L, 5L, new BigDecimal("100000.0000"), "PO1");
         assertEquals(OwnershipType.FULL, ownership.getOwnershipType());

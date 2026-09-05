@@ -43,6 +43,7 @@ public class SharedPoolService {
     private final RevenueSplitRuleRepository splitRuleRepository;
     private final AssetOwnershipRepository ownershipRepository;
     private final RevenueSettlementRepository settlementRepository;
+    private final com.claw.server.domain.capacity.CapacityBookingService capacityBookingService;
 
     /**
      * 资产入池：将资产放入共享池，指定站点和分成比例。
@@ -174,6 +175,17 @@ public class SharedPoolService {
         order = rentalOrderRepository.save(order);
         log.info("完成租赁订单 orderNo={} totalFee={} ownerShare={} stationShare={}",
                 order.getOrderNo(), totalFee, order.getOwnerShare(), order.getStationShare());
+
+        // 容量预订回佣：从厂家 owner_share 计提并按定购单位比例自动分成。
+        // 异常不阻断租赁完成（回佣失败可后续补偿），故就地捕获。
+        try {
+            int rebateRows = capacityBookingService.applyRebateForRental(order.getId());
+            if (rebateRows > 0) {
+                log.info("容量回佣已触发 rentalOrderId={} rows={}", order.getId(), rebateRows);
+            }
+        } catch (Exception e) {
+            log.error("容量回佣失败(不影响租赁完成) rentalOrderId={} : {}", order.getId(), e.getMessage());
+        }
         return order;
     }
 

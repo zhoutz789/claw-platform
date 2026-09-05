@@ -36,5 +36,9 @@ public enum BizType {
     /** 站方收益结算（V10：管理收益/服务费/光伏收益到站方账户）。 */
     OPERATOR_REVENUE,
     /** 项目专属核算（V36 项目管理域：每项目独立双记账）。 */
-    PROJECT_LEDGER
+    PROJECT_LEDGER,
+    /** 容量预订预付（V71：用户定购产能单位，预付产能款直付厂家托管）。 */
+    CAPACITY_SUBSCRIPTION,
+    /** 容量回佣（V71：从厂家 owner_share 计提，按定购单位比例自动分成）。 */
+    CAPACITY_REBATE
 }
