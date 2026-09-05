@@ -15,13 +15,13 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 站点接口（客户选购入口 + 投资者投放入口 + 服务站作业 S4）。
+ * 站点接口（客户选购入口 + 资产投放入口 + 服务站作业 S4）。
  *
  * <p>GET  /stations/nearby                 附近站点（?countryCode=&lat=&lng=&limit=3）
  * GET  /stations/map                      地图适配层（附近换电站 + 满电/充电中电池数）
  * GET  /stations/search?sku=&lat=&lng=    搜车型 → 附近有现货的站点
  * GET  /stations/{id}/stock               站内现货
- * POST /stations/{id}/stock               投放现货（认购入站）
+ * POST /stations/{id}/stock               投放现货（资产入站）
  * POST /stations/{id}/scan-out            服务站扫码发放满电电池
  * POST /stations/{id}/scan-in             服务站扫码回收欠电电池
  * GET  /stations/{id}/slots               服务站电池位

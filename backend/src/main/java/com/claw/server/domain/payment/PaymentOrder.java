@@ -27,7 +27,7 @@ public class PaymentOrder {
     @Column(nullable = false, unique = true)
     private String orderNo;
 
-    /** 关联业务单号（充值/换电单/认购单等）。 */
+    /** 关联业务单号（充值/换电单/订单等）。 */
     @Column(nullable = false)
     private String bizRef;
 

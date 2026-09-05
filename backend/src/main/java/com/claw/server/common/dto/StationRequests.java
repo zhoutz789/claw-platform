@@ -13,7 +13,7 @@ public final class StationRequests {
     private StationRequests() {
     }
 
-    /** 投放现货（投资者认购车辆投放至站点成为现货）。 */
+    /** 投放现货（资产投放至站点成为现货）。 */
     public record StockIn(
             @NotNull Long stationId,
             @NotBlank String skuCode,

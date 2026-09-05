@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * 站点服务：附近站点现货（客户选购入口）+ 投放现货（投资者认购入口）。
+ * 站点服务：附近站点现货（客户选购入口）+ 投放现货（资产入站入口）。
  *
  * <p>对接周老板验收口径：
  * <ul>
@@ -108,7 +108,7 @@ public class StationService {
                 .toList();
     }
 
-    /** 投放现货（投资者认购入站）：已存在则累加库存。 */
+    /** 投放现货（资产入站）：已存在则累加库存。 */
     @Transactional
     public StationViews.StockView stockIn(Long stationId, String skuCode, int qty) {
         if (!stationRepository.existsById(stationId)) {
