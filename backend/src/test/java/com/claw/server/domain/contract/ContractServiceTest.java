@@ -10,6 +10,7 @@ import org.mockito.MockitoAnnotations;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
@@ -158,5 +159,31 @@ class ContractServiceTest {
 
         assertEquals(ContractStatus.ACTIVE, renewed.getStatus());
         assertNotNull(renewed.getContractNo());
+    }
+
+    @Test
+    @DisplayName("listByStation：按站点返回合约列表（按生效时间倒序）")
+    void listByStation_returnsStationContracts() {
+        StationContract c1 = StationContract.builder().id(1L).stationId(10L).status(ContractStatus.ACTIVE).build();
+        StationContract c2 = StationContract.builder().id(2L).stationId(10L).status(ContractStatus.EXITED).build();
+        when(contractRepository.findByStationIdAndDeletedFalseOrderByEffectiveFromDesc(10L)).thenReturn(List.of(c1, c2));
+
+        List<StationContract> list = service.listByStation(10L);
+
+        assertEquals(2, list.size());
+        verify(contractRepository).findByStationIdAndDeletedFalseOrderByEffectiveFromDesc(10L);
+    }
+
+    @Test
+    @DisplayName("listExitRequested：返回所有 EXIT_REQUESTED 合约（退款看板）")
+    void listExitRequested_returnsPendingRefunds() {
+        StationContract c = StationContract.builder().id(3L).stationId(10L).status(ContractStatus.EXIT_REQUESTED).build();
+        when(contractRepository.findByStatusAndDeletedFalse(ContractStatus.EXIT_REQUESTED)).thenReturn(List.of(c));
+
+        List<StationContract> list = service.listExitRequested();
+
+        assertEquals(1, list.size());
+        assertEquals(ContractStatus.EXIT_REQUESTED, list.get(0).getStatus());
+        verify(contractRepository).findByStatusAndDeletedFalse(ContractStatus.EXIT_REQUESTED);
     }
 }

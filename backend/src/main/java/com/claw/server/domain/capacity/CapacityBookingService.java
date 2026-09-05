@@ -11,6 +11,8 @@ import com.claw.server.common.enums.CapacityType;
 import com.claw.server.domain.ledger.Account;
 import com.claw.server.domain.ledger.AccountService;
 import com.claw.server.domain.ledger.LedgerService;
+import com.claw.server.domain.settings.SystemConfig;
+import com.claw.server.domain.settings.SystemConfigRepository;
 import com.claw.server.domain.sharedpool.RentalOrder;
 import com.claw.server.domain.sharedpool.RentalOrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -54,6 +56,7 @@ public class CapacityBookingService {
     private final RentalOrderRepository rentalOrderRepository;
     private final AccountService accountService;
     private final LedgerService ledgerService;
+    private final SystemConfigRepository systemConfigRepository;
 
     private static final BigDecimal SCALE4 = BigDecimal.valueOf(4);
 
@@ -68,6 +71,18 @@ public class CapacityBookingService {
         if (totalUnits == null || totalUnits <= 0) {
             throw BizException.invalidParam("error.capacity.units.invalid");
         }
+
+        // ⑤ 回佣率：缺省取配置默认（CAPACITY_REBATE_RATE_DEFAULT，兜底 0.10）；
+        // 显式传入但超上限（CAPACITY_REBATE_RATE_MAX，兜底 0.30）则拒绝建计划。
+        BigDecimal effectiveRebateRate;
+        if (rebateRate == null) {
+            effectiveRebateRate = defaultRebateRate();
+        } else if (rebateRate.compareTo(maxRebateRate()) > 0) {
+            throw BizException.of(40973, "error.capacity.rebate.rate.exceed");
+        } else {
+            effectiveRebateRate = rebateRate;
+        }
+
         CapacityPlan plan = CapacityPlan.builder()
                 .assetId(assetId)
                 .poolEntryId(poolEntryId)
@@ -76,7 +91,7 @@ public class CapacityBookingService {
                 .subscribedUnits(0)
                 .unitPrice(unitPrice)
                 .capacityType(capacityType != null ? capacityType : CapacityType.SERIAL)
-                .rebateRate(rebateRate != null ? rebateRate : BigDecimal.valueOf(0.10))
+                .rebateRate(effectiveRebateRate)
                 .windowStart(windowStart)
                 .windowEnd(windowEnd)
                 .status(CapacityPlanStatus.OPEN)
@@ -111,11 +126,22 @@ public class CapacityBookingService {
         if (unitCount == null || unitCount <= 0) {
             throw BizException.invalidParam("error.capacity.unit.invalid");
         }
-        if (subscriptionRepository.existsByPlanIdAndSubscriberUserIdAndDeletedFalse(planId, subscriberUserId)) {
-            throw BizException.of(40971, "error.capacity.already.subscribed");
-        }
-        if (plan.getSubscribedUnits() + unitCount > plan.getTotalUnits()) {
-            throw BizException.of(40972, "error.capacity.units.exceed");
+        // ④ CapacityType 语义分支：
+        // SERIAL（串行独占）：至多一个定购行，重复定购直接拒绝（40971）；
+        // PARALLEL（并行共享）：允许多行 top-up，但单订户累计份数不得超总容量（40972）。
+        if (plan.getCapacityType() == CapacityType.SERIAL) {
+            if (subscriptionRepository.existsByPlanIdAndSubscriberUserIdAndDeletedFalse(planId, subscriberUserId)) {
+                throw BizException.of(40971, "error.capacity.already.subscribed");
+            }
+            if (plan.getSubscribedUnits() + unitCount > plan.getTotalUnits()) {
+                throw BizException.of(40972, "error.capacity.units.exceed");
+            }
+        } else {
+            Long ownedUnits = subscriptionRepository.sumUnitCountByPlanIdAndSubscriberUserId(planId, subscriberUserId);
+            long already = ownedUnits == null ? 0L : ownedUnits;
+            if (already + unitCount > plan.getTotalUnits()) {
+                throw BizException.of(40972, "error.capacity.units.exceed");
+            }
         }
 
         BigDecimal prepaid = plan.getUnitPrice().multiply(BigDecimal.valueOf(unitCount))
@@ -183,6 +209,9 @@ public class CapacityBookingService {
                 .findFirstByPlanIdAndStatusAndDeletedFalseOrderByCreatedAtDesc(plan.getId(), "ACTIVE")
                 .orElse(null);
         BigDecimal rebateRate = rule != null ? rule.getRebateRate() : plan.getRebateRate();
+        // ⑤ 防御性夹紧：回佣率不超配置上限 CAPACITY_REBATE_RATE_MAX（兜底 0.30），防止历史脏数据越界。
+        // 回佣拆分比例（unitCount/totalUnits）对 SERIAL / PARALLEL 两类语义一致。
+        rebateRate = rebateRate.min(maxRebateRate());
         BigDecimal rebateTotal = ownerShare.multiply(rebateRate).setScale(4, RoundingMode.HALF_UP);
         BigDecimal minPayout = rule != null ? rule.getMinPayout() : BigDecimal.valueOf(0.01);
         if (rebateTotal.compareTo(minPayout) < 0) {
@@ -250,5 +279,68 @@ public class CapacityBookingService {
     @Transactional(readOnly = true)
     public CapacityPlan findOpenPlan(Long assetId) {
         return planRepository.findFirstByAssetIdAndDeletedFalseOrderByCreatedAtDesc(assetId).orElse(null);
+    }
+
+    /**
+     * 容量预订默认回佣率（配置驱动，兜底 0.10）。
+     *
+     * <p>取自 {@code system_config.CAPACITY_REBATE_RATE_DEFAULT}，缺失或非法时回退 0.10。
+     * 与 {@code CreditLimitService.defaultMultiplier()} 同款取值方式，不硬编码默认倍率。
+     */
+    public BigDecimal defaultRebateRate() {
+        return systemConfigRepository.findByConfigKeyAndDeletedFalse("CAPACITY_REBATE_RATE_DEFAULT")
+                .map(SystemConfig::getConfigValue)
+                .filter(v -> v != null && !v.isBlank())
+                .map(v -> {
+                    try {
+                        return new BigDecimal(v.trim());
+                    } catch (NumberFormatException e) {
+                        return null;
+                    }
+                })
+                .filter(v -> v != null)
+                .orElseGet(() -> {
+                    log.warn("system_config.CAPACITY_REBATE_RATE_DEFAULT 缺失或非法，回退兜底值 0.10");
+                    return new BigDecimal("0.10");
+                });
+    }
+
+    /**
+     * 容量预订回佣率上限（配置驱动，兜底 0.30）。
+     */
+    public BigDecimal maxRebateRate() {
+        return systemConfigRepository.findByConfigKeyAndDeletedFalse("CAPACITY_REBATE_RATE_MAX")
+                .map(SystemConfig::getConfigValue)
+                .filter(v -> v != null && !v.isBlank())
+                .map(v -> {
+                    try {
+                        return new BigDecimal(v.trim());
+                    } catch (NumberFormatException e) {
+                        return null;
+                    }
+                })
+                .filter(v -> v != null)
+                .orElseGet(() -> {
+                    log.warn("system_config.CAPACITY_REBATE_RATE_MAX 缺失或非法，回退兜底值 0.30");
+                    return new BigDecimal("0.30");
+                });
+    }
+
+    /** 厂家视角：列出自己发布的容量计划。 */
+    @Transactional(readOnly = true)
+    public List<CapacityPlan> listPlans(Long ownerUserId) {
+        return planRepository.findByOwnerUserIdAndDeletedFalse(ownerUserId);
+    }
+
+    /** 用户视角：列出自己参与的定购记录。 */
+    @Transactional(readOnly = true)
+    public List<CapacitySubscription> listBySubscriber(Long subscriberUserId) {
+        return subscriptionRepository.findBySubscriberUserIdAndDeletedFalse(subscriberUserId);
+    }
+
+    /** 用户视角：列出自己名下的回佣结算明细。 */
+    @Transactional(readOnly = true)
+    public List<CapacityRebateSettlement> listRebatesBySubscriber(Long subscriberUserId) {
+        return rebateSettlementRepository.findBySubscriberUserIdAndDeletedFalse(subscriberUserId);
     }
 }

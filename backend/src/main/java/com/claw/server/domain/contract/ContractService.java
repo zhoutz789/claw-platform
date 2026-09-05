@@ -195,6 +195,22 @@ public class ContractService {
         return contractRepository.findByStationIdAndStatusAndDeletedFalse(stationId, ContractStatus.ACTIVE);
     }
 
+    /**
+     * 列出某服务站的全部门店合约（按生效时间倒序），后台合约管理页用。
+     */
+    @Transactional(readOnly = true)
+    public List<StationContract> listByStation(Long stationId) {
+        return contractRepository.findByStationIdAndDeletedFalseOrderByEffectiveFromDesc(stationId);
+    }
+
+    /**
+     * 列出所有「已申请退出」的合约（退款看板 / 保证金清算队列）。
+     */
+    @Transactional(readOnly = true)
+    public List<StationContract> listExitRequested() {
+        return contractRepository.findByStatusAndDeletedFalse(ContractStatus.EXIT_REQUESTED);
+    }
+
     private String generateContractNo() {
         String date = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
         String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 6).toUpperCase();

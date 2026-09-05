@@ -16,4 +16,10 @@ public interface StationContractRepository extends JpaRepository<StationContract
     /** 到期待处理（生效中且已过期），供定时任务置 EXPIRED。 */
     List<StationContract> findByStatusAndEffectiveToBeforeAndDeletedFalse(
             com.claw.server.common.enums.ContractStatus status, java.time.Instant effectiveTo);
+
+    /** 该站全部合约（按生效时间倒序），后台合约管理页用。 */
+    List<StationContract> findByStationIdAndDeletedFalseOrderByEffectiveFromDesc(Long stationId);
+
+    /** 退款看板：所有 EXIT_REQUESTED 合约。 */
+    List<StationContract> findByStatusAndDeletedFalse(com.claw.server.common.enums.ContractStatus status);
 }
