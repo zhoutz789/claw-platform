@@ -124,4 +124,39 @@ class ContractServiceTest {
         assertEquals(0, done.getRefundAmount().compareTo(new BigDecimal("20000.00")));
         assertNotNull(done.getTerminatedAt());
     }
+
+    @Test
+    @DisplayName("升档续签：旧 ACTIVE 合约置 RENEWED，新建 ACTIVE 3 年期合约")
+    void renewOnUpgrade_renewsOldAndCreatesNew() {
+        StationContract old = StationContract.builder().id(99L).stationId(10L)
+                .status(ContractStatus.ACTIVE).build();
+        when(contractRepository.findByStationIdAndStatusAndDeletedFalse(10L, ContractStatus.ACTIVE))
+                .thenReturn(Optional.of(old));
+
+        StationContract renewed = service.renewOnUpgrade(10L, 3L,
+                new BigDecimal("50000.00"), new BigDecimal("200000.00"), 7L);
+
+        // 旧约被置 RENEWED（被新约替代）
+        assertEquals(ContractStatus.RENEWED, old.getStatus());
+        assertNotNull(old.getTerminatedAt());
+        // 新约 ACTIVE 且 3 年期
+        assertEquals(ContractStatus.ACTIVE, renewed.getStatus());
+        assertEquals(0, new BigDecimal("200000.00").compareTo(renewed.getCreditLimit()));
+        assertEquals(0, new BigDecimal("50000.00").compareTo(renewed.getDepositAmount()));
+        long years = ChronoUnit.DAYS.between(renewed.getEffectiveFrom(), renewed.getEffectiveTo());
+        assertTrue(years >= 1090 && years <= 1100, "续签新约应≈3年，实际=" + years + "天");
+    }
+
+    @Test
+    @DisplayName("升档续签：无进行中合约时仅新建，不抛错")
+    void renewOnUpgrade_noActiveCreatesNew() {
+        when(contractRepository.findByStationIdAndStatusAndDeletedFalse(10L, ContractStatus.ACTIVE))
+                .thenReturn(Optional.empty());
+
+        StationContract renewed = service.renewOnUpgrade(10L, 3L,
+                new BigDecimal("50000.00"), new BigDecimal("200000.00"), 7L);
+
+        assertEquals(ContractStatus.ACTIVE, renewed.getStatus());
+        assertNotNull(renewed.getContractNo());
+    }
 }

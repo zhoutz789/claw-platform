@@ -101,6 +101,16 @@ public class StationController {
     }
 
     /**
+     * 追加保证金升档（缺口①）：服务站追加保证金 → 选更高档位 → 授信 ×4 放大、项目扩大、旧约续签。
+     * 仅平台运营可调，需 operator 身份（未登录返回 401）。
+     */
+    @PostMapping("/{id}/upgrade-tier")
+    public ApiResult<StationService.StationUpgradeResult> upgradeTier(@PathVariable Long id,
+                                                                     @RequestParam Long newTierId) {
+        return ApiResult.ok(stationService.upgradeTier(id, newTierId, requireOperator()));
+    }
+
+    /**
      * 取当前登录用户 ID；无认证上下文时返回 401（不是 500）。
      *
      * <p>此前抛 IllegalStateException("unauthenticated")，而全局异常处理器没有对应

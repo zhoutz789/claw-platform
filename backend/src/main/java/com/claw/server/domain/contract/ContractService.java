@@ -82,6 +82,51 @@ public class ContractService {
     }
 
     /**
+     * 升档续签（缺口①，周老板 2026-09-06 拍板）：旧进行中合约置 RENEWED（被新约替代），
+     * 另建一份新的 3 年期 ACTIVE 合约（新档位 / 新保证金 / 新授信）。
+     *
+     * <p>幂等友好：若当前无进行中合约（如已 EXITED 后重新升档），仅新建，不抛错。
+     * 终态 RENEWED 不受部分唯一索引约束（V74），多次升档可留存多份历史约。
+     *
+     * @return 新签的 ACTIVE 合约
+     */
+    @Transactional
+    public StationContract renewOnUpgrade(Long stationId, Long depositTierId,
+                                         BigDecimal depositAmount, BigDecimal creditLimit, Long operatorId) {
+        contractRepository.findByStationIdAndStatusAndDeletedFalse(stationId, ContractStatus.ACTIVE)
+                .ifPresent(old -> {
+                    old.setStatus(ContractStatus.RENEWED);
+                    old.setTerminatedAt(Instant.now());
+                    old.setUpdatedAt(Instant.now());
+                    old.setUpdatedBy(operatorId);
+                    contractRepository.save(old);
+                    log.info("服务站 {} 升档：旧合约 {} 置 RENEWED（被新约替代）", stationId, old.getContractNo());
+                });
+
+        Instant now = Instant.now();
+        Instant effectiveTo = now.atZone(java.time.ZoneOffset.UTC).plusYears(TERM_YEARS).toInstant();
+        StationContract contract = StationContract.builder()
+                .contractNo(generateContractNo())
+                .stationId(stationId)
+                .applicantType("STATION")
+                .depositTierId(depositTierId)
+                .depositAmount(depositAmount)
+                .creditLimit(creditLimit)
+                .termYears(TERM_YEARS)
+                .signedAt(now)
+                .effectiveFrom(now)
+                .effectiveTo(effectiveTo)
+                .status(ContractStatus.ACTIVE)
+                .refundStatus(ContractRefundStatus.NONE)
+                .tenantId(1L)
+                .build();
+        StationContract saved = contractRepository.save(contract);
+        log.info("服务站 {} 升档续签新 3 年期合约 contractNo={} 保证金 {} 授信 {}",
+                stationId, saved.getContractNo(), depositAmount, creditLimit);
+        return saved;
+    }
+
+    /**
      * 申请退出：置 EXIT_REQUESTED，退款截止 = 申请时 + 3 月。
      */
     @Transactional

@@ -3,16 +3,26 @@ package com.claw.server.domain.station;
 import com.claw.server.common.api.BizException;
 import com.claw.server.common.dto.StationViews;
 import com.claw.server.common.security.CountryContext;
+import com.claw.server.domain.contract.ContractService;
+import com.claw.server.domain.credit.CreditLimitService;
+import com.claw.server.domain.onboarding.OnboardingDeposit;
+import com.claw.server.domain.onboarding.OnboardingDepositRepository;
+import com.claw.server.domain.onboarding.OnboardingDepositTier;
+import com.claw.server.domain.onboarding.OnboardingDepositTierRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 站点服务：附近站点现货（客户选购入口）+ 投放现货（投资者认购入口）。
@@ -25,6 +35,7 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class StationService {
 
     private static final double EARTH_RADIUS_KM = 6371.0;
@@ -32,6 +43,10 @@ public class StationService {
     private final StationRepository stationRepository;
     private final StationStockRepository stockRepository;
     private final StationBatteryRepository batteryRepository;
+    private final OnboardingDepositTierRepository tierRepository;
+    private final OnboardingDepositRepository depositRepository;
+    private final CreditLimitService creditLimitService;
+    private final ContractService contractService;
 
     /**
      * 后台站点全量列表（管理端下拉选项数据源）。
@@ -126,6 +141,82 @@ public class StationService {
                         ? Double.MAX_VALUE : v.station().distKm().doubleValue()))
                 .limit(n)
                 .toList();
+    }
+
+    /**
+     * 追加保证金升档（缺口① · 周老板 2026-09-06 拍板）。
+     *
+     * <p>服务站追加保证金 → 选择更高档位 → 授信额度按「新档位保证金 × 4」放大（项目随之扩大、可承载寄售上限增加）；
+     * 旧合约续签（RENEWED 旧约 + 新 ACTIVE 3 年期），并把追加的保证金记入 {@code onboarding_deposits}（CONFIRMED）。
+     *
+     * <p>校验：① 新档位必须启用；② 新档位保证金必须严格大于当前档位（升档语义）。降档/平档一律拒绝。
+     *
+     * @param stationId 服务站 ID
+     * @param newTierId 目标更高档位 ID
+     * @param operatorId 操作人（平台运营，追加保证金由其确认收讫后触发升档）
+     * @return 升档结果（新档位 / 追加金额 / 新授信 / 新合约号）
+     */
+    @Transactional
+    public StationUpgradeResult upgradeTier(Long stationId, Long newTierId, Long operatorId) {
+        Station station = stationRepository.findById(stationId)
+                .orElseThrow(() -> BizException.of(40401, "station.not.found"));
+        OnboardingDepositTier curTier = tierRepository.findById(station.getDepositTierId())
+                .orElseThrow(() -> BizException.of(40401, "onboarding.deposit.tier.not.found"));
+        OnboardingDepositTier newTier = tierRepository.findById(newTierId)
+                .orElseThrow(() -> BizException.of(40401, "onboarding.deposit.tier.not.found"));
+        if (!Boolean.TRUE.equals(newTier.getEnabled())) {
+            throw BizException.of(40940, "onboarding.deposit.tier.disabled");
+        }
+        if (newTier.getDepositAmount().compareTo(curTier.getDepositAmount()) <= 0) {
+            throw BizException.of(40940, "onboarding.upgrade.tier.not.higher");
+        }
+        BigDecimal newCredit = creditLimitService.resolveTierCreditLimit(newTier);
+        BigDecimal additional = newTier.getDepositAmount().subtract(curTier.getDepositAmount());
+
+        Instant now = Instant.now();
+        // 记录追加保证金（运营已确认收讫，状态置 CONFIRMED 便于审计）
+        Long appId = station.getOnboardingApplicationId() != null ? station.getOnboardingApplicationId() : 0L;
+        if (station.getOnboardingApplicationId() == null) {
+            log.warn("服务站 {} 升档：onboarding_application_id 为空，追加保证金台账 application_id 暂填 0，建议补录", stationId);
+        }
+        depositRepository.save(OnboardingDeposit.builder()
+                .depositNo(genDepositNo())
+                .applicationId(appId)
+                .principalType("STATION")
+                .principalId(stationId)
+                .tierId(newTierId)
+                .amount(additional)
+                .currency("USD")
+                .payMethod("OFFLINE_TRANSFER")
+                .status(OnboardingDeposit.Status.CONFIRMED.name())
+                .confirmedBy(operatorId)
+                .confirmedAt(now)
+                .createdAt(now).updatedAt(now)
+                .build());
+
+        // 升档：写回档位与授信额度（项目扩大）
+        station.setDepositTierId(newTierId);
+        station.setCreditLimit(newCredit);
+        station.setUpdatedAt(now);
+        stationRepository.save(station);
+
+        // 合约续签：旧约 RENEWED，新约 ACTIVE 3 年
+        String newContractNo = contractService.renewOnUpgrade(
+                stationId, newTierId, newTier.getDepositAmount(), newCredit, operatorId).getContractNo();
+
+        log.info("服务站 {} 升档成功：新档位 {} 追加 {} 新授信 {} 新合约 {}",
+                stationId, newTierId, additional, newCredit, newContractNo);
+        return new StationUpgradeResult(stationId, newTierId, additional, newCredit, newContractNo);
+    }
+
+    /** 升档结果（内部 DTO）。 */
+    public record StationUpgradeResult(Long stationId, Long newTierId, BigDecimal additionalDeposit,
+                                       BigDecimal newCreditLimit, String newContractNo) {}
+
+    /** 生成追加保证金台账号 DEP{yyyyMMdd}{4位序号}。 */
+    private String genDepositNo() {
+        return "DEP" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)
+                + String.format("%04d", ThreadLocalRandom.current().nextInt(10000));
     }
 
     private StationViews.StationView toView(Station s, BigDecimal lat, BigDecimal lng) {
