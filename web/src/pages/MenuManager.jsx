@@ -208,9 +208,6 @@ const isDescendant = (parent, node) => {
   return false;
 };
 
-// antd Tree 落点守卫：不允许把节点拖入它自身的后代中（会造成父子循环，渲染即崩）
-const allowDrop = ({ dragNode, dropNode }) => !isDescendant(dragNode, dropNode);
-
 // 经典 antd Tree 拖拽落点算法（克隆后操作，避免改动原引用）
 const cloneTree = (arr) =>
   arr.map((n) => ({
@@ -220,42 +217,6 @@ const cloneTree = (arr) =>
     children: n.children ? cloneTree(n.children) : undefined,
     dataRef: n.dataRef,
   }));
-
-const applyDrop = (tree, info) => {
-  const dropKey = info.node.key;
-  const dragKey = info.dragNode.key;
-  const dropPos = info.node.pos.split('-');
-  const dropPosition = info.dropPosition - Number(dropPos[dropPos.length - 1]);
-  const loop = (data, key, callback) => {
-    for (let i = 0; i < data.length; i++) {
-      if (data[i].key === key) return callback(data[i], i, data);
-      if (data[i].children && loop(data[i].children, key, callback)) return true;
-    }
-    return false;
-  };
-  const data = cloneTree(tree);
-  let dragObj;
-  loop(data, dragKey, (item, index, arr) => {
-    arr.splice(index, 1);
-    dragObj = item;
-  });
-  if (!info.dropToGap) {
-    loop(data, dropKey, (item) => {
-      item.children = item.children || [];
-      item.children.push(dragObj);
-    });
-  } else {
-    let ar = data;
-    let i;
-    loop(data, dropKey, (item, index, arr) => {
-      ar = arr;
-      i = index;
-    });
-    if (dropPosition === -1) ar.splice(i, 0, dragObj);
-    else ar.splice(i + 1, 0, dragObj);
-  }
-  return data;
-};
 
 // 同级（同一父级）内移动节点位置。仅重排兄弟顺序，不改变所属父级，不影响跨中心归类。
 // dir: 'up' 上移一位 / 'down' 下移一位；越界时 no-op 返回原 clone。
@@ -269,6 +230,29 @@ const moveSibling = (tree, key, dir) => {
   const [node] = arr.splice(index, 1);
   arr.splice(target, 0, node);
   return clone;
+};
+
+const findParentKey = (nodes, key, parent = null) => {
+  for (const n of nodes) {
+    if (n.key === key) return parent ? parent.key : ROOT_KEY;
+    if (n.children) {
+      const hit = findParentKey(n.children, key, n);
+      if (hit !== null) return hit;
+    }
+  }
+  return null;
+};
+
+const reparent = (tree, key, newParentKey) => {
+  const currentParent = findParentKey(tree, key);
+  if (newParentKey === currentParent || newParentKey === key) return tree;
+  const clone = cloneTree(tree);
+  const node = findNode(clone, key);
+  if (!node) return clone;
+  const newParent = newParentKey === ROOT_KEY ? null : findNode(clone, newParentKey);
+  if (newParent && isDescendant(newParent, node)) return clone; // 禁止挂到自己的后代下
+  const without = removeNode(clone, key);
+  return insertNode(without, newParentKey, { ...node });
 };
 
 // 由路径推导菜单 key：/task-drone -> task-drone，保证与路由段一致（选中态与跳转依赖它）
@@ -322,8 +306,6 @@ export default function MenuManager() {
     () => JSON.stringify(rebuildNav(tree)) !== JSON.stringify(getNav()),
     [tree, liveNav]
   );
-
-  const onDrop = (info) => setTree(applyDrop(tree, info));
 
   const save = async () => {
     setNav(sanitizeNav(rebuildNav(tree)));
@@ -618,18 +600,15 @@ export default function MenuManager() {
         {/* 左：结构编辑器 */}
         <Card className="wb-card" title={t('system:menuManager.card.structure')} style={{ flex: '1 1 420px', minWidth: 360 }}>
           <Tree
-            draggable
             blockNode
             treeData={displayTree}
             titleRender={titleRender}
-            onDrop={onDrop}
-            allowDrop={allowDrop}
             onSelect={(keys) => setSelectedKey(keys[0] || null)}
             selectedKeys={selectedKey ? [selectedKey] : []}
             defaultExpandAll
           />
           <Paragraph type="secondary" style={{ marginTop: 12, fontSize: 12 }}>
-            {t('system:menuManager.hint.drag')}
+            {t('system:menuManager.hint.reorder')}
           </Paragraph>
         </Card>
 
@@ -681,6 +660,15 @@ export default function MenuManager() {
                   <Switch
                     checked={!!selected.dataRef.hidden}
                     onChange={(v) => setTree(updateNode(tree, selected.key, { hidden: v }))}
+                  />
+                </div>
+                <div>
+                  <Text type="secondary">{t('system:menuManager.form.parent')}</Text>
+                  <Select
+                    style={{ width: '100%' }}
+                    value={findParentKey(tree, selected.key)}
+                    options={groupOptions}
+                    onChange={(pk) => setTree(reparent(tree, selected.key, pk))}
                   />
                 </div>
                 <Tooltip title={deleteHint}>

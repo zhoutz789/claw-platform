@@ -183,7 +183,8 @@
       "descSuffix": "It survives a refresh and a browser restart. If you mess things up, click \"Restore defaults\" to go back to the built-in menu with one click."
     },
     "hint": {
-      "drag": "Tip: use the \"Move up / Move down\" buttons on the right of a node to reorder within the same group; drag a node onto another group's title to regroup it across centres (e.g. move a page from \"Operations\" to \"System\")."
+      "drag": "Tip: use the \"Move up / Move down\" buttons on the right of a node to reorder within the same group; drag a node onto another group's title to regroup it across centres (e.g. move a page from \"Operations\" to \"System\").",
+      "reorder": "Tip: select a node, then use the up/down buttons to reorder within its group, or the 'Mount under' dropdown to move it across groups. Drag-and-drop is no longer supported."
     },
     "prop": {
       "displayName": "Display name",
