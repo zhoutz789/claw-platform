@@ -13,14 +13,14 @@
     "fin": "",
     "risk-center": "",
     "onboarding": "ការគ្រប់គ្រងការចូលរួម",
-    "sys": "មជ្ឈមណ្ឌលប្រព័ន្ធ"
+    "sys": "មជ្ឈមណ្ឌលប្រព័ន្ធ",
+    "platform-settings": "ការកំណត់វេទិកា"
   },
   "item": {
     "workbench": "ផ្ទាំងការងារ",
     "product-center": "មជ្ឈមណ្ឌលផលិតផល",
     "certificate": "",
     "bind-ownership": "",
-    "product-template": "ពុម្ពផលិតផល",
     "data-binding": "ការទទួលទិន្នន័យ",
     "authorization": "",
     "project-management": "មជ្ឈមណ្ឌលគម្រោង",
@@ -61,7 +61,6 @@
     "app-portal": "ច្រកកម្មវិធី",
     "roles": "ការគ្រប់គ្រងតួនាទី",
     "permission": "ម៉ាទ្រីសសិទ្ធិ",
-    "menu-permission": "សិទ្ធិម៉ឺនុយ",
     "menu-manager": "ការគ្រប់គ្រងម៉ឺនុយ",
     "settings": "ការកំណត់ប្រព័ន្ធ",
     "countries": "",
@@ -94,6 +93,7 @@
     "org-manage": "ការគ្រប់គ្រងអង្គភាព",
     "sub-accounts": "គណនីរង",
     "capacity-booking": "ការកក់ចុះបន្ទុករបស់ខ្ញុំ",
-    "station-contracts": "កិច្ចសន្យាស្ថានីយ"
+    "station-contracts": "កិច្ចសន្យាស្ថានីយ",
+    "categories": "ប្រភេទ"
   }
 }

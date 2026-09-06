@@ -44,13 +44,11 @@ import Certificate from './pages/Certificate';
 import BindOwnership from './pages/BindOwnership';
 import DeviceDataAccess from './pages/DeviceDataAccess';
 import BrandOnboarding from './pages/BrandOnboarding';
-import MenuPermission from './pages/MenuPermission';
 import MenuManager from './pages/MenuManager';
 import AssetParams from './pages/AssetParams';
 import AppPortal from './pages/AppPortal';
 import Departments from './pages/Departments';
 // —— 子菜单化：新增包装页 / 独立子菜单页 ——
-import ProductTemplate from './pages/ProductTemplate';
 import Authorization from './pages/Authorization';
 import ProductPublish from './pages/ProductPublish';
 import OrderManage from './pages/OrderManage';
@@ -77,6 +75,7 @@ import RoleTemplates from './pages/RoleTemplates';
 import RoleGroups from './pages/RoleGroups';
 import PrincipalBindings from './pages/PrincipalBindings';
 import Merchants from './pages/Merchants';
+import CategoryManage from './pages/CategoryManage';
 // —— 增量 C · 入驻管理 ——
 import OnboardingApply from './pages/OnboardingApply';
 import OnboardingReview from './pages/OnboardingReview';
@@ -159,7 +158,6 @@ export default function App() {
           <Route path="task-rent" element={<TaskRent />} />
           <Route path="task-near" element={<TaskNear />} />
           {/* 产品管理子菜单：独立子页 */}
-          <Route path="product-template" element={<ProductTemplate />} />
           <Route path="authorization" element={<Authorization />} />
           {/* 旧 device-detail / device-twin 已被 ProductCenter 取代，路由移除 */}
           {/* 商品管理子菜单：独立子页 */}
@@ -169,7 +167,6 @@ export default function App() {
           <Route path="order-manage" element={<OrderManage />} />
           <Route path="brand-onboarding" element={<BrandOnboarding />} />
           <Route path="app-portal" element={<AppPortal />} />
-          <Route path="menu-permission" element={<MenuPermission />} />
           <Route path="menu-manager" element={<MenuManager />} />
           <Route path="asset-params" element={<AssetParams />} />
           <Route path="departments" element={<Departments />} />
@@ -192,6 +189,8 @@ export default function App() {
           <Route path="principal-bindings" element={<PrincipalBindings />} />
           {/* Phase 2 骨架：商家入驻 */}
           <Route path="merchants" element={<Merchants />} />
+          {/* ② 类别管理（通用多级分类树，menu:categories 权限码见 V78） */}
+          <Route path="categories" element={<CategoryManage />} />
 
           {/* 增量 C · 入驻管理（菜单可见性由 menu:{navKey} 权限码控制，见 V62） */}
           <Route path="onboarding-apply" element={<RequirePermRoute menuKey="onboarding-apply"><OnboardingApply /></RequirePermRoute>} />

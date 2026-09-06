@@ -25,7 +25,7 @@ import { tv } from './i18n';
 import {
   DashboardOutlined, AppstoreOutlined, ShoppingOutlined, ProjectOutlined, RocketOutlined,
   DeploymentUnitOutlined, AccountBookOutlined, SafetyOutlined, SettingOutlined, InboxOutlined,
-  IdcardOutlined, SendOutlined, ShopOutlined,
+  IdcardOutlined, SendOutlined, ShopOutlined, ControlOutlined,
 } from '@ant-design/icons';
 
 // 九大模块（工作台 + A/B/C/D 期新设计 + 四大中心）；children 为各模块下的页面。
@@ -60,6 +60,8 @@ export const NAV = [
       { key: 'manufacturer', label: 'nav:item.manufacturer', path: '/manufacturer' },
       { key: 'order-manage', label: 'nav:item.order-manage', path: '/order-manage' },
       { key: 'merchants', label: 'nav:item.merchants', path: '/merchants' },
+      // 类别管理（通用多级分类树，发布商品时选用；menu:categories 权限码见 V78 迁移）
+      { key: 'categories', label: 'nav:item.categories', path: '/categories' },
     ],
   },
   // 供应流通（增量 B：生产 / 库存 / 调拨 / 履约 / 结算）
@@ -75,6 +77,8 @@ export const NAV = [
       { key: 'fulfillment-orders', label: 'nav:item.fulfillment-orders', path: '/fulfillment-orders' },
       { key: 'pickup-scan', label: 'nav:item.pickup-scan', path: '/pickup-scan' },
       { key: 'commission-rules', label: 'nav:item.commission-rules', path: '/commission-rules' },
+      // 容量预订（menu:capacity-booking 权限码见 V77 迁移）
+      { key: 'capacity-booking', label: 'nav:item.capacity-booking', path: '/capacity-booking' },
     ],
   },
   // 模块四 · 服务站功能（库存 / 项目 / 结算三层解耦，menu:* 权限码见 V68 迁移）
@@ -84,6 +88,8 @@ export const NAV = [
       { key: 'station-inventory', label: 'nav:item.station-inventory', path: '/station-inventory' },
       { key: 'station-projects', label: 'nav:item.station-projects', path: '/station-projects' },
       { key: 'station-settlements', label: 'nav:item.station-settlements', path: '/station-settlements' },
+      // 服务站合约（menu:station-contracts 权限码见 V77 迁移）
+      { key: 'station-contracts', label: 'nav:item.station-contracts', path: '/station-contracts' },
     ],
   },
   // 增量 D · 无人机 / 低空经济域（menu:* 权限码见 V66 迁移）
@@ -158,6 +164,16 @@ export const NAV = [
       { key: 'sub-accounts', label: 'nav:item.sub-accounts', path: '/sub-accounts' },
     ],
   },
+  // ——— 平台设置 / 约定：从「系统中心」剥离出的独立分组，收口平台级配置类入口，避免误看 ———
+  {
+    key: 'platform-settings', label: 'nav:group.platform-settings', icon: ControlOutlined,
+    children: [
+      { key: 'settings', label: 'nav:item.settings', path: '/settings' },
+      { key: 'countries', label: 'nav:item.countries', path: '/countries' },
+      { key: 'asset-params', label: 'nav:item.asset-params', path: '/asset-params' },
+      { key: 'departments', label: 'nav:item.departments', path: '/departments' },
+    ],
+  },
   {
     key: 'sys', label: 'nav:group.sys', icon: SettingOutlined,
     children: [
@@ -168,12 +184,7 @@ export const NAV = [
       { key: 'role-groups', label: 'nav:item.role-groups', path: '/role-groups' },
       { key: 'principal-bindings', label: 'nav:item.principal-bindings', path: '/principal-bindings' },
       { key: 'permission', label: 'nav:item.permission', path: '/permission' },
-      { key: 'menu-permission', label: 'nav:item.menu-permission', path: '/menu-permission' },
       { key: 'menu-manager', label: 'nav:item.menu-manager', path: '/menu-manager' },
-      { key: 'settings', label: 'nav:item.settings', path: '/settings' },
-      { key: 'countries', label: 'nav:item.countries', path: '/countries' },
-      { key: 'asset-params', label: 'nav:item.asset-params', path: '/asset-params' },
-      { key: 'departments', label: 'nav:item.departments', path: '/departments' },
     ],
   },
 ];
@@ -236,9 +247,9 @@ export const ROUTES = [
   '/arbitration', '/profit', '/fee', '/roles', '/permission', '/settings', '/product-iot',
   '/product-center', '/project-management', '/certificate', '/bind-ownership', '/device-data-access',
   '/task-drone', '/task-logi', '/task-ad', '/task-video', '/task-rent', '/task-near',
-  '/product-template', '/authorization', '/goods-list', '/product-wizard', '/product-publish',
-  '/order-manage', '/brand-onboarding', '/app-portal', '/menu-permission', '/menu-manager',
-  '/asset-params', '/departments',
+  '/authorization',   '/goods-list', '/product-wizard', '/product-publish',
+  '/order-manage', '/brand-onboarding', '/app-portal', '/menu-manager',
+  '/asset-params', '/departments', '/categories',
   // 增量 B · 库存 / 流转 / 渠道域
   '/production', '/mfg-inventory', '/station-consignment', '/transfers', '/fulfillment-orders',
   '/pickup-scan', '/commission-rules',

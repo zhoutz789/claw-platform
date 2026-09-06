@@ -13,14 +13,14 @@
     "fin": "财务中心",
     "risk-center": "风控中心",
     "onboarding": "入驻管理",
-    "sys": "系统中心"
+    "sys": "系统中心",
+    "platform-settings": "平台设置"
   },
   "item": {
     "workbench": "工作台",
     "product-center": "产品中心",
     "certificate": "合格证",
     "bind-ownership": "绑定 / 产权",
-    "product-template": "产品模板",
     "data-binding": "数据接入",
     "authorization": "赋权管理",
     "project-management": "项目中心",
@@ -61,7 +61,6 @@
     "app-portal": "应用门户",
     "roles": "角色管理（权限组）",
     "permission": "权限矩阵",
-    "menu-permission": "菜单权限",
     "menu-manager": "菜单管理",
     "settings": "系统配置",
     "countries": "国家·法域",
@@ -94,6 +93,7 @@
     "org-manage": "组织管理",
     "sub-accounts": "子账号管理",
     "capacity-booking": "我的容量预订",
-    "station-contracts": "服务站合约管理"
+    "station-contracts": "服务站合约管理",
+    "categories": "类别管理"
   }
 }

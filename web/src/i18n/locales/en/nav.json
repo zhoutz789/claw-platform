@@ -13,14 +13,14 @@
     "fin": "Finance",
     "risk-center": "Risk Control",
     "onboarding": "Onboarding",
-    "sys": "System"
+    "sys": "System",
+    "platform-settings": "Platform Settings"
   },
   "item": {
     "workbench": "Workbench",
     "product-center": "Product Center",
     "certificate": "Certificate of Conformity",
     "bind-ownership": "Binding / Ownership",
-    "product-template": "Product Templates",
     "data-binding": "Data Ingestion",
     "authorization": "Authorization",
     "project-management": "Project Center",
@@ -61,7 +61,6 @@
     "app-portal": "App Portal",
     "roles": "Role Management (Permission Groups)",
     "permission": "Permission Matrix",
-    "menu-permission": "Menu Permissions",
     "menu-manager": "Menu Manager",
     "settings": "System Settings",
     "countries": "Countries · Jurisdictions",
@@ -94,6 +93,7 @@
     "org-manage": "Organization Governance",
     "sub-accounts": "Sub Accounts",
     "capacity-booking": "My Capacity Booking",
-    "station-contracts": "Station Contracts"
+    "station-contracts": "Station Contracts",
+    "categories": "Categories"
   }
 }
