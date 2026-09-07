@@ -1,6 +1,7 @@
 package com.claw.server.domain.certificate;
 
 import com.claw.server.common.api.BizException;
+import com.claw.server.common.dto.CertificateDtos.CertificateDto;
 import com.claw.server.domain.manufacturer.Product;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +51,28 @@ public class CertificateService {
     @Transactional(readOnly = true)
     public Optional<Certificate> getByDevice(Long deviceId) {
         return certificateRepository.findByDeviceId(deviceId);
+    }
+
+    /** 设备合格证视图（含不可变快照 spec_json 与可编辑 data_json）。 */
+    @Transactional(readOnly = true)
+    public CertificateDto getDto(Long deviceId) {
+        Certificate c = certificateRepository.findByDeviceId(deviceId)
+                .orElseThrow(() -> BizException.of(40401, "certificate.not.found"));
+        return toDto(c);
+    }
+
+    /** 更新可编辑识别信息（data_json）；cert_no / issued_at / spec_json 保持不可变。 */
+    @Transactional
+    public CertificateDto updateData(Long deviceId, String dataJson) {
+        Certificate c = certificateRepository.findByDeviceId(deviceId)
+                .orElseThrow(() -> BizException.of(40401, "certificate.not.found"));
+        c.setDataJson(dataJson);
+        return toDto(certificateRepository.save(c));
+    }
+
+    private CertificateDto toDto(Certificate c) {
+        return new CertificateDto(c.getId(), c.getDeviceId(), c.getCertNo(), c.getManufacturerId(),
+                c.getProductId(), c.getSpecJson(), c.getDataJson(), c.getIssuedBy(), c.getIssuedAt());
     }
 
     @Transactional(readOnly = true)

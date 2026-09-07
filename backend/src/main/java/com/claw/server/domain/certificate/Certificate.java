@@ -70,4 +70,12 @@ public class Certificate {
     @Column(nullable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();
+
+    /**
+     * 可编辑识别信息（与 spec_json 分离：spec_json 是出证时的不可变快照，
+     * data_json 是出厂后可由厂家维护的识别字段值，按合格证模板字段填充）。
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "data_json", columnDefinition = "jsonb")
+    private String dataJson;
 }
