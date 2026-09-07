@@ -11,6 +11,9 @@ app/.flutter-plugins*
 app/build/
 app/.flutter_build/
 
+# 运行时上传目录（业务产生，不入库）
+backend/uploads/
+
 # Node / Web
 web/node_modules/
 web/dist/
