@@ -1,18 +1,17 @@
 // 可配置导航存储：在 nav.js 的 BASE_NAV 之上提供「用户自定义覆盖」。
-// - 覆盖保存在 localStorage，刷新/重开仍生效；
+// - 覆盖为「会话内内存态」：菜单布局的唯一数据源已上移到后端（GET / PUT /v1/admin/menu-layout），
+//   由「系统中心 → 菜单管理」页在一个原子请求里读写，不再落 localStorage。
+//   因此本模块不再持久化任何东西：刷新后 active 回到 null，侧边栏以后端下发的菜单为准；
+//   后端不可达时回落到 nav.js 的 BASE_NAV，保证本地全量页面仍然可用。
 // - 通过订阅机制让侧边栏、工作台快捷入口在保存后即时刷新；
 // - 图标函数无法序列化：覆盖里只存图标名字符串，渲染时经 ICON_REGISTRY / ICON_BY_KEY 还原。
 //
-// v5（2026-08-29）重大变更：覆盖策略由「整包替换」改为「增量合并」。
-//   旧问题：v3 → v4 时靠升级 STORAGE_KEY 版本号作废用户配置，导致周老板在「菜单管理」里
-//   保存过的显示/排序设置被整体清空，且以后每加一个新菜单都要再升一次版本号。
-//   新策略：STORAGE_KEY 虽升到 v5，但会在首次读取时迁移 v4/v3/v2/v1 的旧覆盖，
-//   并通过 mergeWithBase() 与当前 BASE_NAV 做增量合并：
-//     · BASE_NAV 是「菜单全集」的权威来源 —— 新增的菜单项一定会出现（追加到本层末尾），
-//       用户只能隐藏，不能把菜单从数据源里删没；
-//     · 用户在覆盖里的个性化字段（hidden / 改名后的 label / 自定义 path / 自选图标）按 key 合并；
-//     · 用户调整过的顺序与跨分组归类原样保留（拖拽、上移/下移继续有效）；
-//     · 覆盖里存在但 BASE_NAV 已删除的项，若非用户自建（custom: true）则丢弃，避免旧残留复活。
+// 增量合并策略（保留自 v5，语义不变）：
+//   · BASE_NAV 是「菜单全集」的兜底来源 —— 新增的菜单项一定会出现（追加到本层末尾），
+//     用户只能隐藏，不能把菜单从数据源里删没；
+//   · 用户在覆盖里的个性化字段（hidden / 改名后的 label / 自定义 path / 自选图标）按 key 合并；
+//   · 用户调整过的顺序与跨分组归类原样保留（上移/下移、挂载到继续有效）；
+//   · 覆盖里存在但 BASE_NAV 已删除的项，若非用户自建（custom: true）则丢弃，避免旧残留复活。
 import { useState, useEffect } from 'react';
 import {
   AppstoreOutlined, DashboardOutlined, DeploymentUnitOutlined, AccountBookOutlined,
@@ -30,22 +29,11 @@ import {
 } from '@ant-design/icons';
 import { NAV as BASE_NAV, HOME_GROUP_KEY, HOME_GROUP_LABEL } from './nav';
 
-const STORAGE_KEY = 'claw_menu_override_v5';
-
-// 历史版本键（从新到旧）。首次加载时按序尝试迁移，迁移成功后写回 v5 并清理旧键。
-const LEGACY_STORAGE_KEYS = [
-  'claw_menu_override_v4',
-  'claw_menu_override_v3',
-  'claw_menu_override_v2',
-  'claw_menu_override_v1',
-];
-
-// ---- 图标注册表（必须声明在 loadInitial 之前！） ----
-// 注意：sanitizeNav() 在清洗时会读 ICON_REGISTRY 校验图标名，而 sanitizeNav 会被模块级
-// 初始化 `let active = loadInitial()` 触发。若把本表声明在下方，模块求值到 loadInitial 时
-// ICON_REGISTRY 仍处于 TDZ（暂时性死区），会抛 ReferenceError 并被 readOverride 的 catch
-// 静默吞掉 —— 表现为「保存过图标的用户，每次刷新配置全部丢失且页面不报错」。
-// 因此图标相关的常量一律前置，下方只允许放函数声明。
+// ---- 图标注册表（必须声明在任何调用之前！） ----
+// 注意：sanitizeNav() 在清洗时会读 ICON_REGISTRY 校验图标名，而 sanitizeNav 可能在本模块
+// 求值阶段就被触发（例如 ICON_BY_KEY 的初始化）。若把本表声明在下方，求值时会撞上
+// TDZ（暂时性死区）抛 ReferenceError，且没有 try/catch 兜底 —— 表现为「保存过图标的用户，
+// 配置里的图标被无声丢弃」。因此图标相关的常量一律前置，下方只允许放函数声明。
 //
 // 用户在「菜单管理」里为菜单挑图标时，保存的是这里的键名（字符串，可序列化）。
 export const ICON_REGISTRY = {
@@ -79,74 +67,12 @@ export const ICON_BY_KEY = (() => {
   return map;
 })();
 
-// ---- 覆盖状态（模块级单例） ----
+// ---- 覆盖状态（模块级单例，仅内存 / 会话级） ----
 // active === null 表示「无自定义覆盖」；否则为已清洗的用户覆盖（不含图标函数）。
-let active = loadInitial();
+// 菜单布局的持久化已移交后端（/v1/admin/menu-layout），这里不再读写 localStorage：
+// 刷新后回到 null，由后端下发的 remoteNav 决定侧边栏。
+let active = null;
 const listeners = new Set();
-
-/**
- * 读取 localStorage 中的覆盖数据；无 v5 数据时迁移历史版本。
- * @returns {Array|null} 清洗后的覆盖数组，无有效数据时返回 null
- */
-function loadInitial() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const clean = readOverride(raw);
-      if (clean && clean.length) return clean;
-    }
-  } catch (e) {
-    /* localStorage 不可用（隐私模式等），忽略 */
-  }
-  return migrateLegacy();
-}
-
-/**
- * 解析并清洗一段覆盖 JSON 字符串。
- * @param {string} raw JSON 字符串
- * @returns {Array|null} 清洗后的数组；数据损坏或为空时返回 null
- */
-function readOverride(raw) {
-  try {
-    const parsed = JSON.parse(raw);
-    const clean = sanitizeNav(parsed);
-    return clean && clean.length ? clean : null;
-  } catch (e) {
-    // 不再静默吞异常：这里一旦出错，用户的整份菜单配置会被无声丢弃、回退默认菜单，
-    // 页面却毫无提示（曾导致「明明保存了，刷新就没了」）。留下线索便于定位。
-    console.warn('[menuStore] 读取菜单覆盖失败，已回退默认菜单：', e);
-    return null;
-  }
-}
-
-/**
- * 迁移历史版本的覆盖数据：取最新的一个有效旧覆盖，直接沿用为 v5 覆盖（只换存储键，不清空内容）。
- * 不做「合并后落盘」，保持覆盖体积最小 —— 与 BASE_NAV 的合并留给 getNav() 在读取时完成，
- * 这样 nav.js 以后再新增菜单项，仍然能自动出现在用户的菜单里。
- * @returns {Array|null} 迁移后的覆盖数组；无历史数据时返回 null
- */
-function migrateLegacy() {
-  for (const key of LEGACY_STORAGE_KEYS) {
-    let raw = null;
-    try {
-      raw = localStorage.getItem(key);
-    } catch (e) {
-      return null;
-    }
-    if (!raw) continue;
-    const old = readOverride(raw);
-    if (!old) continue;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(old));
-      // 迁移完成，清理旧键，避免两份数据并存造成歧义
-      for (const k of LEGACY_STORAGE_KEYS) localStorage.removeItem(k);
-    } catch (e) {
-      /* 写入失败不影响本次会话使用 */
-    }
-    return old;
-  }
-  return null;
-}
 
 // 清洗/修复任意来源的导航结构，保证渲染层永不被坏数据击垮：
 // - 必须返回数组；
@@ -322,34 +248,24 @@ export function getNav() {
 }
 
 /**
- * 保存用户覆盖并通知所有订阅者。
+ * 设置会话内的用户覆盖并通知所有订阅者（**不落盘**）。
+ * 菜单布局的持久化请用后端 PUT /v1/admin/menu-layout 完成；
+ * 本函数只用于「本次会话内立即预览」（如菜单管理页的导入预览）。
  * @param {Array} nav 覆盖树（会先经 sanitizeNav 清洗）
  * @returns {void}
  */
 export function setNav(nav) {
   const clean = sanitizeNav(nav);
   active = clean.length ? clean : null;
-  try {
-    if (active) localStorage.setItem(STORAGE_KEY, JSON.stringify(active));
-    else localStorage.removeItem(STORAGE_KEY);
-  } catch (e) {
-    /* 忽略写入失败 */
-  }
   emit();
 }
 
 /**
- * 清除用户覆盖，回到 nav.js 的默认菜单。
+ * 清除会话内的用户覆盖，回到后端菜单（无后端时回到 nav.js 的默认菜单）。
  * @returns {void}
  */
 export function resetNav() {
   active = null;
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-    for (const k of LEGACY_STORAGE_KEYS) localStorage.removeItem(k);
-  } catch (e) {
-    /* 忽略 */
-  }
   emit();
 }
 

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Tree, Card, Input, Switch, Button, Space, message, Typography, Alert, Tag, Menu,
-  Modal, Form, Select, Popconfirm, Radio, Tooltip,
+  Modal, Form, Select, Popconfirm, Radio, Tooltip, Spin,
 } from 'antd';
 import {
   PlusOutlined, SaveOutlined, ReloadOutlined, DeleteOutlined, EyeInvisibleOutlined,
@@ -10,79 +10,138 @@ import {
 import { useTranslation } from 'react-i18next';
 import PageCard from '../components/PageCard';
 import {
-  useMenuNav, getNav, setNav, resetNav, sanitizeNav, filterHidden,
-  resolveIcon, ICON_OPTIONS,
+  sanitizeNav, filterHidden, resolveIcon, ICON_OPTIONS,
 } from '../menuStore';
-import { ROUTES, navLabel } from '../nav';
+import { NAV, ROUTES, navLabel } from '../nav';
 import api from '../api';
+import { loadPermissions } from '../permStore';
 import { Perm } from '../components/Perm';
 
-/** 拍平权限目录树为数组（仅用于收集后端已存在的 code 集合）。 */
-const flattenCatalog = (nodes, acc = []) => {
-  (nodes || []).forEach((n) => {
-    acc.push(n);
-    if (n.children) flattenCatalog(n.children, acc);
-  });
-  return acc;
+// 后端菜单布局接口（唯一数据源）：GET / PUT /v1/admin/menu-layout
+const LAYOUT_URL = '/v1/admin/menu-layout';
+
+// 内置默认菜单的 key -> label 索引。
+// 用途一：后端尚未存 name（空显示名）时兜底成内置 i18n key，避免侧边栏出现空白菜单；
+// 用途二：「恢复默认」时把内置树原样推给后端。
+const BASE_LABEL_BY_KEY = (() => {
+  const map = new Map();
+  const walk = (nodes) => {
+    for (const n of nodes || []) {
+      if (typeof n.label === 'string') map.set(n.key, n.label);
+      if (n.children) walk(n.children);
+    }
+  };
+  walk(NAV);
+  return map;
+})();
+
+/**
+ * 权限码 -> 菜单 key：'menu:orders' -> 'orders'。
+ * @param {string} code 权限码
+ * @returns {string} 菜单 key（无 'menu:' 前缀时原样返回）
+ */
+const navKeyOf = (code) => {
+  const s = typeof code === 'string' ? code : String(code ?? '');
+  return s.startsWith('menu:') ? s.slice(5) : s;
 };
 
 /**
- * 把编辑态 nav 树拍平为「后端权限目录可同步项」。
- * 仅同步后端 catalog 中真实存在的 menu:{key} 节点（跳过用户自建分组 grp_*），
- * 且不会用 i18n key 覆盖后端目录的显示名（只有用户改名后的明文才同步 name）。
+ * 把后端返回的扁平布局（按 sortNo 有序）还原成 nav 形状的树。
+ * - parentCode 无法解析（父级不存在 / 成环 / 指向自己）的项一律降级为根，绝不产生死循环；
+ * - 同层按 sortNo 升序，sortNo 缺失时退回后端数组顺序（即「保持原序」）。
+ * @param {Array} items 后端 GET /v1/admin/menu-layout 的扁平列表
+ * @returns {Array} nav 形状的导航树
+ */
+const buildNavFromItems = (items) => {
+  const list = Array.isArray(items) ? items : [];
+  const nodes = new Map(); // key -> nav 节点
+  const parentOf = new Map(); // key -> 父级 key | null
+  const metaByKey = new Map(); // key -> { sortNo, order }
+
+  list.forEach((it, idx) => {
+    if (!it || typeof it !== 'object') return;
+    const key = navKeyOf(it.code);
+    if (!key || nodes.has(key)) return; // 无 key / 重复 key 直接丢弃
+    const node = { key, label: it.name || BASE_LABEL_BY_KEY.get(key) || key };
+    // path 即使是空字符串也保留：空路径 = 分组，与 sanitizeNav 的语义保持一致
+    if (typeof it.path === 'string') node.path = it.path;
+    if (typeof it.icon === 'string') node.icon = it.icon;
+    if (it.hidden === true) node.hidden = true;
+    if (it.custom === true) node.custom = true;
+    nodes.set(key, node);
+    const pk = it.parentCode ? navKeyOf(it.parentCode) : null;
+    parentOf.set(key, pk && pk !== key ? pk : null);
+    const sortNo = Number(it.sortNo);
+    metaByKey.set(key, { sortNo: Number.isFinite(sortNo) ? sortNo : Number.MAX_SAFE_INTEGER, order: idx });
+  });
+
+  // 沿 parentCode 上溯，检测该节点所在的挂载链是否成环
+  const inCycle = (key) => {
+    const seen = new Set();
+    let cur = key;
+    while (cur) {
+      if (seen.has(cur)) return true;
+      seen.add(cur);
+      cur = nodes.has(cur) ? (parentOf.get(cur) || null) : null;
+    }
+    return false;
+  };
+
+  const roots = [];
+  nodes.forEach((node, key) => {
+    const pk = parentOf.get(key) || null;
+    const parent = pk && !inCycle(key) ? nodes.get(pk) : null;
+    if (parent) {
+      if (!parent.children) parent.children = [];
+      parent.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+
+  const sortLevel = (arr) => {
+    const rankOf = (n) => metaByKey.get(n.key) || { sortNo: 0, order: 0 };
+    arr.sort((a, b) => {
+      const ra = rankOf(a);
+      const rb = rankOf(b);
+      return (ra.sortNo - rb.sortNo) || (ra.order - rb.order);
+    });
+    for (const n of arr) if (n.children) sortLevel(n.children);
+  };
+  sortLevel(roots);
+  return roots;
+};
+
+/**
+ * 把编辑态 treeData 拍平为后端 PUT /v1/admin/menu-layout 需要的 items。
+ * - code = `menu:${key}`，parentCode = 父级存在时 `menu:${parentKey}`，否则 null；
+ * - sortNo 按同层下标 (idx + 1) * 10，保证后续插入仍有空隙；
+ * - name 仅在显示名不是 i18n key（不以 'nav:' 开头）时才下发 —— 否则后端沿用已存显示名，
+ *   避免把 'nav:item.orders' 这类内部 key 写进后端覆盖掉真实文案。
  * @param {Array} nodes 编辑态 treeData（含 dataRef）
  * @param {string|null} parentKey 父级 key
- * @param {boolean} parentCustom 父级是否自建分组
  * @param {Array} out 累加器
- * @returns {Array} 同步项列表
+ * @returns {Array} 布局项列表
  */
-const flattenForCatalogSync = (nodes, parentKey, parentCustom, out = []) => {
+const flattenTreeForLayout = (nodes, parentKey = null, out = []) => {
   (nodes || []).forEach((n, idx) => {
-    const key = n.key;
-    const isCustom = n.dataRef?.custom === true;
-    const label = navLabel(n.dataRef || n);
-    const isI18nKey = typeof label === 'string' && label.startsWith('nav:');
-    out.push({
-      code: `menu:${key}`,
+    const dataRef = n.dataRef || n;
+    const rawLabel = dataRef.label;
+    const isI18nKey = typeof rawLabel === 'string' && rawLabel.startsWith('nav:');
+    const item = {
+      code: `menu:${n.key}`,
+      parentCode: parentKey ? `menu:${parentKey}` : null,
       sortNo: (idx + 1) * 10,
-      parentCode: parentKey && !parentCustom ? `menu:${parentKey}` : null,
-      path: n.dataRef?.path ?? null,
-      icon: typeof n.dataRef?.icon === 'string' ? n.dataRef.icon : null,
-      name: isI18nKey ? undefined : (n.dataRef?.label ?? null),
-    });
-    if (n.children) flattenForCatalogSync(n.children, key, isCustom, out);
+      path: typeof dataRef.path === 'string' ? dataRef.path : null,
+      icon: typeof dataRef.icon === 'string' ? dataRef.icon : null,
+      hidden: dataRef.hidden === true,
+      custom: dataRef.custom === true,
+    };
+    if (!isI18nKey) item.name = typeof rawLabel === 'string' ? rawLabel : null;
+    out.push(item);
+    if (n.children && n.children.length) flattenTreeForLayout(n.children, n.key, out);
   });
   return out;
-};
-
-/**
- * 保存本地布局后，把菜单改名 / 路径 / 排序 / 图标 / 父级同步到后端权限目录（PUT /catalog/{code}）。
- * 后端不可达 / 目录接口缺失时降级：仅本地生效，不影响 localStorage 保存结果。
- * @param {Array} tree 编辑态 treeData
- * @returns {Promise<{synced:number, failedCount:number}>}
- */
-const syncToBackend = async (tree) => {
-  let catalog;
-  try {
-    catalog = await api.get('/v1/admin/permissions/catalog');
-  } catch (e) {
-    return { synced: 0, failedCount: 0, skipped: e };
-  }
-  if (!Array.isArray(catalog)) return { synced: 0, failedCount: 0 };
-  const codes = new Set(flattenCatalog(catalog).map((n) => n.code));
-  const entries = flattenForCatalogSync(tree, null, false).filter((e) => codes.has(e.code));
-  if (!entries.length) return { synced: 0, failedCount: 0 };
-  const results = await Promise.allSettled(entries.map((e) => {
-    const body = {};
-    if (e.name != null) body.name = e.name;
-    if (e.path != null) body.path = e.path;
-    body.sortNo = e.sortNo;
-    if (e.icon != null) body.icon = e.icon;
-    body.parentCode = e.parentCode;
-    return api.put(`/v1/admin/permissions/catalog/${encodeURIComponent(e.code)}`, body);
-  }));
-  const failedCount = results.filter((r) => r.status === 'rejected').length;
-  return { synced: results.length - failedCount, failedCount };
 };
 
 const { Text, Paragraph } = Typography;
@@ -127,6 +186,10 @@ const rebuildNav = (tree) =>
     else delete n.children;
     return n;
   });
+
+// 「已保存态」快照：与 rebuildNav(tree) 比对即可判定是否有未保存改动。
+// 取代原先与 localStorage（getNav()）比对的写法 —— 现在布局的唯一数据源在后端。
+const snapshotOf = (tree) => JSON.stringify(rebuildNav(tree));
 
 const findNode = (tree, key) => {
   for (const t of tree) {
@@ -282,8 +345,12 @@ const MiniPreview = ({ nav }) => {
 
 export default function MenuManager() {
   const { t, i18n } = useTranslation();
-  const liveNav = useMenuNav(); // 订阅，保存后即时反映
-  const [tree, setTree] = useState(() => toTreeData(getNav()));
+  // 编辑态树（内存态）。初始为空，挂载后由 GET /v1/admin/menu-layout 填充。
+  const [tree, setTree] = useState([]);
+  // 已保存态快照（JSON 字符串），用于判定 dirty
+  const [savedSnapshot, setSavedSnapshot] = useState('[]');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [selectedKey, setSelectedKey] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
   const [addKind, setAddKind] = useState('page');
@@ -302,33 +369,68 @@ export default function MenuManager() {
     ...collectGroupOptions(displayTree),
   ], [displayTree, t, i18n.language]);
 
-  const dirty = useMemo(
-    () => JSON.stringify(rebuildNav(tree)) !== JSON.stringify(getNav()),
-    [tree, liveNav]
-  );
+  const dirty = useMemo(() => snapshotOf(tree) !== savedSnapshot, [tree, savedSnapshot]);
 
+  // 用后端扁平布局重建编辑树，并把快照同步为「已保存态」
+  const applyItems = useCallback((items) => {
+    const nextTree = toTreeData(buildNavFromItems(items));
+    setTree(nextTree);
+    setSavedSnapshot(snapshotOf(nextTree));
+  }, []);
+
+  // 挂载时从后端读取菜单布局（唯一数据源）。
+  // 依赖刻意只留挂载这一次：语言切换会让 t 变更，若因此重新加载会把用户未保存的编辑冲掉。
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    api
+      .get(LAYOUT_URL)
+      .then((items) => { if (alive) applyItems(items); })
+      .catch((e) => {
+        if (alive) message.error(t('system:menuManager.msg.loadFailed', { msg: e.message }));
+      })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * 保存：整棵树一次性原子提交到后端（PUT /v1/admin/menu-layout），
+   * 成功后重新拉取「我的权限」刷新侧边栏，再回读布局重置快照。
+   * @returns {Promise<void>}
+   */
   const save = async () => {
-    setNav(sanitizeNav(rebuildNav(tree)));
-    message.success(t('system:menuManager.msg.saved'));
-    // 本地保存成功后，把菜单改名 / 路径 / 排序 / 图标 / 父级同步到后端权限目录。
-    // 后端不可达时降级：仅本地生效（与 permStore 降级策略一致，不卡死 UI）。
+    setSaving(true);
     try {
-      const res = await syncToBackend(tree);
-      if (res.failedCount > 0) {
-        message.warning(t('system:menuManager.msg.syncPartial', { count: res.synced, failed: res.failedCount }));
-      } else if (res.synced > 0) {
-        message.success(t('system:menuManager.msg.synced', { count: res.synced }));
-      }
+      await api.put(LAYOUT_URL, { items: flattenTreeForLayout(tree) });
+      await loadPermissions(); // 侧边栏从 GET /v1/admin/permissions/mine 重新取菜单
+      applyItems(await api.get(LAYOUT_URL));
+      message.success(t('system:menuManager.msg.saved'));
     } catch (e) {
-      message.warning(t('system:menuManager.msg.syncSkipped', { msg: e.message }));
+      message.error(t('system:menuManager.msg.saveFailed', { msg: e.message }));
+    } finally {
+      setSaving(false);
     }
   };
 
-  const reset = () => {
-    resetNav();
-    setTree(toTreeData(getNav()));
-    setSelectedKey(null);
-    message.success(t('system:menuManager.msg.reset'));
+  /**
+   * 恢复默认：把 nav.js 的内置菜单整棵推给后端（后端在一个事务里 upsert，
+   * 并删除未出现在载荷里的 custom 行），再刷新权限与编辑树。
+   * @returns {Promise<void>}
+   */
+  const reset = async () => {
+    setSaving(true);
+    try {
+      await api.put(LAYOUT_URL, { items: flattenTreeForLayout(toTreeData(NAV)) });
+      await loadPermissions();
+      applyItems(await api.get(LAYOUT_URL));
+      setSelectedKey(null);
+      message.success(t('system:menuManager.msg.reset'));
+    } catch (e) {
+      message.error(t('system:menuManager.msg.resetFailed', { msg: e.message }));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const openAdd = (kind) => {
@@ -473,8 +575,8 @@ export default function MenuManager() {
         message.error(t('system:menuManager.msg.importEmpty'));
         return;
       }
-      setNav(clean);
-      setTree(toTreeData(getNav()));
+      // 仅载入编辑区（标脏），由用户点「保存布局」一次性提交到后端
+      setTree(toTreeData(clean));
       setSelectedKey(null);
       message.success(t('system:menuManager.msg.imported', { count: clean.length }));
     };
@@ -564,7 +666,15 @@ export default function MenuManager() {
             </Popconfirm>
           </Perm>
           <Perm code="menu:update">
-            <Button type="primary" icon={<SaveOutlined />} onClick={save} disabled={!dirty}>{t('action.saveLayout')}</Button>
+            <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              onClick={save}
+              disabled={!dirty}
+              loading={saving}
+            >
+              {t('action.saveLayout')}
+            </Button>
           </Perm>
           <input
             ref={fileRef}
@@ -599,14 +709,18 @@ export default function MenuManager() {
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
         {/* 左：结构编辑器 */}
         <Card className="wb-card" title={t('system:menuManager.card.structure')} style={{ flex: '1 1 420px', minWidth: 360 }}>
-          <Tree
-            blockNode
-            treeData={displayTree}
-            titleRender={titleRender}
-            onSelect={(keys) => setSelectedKey(keys[0] || null)}
-            selectedKeys={selectedKey ? [selectedKey] : []}
-            defaultExpandAll
-          />
+          {loading ? (
+            <div style={{ padding: 24, textAlign: 'center' }}><Spin /></div>
+          ) : (
+            <Tree
+              blockNode
+              treeData={displayTree}
+              titleRender={titleRender}
+              onSelect={(keys) => setSelectedKey(keys[0] || null)}
+              selectedKeys={selectedKey ? [selectedKey] : []}
+              defaultExpandAll
+            />
+          )}
           <Paragraph type="secondary" style={{ marginTop: 12, fontSize: 12 }}>
             {t('system:menuManager.hint.reorder')}
           </Paragraph>

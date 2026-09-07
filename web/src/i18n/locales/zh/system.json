@@ -234,6 +234,9 @@
     },
     "msg": {
       "saved": "已保存菜单布局，侧边栏已实时更新",
+      "loadFailed": "加载菜单布局失败：{{msg}}",
+      "saveFailed": "保存菜单布局失败：{{msg}}",
+      "resetFailed": "恢复默认菜单失败：{{msg}}",
       "reset": "已恢复默认菜单布局",
       "groupAdded": "已新增分组「{{label}}」，记得点右上角「保存布局」",
       "itemAdded": "已新增菜单项「{{label}}」，记得点右上角「保存布局」",

@@ -234,6 +234,9 @@
     },
     "msg": {
       "saved": "Menu layout saved — the sidebar is updated",
+      "loadFailed": "Failed to load the menu layout: {{msg}}",
+      "saveFailed": "Failed to save the menu layout: {{msg}}",
+      "resetFailed": "Failed to restore the default menu: {{msg}}",
       "reset": "Default menu layout restored",
       "groupAdded": "Group \"{{label}}\" added — remember to click \"Save layout\" at the top right",
       "itemAdded": "Menu item \"{{label}}\" added — remember to click \"Save layout\" at the top right",
