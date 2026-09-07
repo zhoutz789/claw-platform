@@ -151,26 +151,11 @@
       }
     }
   },
-  "menuPermission": {
-    "title": "Menu permissions (RuoYi-style one-click configuration)",
-    "desc": "Ticking a menu grants the role the matching permission; when you add a feature you only need to register its menu here and then assign it to roles, which keeps a large system easy to extend. The current catalogue comes from the backend permission catalogue (permission table).",
-    "cardTitle": "Menu permission tree",
-    "empty": "No permission catalogue available (backend not connected yet)",
-    "save": "Save permissions",
-    "roleLabel": "Role",
-    "selectRole": "Select role",
-    "msg": {
-      "loadFailed": "Failed to load roles / permission catalogue: {{msg}}",
-      "loadRoleFailed": "Failed to load role permissions: {{msg}}",
-      "saved": "Menu permissions saved for \"{{name}}\" (written to the backend)",
-      "saveFailed": "Save failed: {{msg}}"
-    }
-  },
   "menuManager": {
     "title": "Menu Manager (custom navigation)",
     "rootOption": "(as a top-level menu / root group)",
     "card": {
-      "structure": "Navigation structure (drag to sort / regroup across centres)",
+      "structure": "Navigation structure (reorder with up/down, regroup via 'Mount under')",
       "props": "Selected node properties",
       "preview": "Live preview (the sidebar you will get)"
     },
@@ -178,12 +163,11 @@
       "title": "Change your menus here — no code needed",
       "descPrefix": "The sidebar's",
       "descEmph": "show / hide / sort / rename / regroup",
-      "descMid": "is all done on this page: select a node on the left to edit its properties, use the \"Move up / Move down\" buttons on the right of a node or simply drag it, and use the plus buttons to add menu items and groups; when you are done click",
+      "descMid": "is all done on this page: select a node on the left to edit its properties, use the \"Move up / Move down\" buttons on the right of a node, or the 'Mount under' dropdown to regroup across centres, and use the plus buttons to add menu items and groups; when you are done click",
       "descEmph2": "\"Save layout\" at the top right to apply it immediately",
-      "descSuffix": "It survives a refresh and a browser restart. If you mess things up, click \"Restore defaults\" to go back to the built-in menu with one click."
+      "descSuffix": "The layout is stored on the server, so it survives a refresh, a browser restart and even another machine. If you mess things up, click \"Restore defaults\" to go back to the built-in menu with one click."
     },
     "hint": {
-      "drag": "Tip: use the \"Move up / Move down\" buttons on the right of a node to reorder within the same group; drag a node onto another group's title to regroup it across centres (e.g. move a page from \"Operations\" to \"System\").",
       "reorder": "Tip: select a node, then use the up/down buttons to reorder within its group, or the 'Mount under' dropdown to move it across groups. Drag-and-drop is no longer supported."
     },
     "prop": {
