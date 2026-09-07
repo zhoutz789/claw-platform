@@ -93,6 +93,10 @@ public class AdminPermissionController {
             if (!PTYPE_MENU.equalsIgnoreCase(p.getPtype())) {
                 continue;
             }
+            // V80：菜单布局标志 —— hidden 的节点（连同整棵子树）不进任何人的菜单树。
+            if (Boolean.TRUE.equals(p.getHidden())) {
+                continue;
+            }
             if (p.getParentCode() == null || !byCode.containsKey(p.getParentCode())) {
                 roots.add(p);
             } else {
@@ -118,6 +122,10 @@ public class AdminPermissionController {
      */
     private MenuNode toMenuNode(Permission p, Set<String> permissions, boolean allGranted,
                                 Map<String, List<Permission>> childrenMap, Set<String> visiting) {
+        // V80：菜单布局标志 —— 隐藏节点在递归前就地返回 null，整棵子树一并剔除。
+        if (Boolean.TRUE.equals(p.getHidden())) {
+            return null;
+        }
         if (!visiting.add(p.getCode())) {
             // 目录数据成环（A 的 parent 是 B、B 的 parent 是 A）：就地截断，避免栈溢出。
             log.warn("权限目录存在环，已截断：code={}", p.getCode());
@@ -169,7 +177,8 @@ public class AdminPermissionController {
 
     private PermissionNode toNode(Permission p, List<PermissionNode> children) {
         return new PermissionNode(p.getId(), p.getCode(), p.getName(), p.getPtype(), p.getParentCode(),
-                p.getPath(), p.getSortNo(), p.getIcon(), children);
+                p.getPath(), p.getSortNo(), p.getIcon(), children,
+                Boolean.TRUE.equals(p.getHidden()), Boolean.TRUE.equals(p.getCustom()));
     }
 
     private void fill(Map<String, List<PermissionNode>> childrenMap, List<PermissionNode> nodes) {
@@ -179,7 +188,7 @@ public class AdminPermissionController {
                 kids.sort(Comparator.comparingInt(k -> k.sortNo() == null ? 0 : k.sortNo()));
                 fill(childrenMap, kids);
                 nodes.set(nodes.indexOf(n), new PermissionNode(n.id(), n.code(), n.name(), n.ptype(),
-                        n.parentCode(), n.path(), n.sortNo(), n.icon(), kids));
+                        n.parentCode(), n.path(), n.sortNo(), n.icon(), kids, n.hidden(), n.custom()));
             }
         }
     }
@@ -211,6 +220,9 @@ public class AdminPermissionController {
         if (req.path() != null) p.setPath(req.path());
         if (req.sortNo() != null) p.setSortNo(req.sortNo());
         if (req.icon() != null) p.setIcon(req.icon());
+        // V80：菜单布局标志位（可空 = 不改）
+        if (req.hidden() != null) p.setHidden(req.hidden());
+        if (req.custom() != null) p.setCustom(req.custom());
         p = permissionRepository.save(p);
         return ApiResult.ok(toNode(p, null));
     }

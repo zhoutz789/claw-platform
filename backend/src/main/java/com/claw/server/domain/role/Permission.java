@@ -36,6 +36,14 @@ public class Permission {
     private Integer sortNo = 0;
     private String icon;
 
+    /** 菜单布局标志：TRUE = 该菜单项在菜单管理 / 侧边栏中隐藏（连同整棵子树不下发）。V80 新增。 */
+    @Builder.Default
+    private Boolean hidden = false;
+
+    /** 菜单布局标志：TRUE = 用户自建菜单项（可被菜单布局批量保存接口回收）。V80 新增。 */
+    @Builder.Default
+    private Boolean custom = false;
+
     /** 说明文案（多语 key 或纯文本），用于菜单/按钮 tooltip 与后台展示。V39 新增。 */
     @Column(columnDefinition = "text")
     private String description;

@@ -11,7 +11,8 @@ public final class PermissionDtos {
 
     /** 权限目录树节点（code = 权限码），供权限矩阵 / 菜单管理页消费。 */
     public record PermissionNode(Long id, String code, String name, String ptype, String parentCode,
-                                 String path, Integer sortNo, String icon, List<PermissionNode> children) {
+                                 String path, Integer sortNo, String icon, List<PermissionNode> children,
+                                 Boolean hidden, Boolean custom) {
     }
 
     /**
@@ -39,9 +40,18 @@ public final class PermissionDtos {
     public record SetRolePermissionReq(List<RolePermissionItem> items) {
     }
 
-    /** 目录项增改。 */
+    /** 目录项增改。hidden / custom 为 V80 新增的菜单布局标志位（可空 = 不改）。 */
     public record UpsertPermission(String code, String name, String ptype, String parentCode, String path,
-                                   Integer sortNo, String icon) {
+                                   Integer sortNo, String icon, Boolean hidden, Boolean custom) {
+    }
+
+    /** 菜单布局单项（后端持久化视角：整棵菜单的扁平列表，父子关系用 parentCode 表达）。V80 新增。 */
+    public record MenuLayoutItem(String code, String parentCode, String name, String path,
+                                 String icon, Integer sortNo, Boolean hidden, Boolean custom) {
+    }
+
+    /** 菜单布局批量保存请求：一次提交整张菜单（原子覆盖）。V80 新增。 */
+    public record MenuLayoutSaveReq(List<MenuLayoutItem> items) {
     }
 
     /**
