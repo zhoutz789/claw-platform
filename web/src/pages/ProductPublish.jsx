@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Card, Form, Input, InputNumber, Select, Button, Upload, Switch, Alert, Typography,
   Space, Divider, message,
@@ -6,19 +6,32 @@ import {
 import { UploadOutlined, VideoCameraOutlined, LinkOutlined, PlusOutlined } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import api from '../api';
+import { categoryTree } from '../api/category';
 import { useTranslation } from 'react-i18next';
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
-// 类目（与后端 AssetType 枚举对齐：EV / BATTERY / CHARGER / DRONE / PV_STATION）
-const CATEGORIES = [
+// 资产类型（与后端 AssetType 枚举对齐：VEHICLE / EV / BATTERY / CHARGER / PV_STATION / DRONE）
+const ASSET_TYPES = [
+  { label: '车辆', value: 'VEHICLE' },
   { label: '电动车', value: 'EV' },
   { label: '电池', value: 'BATTERY' },
   { label: '充电桩', value: 'CHARGER' },
-  { label: '无人机', value: 'DRONE' },
   { label: '光伏站', value: 'PV_STATION' },
+  { label: '无人机', value: 'DRONE' },
 ];
+
+// 把后端「类别管理」多级分类树拍扁为 Select 选项：label 展示「父 / 子」全路径，value 存叶子分类名
+// （products.category 为自由文本字段，存分类名即可与产品中心展示对齐；如需严格外键关联可后续改为存 categoryId）。
+const flattenCategories = (nodes, prefix = '') =>
+  (nodes || []).flatMap((n) => {
+    const label = prefix ? `${prefix} / ${n.name}` : n.name;
+    return [
+      { value: n.name, label },
+      ...flattenCategories(n.children, label),
+    ];
+  });
 
 // 发布商品（京东 / 淘宝式）：信息丰富的发布表单，全部字段真实写入后端。
 export default function ProductPublish() {  const { t } = useTranslation('common');
@@ -37,6 +50,11 @@ export default function ProductPublish() {  const { t } = useTranslation('common
   const [submitting, setSubmitting] = useState(false);
   const [shareLink, setShareLink] = useState('');
 
+  // 「类别管理」多级分类树（发布商品时选用，数据源由旧的 AssetType 枚举改为最新「类别管理」树）
+  const [categories, setCategories] = useState([]);
+  const [catLoading, setCatLoading] = useState(false);
+  const catOptions = useMemo(() => flattenCategories(categories), [categories]);
+
   // 加载厂家列表（发布商品需归属某个厂家）
   useEffect(() => {
     let alive = true;
@@ -49,6 +67,17 @@ export default function ProductPublish() {  const { t } = useTranslation('common
       })
       .catch(() => { /* 后端未就绪时静默，表单仍可填写 */ })
       .finally(() => { if (alive) setLoadingMfr(false); });
+    return () => { alive = false; };
+  }, []);
+
+  // 加载「类别管理」分类树（商品发布的「商品类别」下拉数据源）
+  useEffect(() => {
+    let alive = true;
+    setCatLoading(true);
+    categoryTree()
+      .then((list) => { if (alive) setCategories(list || []); })
+      .catch(() => { /* 后端未就绪时静默，下拉为空但表单仍可提交 */ })
+      .finally(() => { if (alive) setCatLoading(false); });
     return () => { alive = false; };
   }, []);
 
@@ -106,6 +135,7 @@ export default function ProductPublish() {  const { t } = useTranslation('common
     try { v = await form.validateFields(); } catch { return; }
     if (!manufacturerId) { message.warning(t('common:m377')); return; }
     if (!v.category) { message.warning(t('common:m378')); return; }
+    if (!v.assetType) { message.warning('请先选择资产类型'); return; }
 
     setSubmitting(true);
     try {
@@ -118,9 +148,9 @@ export default function ProductPublish() {  const { t } = useTranslation('common
       const product = await api.post('/v1/admin/manufacturer/products', {
         manufacturerId,
         name: v.title,
-        assetType: v.category, // 类目 1:1 映射 AssetType
+        assetType: v.assetType, // 资产类型：独立枚举（VEHICLE/EV/BATTERY/CHARGER/PV_STATION/DRONE）
         brand: v.brand || '',
-        category: v.category,
+        category: v.category, // 商品类别：引用「类别管理」分类树（叶子分类名）
         model: v.model || '',
         description: v.detail || '',
         paramsJson: JSON.stringify(params),
@@ -192,8 +222,11 @@ export default function ProductPublish() {  const { t } = useTranslation('common
             <Form.Item label={t('common:m90')} name="brand" style={{ minWidth: 160 }}>
               <Input placeholder={t('common:m388')} />
             </Form.Item>
-            <Form.Item label={t('common:m389')} name="category" rules={[{ required: true, message: t('common:m378') }]} style={{ minWidth: 160 }}>
-              <Select options={CATEGORIES} placeholder={t('common:m390')} />
+            <Form.Item label={t('common:m389')} name="category" rules={[{ required: true, message: t('common:m378') }]} style={{ minWidth: 200 }}>
+              <Select loading={catLoading} options={catOptions} placeholder={t('common:m390')} showSearch optionFilterProp="label" />
+            </Form.Item>
+            <Form.Item label="资产类型" name="assetType" rules={[{ required: true, message: '请选择资产类型' }]} style={{ minWidth: 160 }}>
+              <Select options={ASSET_TYPES} placeholder="请选择资产类型" />
             </Form.Item>
             <Form.Item label={t('common:m136')} name="model" style={{ minWidth: 160 }}>
               <Input placeholder={t('common:m391')} />
