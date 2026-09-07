@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Card, Select, Table, Switch, Button, Space, Tag, message, Tabs, Tree, Modal, Form, Input, InputNumber } from 'antd';
+import { Card, Select, Switch, Button, Space, Tag, message, Tabs, Tree, Modal, Form, Input, InputNumber } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useFetch } from '../hooks';
@@ -34,14 +34,7 @@ const descendantCodes = (catalog, code, out = []) => {
   return out;
 };
 
-// 角色权限矩阵：把目录拍平成带层级的行（用于渲染 canRead/.../canExport 勾选）。
-function flattenMatrix(nodes, depth = 0, acc = []) {
-  (nodes || []).forEach((n) => {
-    acc.push({ code: n.code, name: n.name, ptype: n.ptype, depth });
-    if (n.children && n.children.length) flattenMatrix(n.children, depth + 1, acc);
-  });
-  return acc;
-}
+// flattenMatrix 已移除：权限矩阵现渲染为带内联开关的目录树（见 matrixTitleRender）。
 
 export default function Permission() {
   const { t } = useTranslation();
@@ -188,10 +181,10 @@ export default function Permission() {
     </Card>
   );
 
-  // ---------- 角色权限矩阵 ----------
+  // ---------- 角色权限矩阵（树形内联开关） ----------
   const { data: roles } = useFetch(() => api.get('/v1/admin/roles'));
   const [roleId, setRoleId] = useState(null);
-  const [rows, setRows] = useState([]);
+  const [permMap, setPermMap] = useState({}); // code -> { canRead, canCreate, canUpdate, canDelete, canExport, btnEnabled }
   const [scope, setScope] = useState('SELF');
   const [saving, setSaving] = useState(false);
 
@@ -201,51 +194,62 @@ export default function Permission() {
     if (!roleId) return;
     (async () => {
       const rp = await api.get(`/v1/admin/permissions/role/${roleId}`);
-      const map = {}; (rp || []).forEach((r) => { map[r.permissionCode] = r; });
-      const flat = flattenMatrix(catalog || []);
-      setRows(flat.map((n) => {
-        const cur = map[n.code];
-        return {
-          ...n,
-          canRead: !!cur?.canRead, canCreate: !!cur?.canCreate, canUpdate: !!cur?.canUpdate,
-          canDelete: !!cur?.canDelete, canExport: !!cur?.canExport,
-          btn: cur?.buttonsJson || '{}',
+      const map = {};
+      (rp || []).forEach((r) => {
+        map[r.permissionCode] = {
+          canRead: !!r.canRead, canCreate: !!r.canCreate, canUpdate: !!r.canUpdate,
+          canDelete: !!r.canDelete, canExport: !!r.canExport,
+          btnEnabled: !!(r.buttonsJson && r.buttonsJson !== '{}'),
         };
-      }));
+      });
+      setPermMap(map);
       const roleObj = (roles || []).find((r) => r.id === roleId);
       setScope(roleObj?.dataScope || 'SELF');
     })();
-  }, [roleId, catalog, roles]);
+  }, [roleId, roles]);
 
-  const toggle = (code, field) => setRows((rs) => rs.map((r) => (r.code === code ? { ...r, [field]: !r[field] } : r)));
+  const toggle = (code, field) =>
+    setPermMap((m) => ({ ...m, [code]: { ...(m[code] || {}), [field]: !m[code]?.[field] } }));
 
   const save = async () => {
     if (!roleId) return;
     setSaving(true);
     try {
-      await api.put(`/v1/admin/permissions/role/${roleId}`, {
-        items: rows.map((r) => ({
-          permissionCode: r.code, canRead: r.canRead, canCreate: r.canCreate,
-          canUpdate: r.canUpdate, canDelete: r.canDelete, canExport: r.canExport, buttonsJson: r.btn,
-        })),
+      const items = flatten(catalog).map((n) => {
+        const p = permMap[n.code] || {};
+        return {
+          permissionCode: n.code,
+          canRead: !!p.canRead, canCreate: !!p.canCreate, canUpdate: !!p.canUpdate,
+          canDelete: !!p.canDelete, canExport: !!p.canExport,
+          buttonsJson: p.btnEnabled ? '{"enabled":true}' : '{}',
+        };
       });
+      await api.put(`/v1/admin/permissions/role/${roleId}`, { items });
       await api.put(`/v1/admin/roles/${roleId}`, { dataScope: scope });
       message.success(t('system:permission.msg.saved'));
     } catch (e) { message.error(e.message); }
     finally { setSaving(false); }
   };
 
-  const cols = [
-    { title: t('system:permission.col.point'), dataIndex: 'name', render: (v, r) => <span style={{ paddingLeft: r.depth * 16 }}>
-      {r.ptype === 'BUTTON' ? <Tag color="purple">{t('system:permission.tag.button')}</Tag> : null}{v}
-      <small style={{ color: 'var(--muted)' }}> · {r.code}</small></span> },
-    { title: t('system:permission.col.read'), dataIndex: 'canRead', render: (_, r) => <Switch size="small" checked={r.canRead} onChange={() => toggle(r.code, 'canRead')} /> },
-    { title: t('system:permission.col.create'), dataIndex: 'canCreate', render: (_, r) => <Switch size="small" checked={r.canCreate} onChange={() => toggle(r.code, 'canCreate')} /> },
-    { title: t('system:permission.col.update'), dataIndex: 'canUpdate', render: (_, r) => <Switch size="small" checked={r.canUpdate} onChange={() => toggle(r.code, 'canUpdate')} /> },
-    { title: t('system:permission.col.delete'), dataIndex: 'canDelete', render: (_, r) => <Switch size="small" checked={r.canDelete} onChange={() => toggle(r.code, 'canDelete')} /> },
-    { title: t('system:permission.col.export'), dataIndex: 'canExport', render: (_, r) => <Switch size="small" checked={r.canExport} onChange={() => toggle(r.code, 'canExport')} /> },
-    { title: t('system:permission.col.buttonEnabled'), dataIndex: 'btn', render: (v, r) => <Switch size="small" checked={v && v !== '{}'} onChange={(c) => setRows((rs) => rs.map((x) => (x.code === r.code ? { ...x, btn: c ? '{"enabled":true}' : '{}' } : x)))} /> },
-  ];
+  const matrixSw = (code, field, label) => (
+    <span style={{ marginLeft: 10, whiteSpace: 'nowrap' }}>
+      <span style={{ color: 'var(--muted)', fontSize: 12 }}>{label}</span>
+      <Switch size="small" checked={!!permMap[code]?.[field]} onChange={() => toggle(code, field)} />
+    </span>
+  );
+
+  const matrixTitleRender = (node) => (
+    <span style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap' }}>
+      <span>{node.title}</span>
+      {node.ptype === 'BUTTON' && <Tag color="purple" style={{ marginLeft: 6 }}>{t('system:permission.tag.button')}</Tag>}
+      {matrixSw(node.key, 'canRead', t('system:permission.col.read'))}
+      {matrixSw(node.key, 'canCreate', t('system:permission.col.create'))}
+      {matrixSw(node.key, 'canUpdate', t('system:permission.col.update'))}
+      {matrixSw(node.key, 'canDelete', t('system:permission.col.delete'))}
+      {matrixSw(node.key, 'canExport', t('system:permission.col.export'))}
+      {node.ptype === 'BUTTON' && matrixSw(node.key, 'btnEnabled', t('system:permission.col.buttonEnabled'))}
+    </span>
+  );
 
   const matrixTab = (
     <Card title={t('system:permission.title')} extra={
@@ -260,7 +264,7 @@ export default function Permission() {
       <p style={{ color: 'var(--muted)', fontSize: 12 }}>
         {t('system:permission.hint')}
       </p>
-      <Table rowKey="code" size="small" dataSource={rows} columns={cols} pagination={false} />
+      <Tree treeData={treeData} titleRender={matrixTitleRender} defaultExpandAll />
     </Card>
   );
 
