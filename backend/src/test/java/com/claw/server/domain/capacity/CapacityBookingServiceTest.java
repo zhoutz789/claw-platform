@@ -12,6 +12,8 @@ import com.claw.server.common.enums.RebateStatus;
 import com.claw.server.domain.ledger.Account;
 import com.claw.server.domain.ledger.AccountService;
 import com.claw.server.domain.ledger.LedgerService;
+import com.claw.server.domain.manufacturer.Product;
+import com.claw.server.domain.manufacturer.ProductRepository;
 import com.claw.server.domain.settings.SystemConfig;
 import com.claw.server.domain.settings.SystemConfigRepository;
 import com.claw.server.domain.sharedpool.RentalOrder;
@@ -68,6 +70,8 @@ class CapacityBookingServiceTest {
     private LedgerService ledgerService;
     @Mock
     private SystemConfigRepository systemConfigRepository;
+    @Mock
+    private ProductRepository productRepository;
 
     private CapacityBookingService service;
 
@@ -76,7 +80,11 @@ class CapacityBookingServiceTest {
         MockitoAnnotations.openMocks(this);
         service = new CapacityBookingService(planRepository, subscriptionRepository,
                 rebateRuleRepository, rebateSettlementRepository, rentalOrderRepository,
-                accountService, ledgerService, systemConfigRepository);
+                accountService, ledgerService, systemConfigRepository, productRepository);
+
+        // 商品默认存在（V83 建计划前的存在性校验）；需要"商品不存在"的用例自己覆盖这个桩
+        when(productRepository.findById(anyLong()))
+                .thenAnswer(inv -> Optional.of(Product.builder().id(inv.getArgument(0)).build()));
 
         // 仓储 save 原样返回（注入自增 id）
         when(planRepository.save(any(CapacityPlan.class))).thenAnswer(inv -> {
@@ -364,6 +372,27 @@ class CapacityBookingServiceTest {
         assertEquals(0, b.getAmount().compareTo(new BigDecimal("10.0000")));
         assertEquals(0, a.getRatio().compareTo(new BigDecimal("0.666667")));
         assertEquals(0, b.getRatio().compareTo(new BigDecimal("0.333333")));
+    }
+
+    @Test
+    @DisplayName("发布计划：商品不存在 / 已软删 时抛 40401 product.not.found，绝不建出悬空计划")
+    void createPlan_productMissingOrDeleted_throws40401() {
+        String desc = "风险提示：不保本；操作方法：填份数付款";
+        // 商品不存在
+        when(productRepository.findById(404L)).thenReturn(Optional.empty());
+        BizException missing = assertThrows(BizException.class, () -> service.createPlan(404L, 900L, 30,
+                new BigDecimal("10.00"), null, null, desc));
+        assertEquals(40401, missing.getCode());
+
+        // 商品存在但已软删
+        when(productRepository.findById(405L))
+                .thenReturn(Optional.of(Product.builder().id(405L).deleted(true).build()));
+        BizException deleted = assertThrows(BizException.class, () -> service.createPlan(405L, 900L, 30,
+                new BigDecimal("10.00"), null, null, desc));
+        assertEquals(40401, deleted.getCode());
+
+        // 两种情形都不允许落库任何计划
+        verify(planRepository, times(0)).save(any(CapacityPlan.class));
     }
 
     @Test

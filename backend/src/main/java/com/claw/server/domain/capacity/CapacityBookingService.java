@@ -11,6 +11,8 @@ import com.claw.server.common.enums.CapacityType;
 import com.claw.server.domain.ledger.Account;
 import com.claw.server.domain.ledger.AccountService;
 import com.claw.server.domain.ledger.LedgerService;
+import com.claw.server.domain.manufacturer.Product;
+import com.claw.server.domain.manufacturer.ProductRepository;
 import com.claw.server.domain.settings.SystemConfig;
 import com.claw.server.domain.settings.SystemConfigRepository;
 import com.claw.server.domain.sharedpool.RentalOrder;
@@ -57,6 +59,8 @@ public class CapacityBookingService {
     private final AccountService accountService;
     private final LedgerService ledgerService;
     private final SystemConfigRepository systemConfigRepository;
+    /** 商品仓储（跨域只读校验：建计划前确认 productId 指向的商品真实存在）。 */
+    private final ProductRepository productRepository;
 
     private static final BigDecimal SCALE4 = BigDecimal.valueOf(4);
 
@@ -72,7 +76,8 @@ public class CapacityBookingService {
      *   <li>{@code assetId} / {@code poolEntryId} 不再入参（V81 已置空列可空）。</li>
      * </ul>
      *
-     * @param productId   关联商品（必填，前端「容量预定」按钮联动带入，不可手改）
+     * @param productId   关联商品（必填，前端「容量预定」按钮联动带入，不可手改；
+     *                    V83 起校验该商品存在且未软删，不存在则 40401 product.not.found）
      * @param ownerUserId 计划发布方（厂家），取自登录态
      * @param totalUnits  总容量单位数（必填，&gt; 0）
      * @param unitPrice   每单位产能预付款（必填，&gt; 0）
@@ -98,6 +103,13 @@ public class CapacityBookingService {
         }
         if (planDesc == null || planDesc.isBlank()) {
             throw BizException.invalidParam("error.capacity.desc.required");
+        }
+        // 商品必须真实存在（V83）：productId 由前端「容量预定」按钮联动带入，但仍是外部输入，
+        // 不校验会允许把容量计划挂到一个不存在的商品上，客户侧打开即空数据且无法追溯。
+        // deleted = TRUE 的软删商品同样视为不存在，避免复活已下架商品。
+        Product product = productRepository.findById(productId).orElse(null);
+        if (product == null || Boolean.TRUE.equals(product.getDeleted())) {
+            throw BizException.of(40401, "product.not.found");
         }
 
         // 回佣率不再由前端传：统一取配置默认（CAPACITY_REBATE_RATE_DEFAULT，兜底 0.10），

@@ -42,9 +42,19 @@ public class CapacityController {
         return ApiResult.ok(capacityBookingService.subscribe(req.planId(), subscriberUserId, req.unitCount()));
     }
 
-    /** 我的定购记录。 */
+    /**
+     * 我的定购记录。
+     *
+     * <p>V83：订户身份 {@code subscriberUserId} 从登录态带出，不再由前端传 —— 前端拿不到
+     * 也无需知道别人的 userId，避免「改个参数就能看他人定购记录」的越权读取。
+     */
     @GetMapping("/subscriptions")
-    public ApiResult<List<CapacitySubscription>> mySubscriptions(@RequestParam Long subscriberUserId) {
+    @RequirePermission("capacity:subscribe")
+    public ApiResult<List<CapacitySubscription>> mySubscriptions() {
+        Long subscriberUserId = AuthContext.currentUserId();
+        if (subscriberUserId == null) {
+            throw BizException.of(40301, "error.permission.denied");
+        }
         return ApiResult.ok(capacityBookingService.listBySubscriber(subscriberUserId));
     }
 
@@ -54,9 +64,18 @@ public class CapacityController {
         return ApiResult.ok(capacityBookingService.findOpenPlan(assetId));
     }
 
-    /** 我的回佣结算明细。 */
+    /**
+     * 我的回佣结算明细。
+     *
+     * <p>V83：与 {@code GET /subscriptions} 同理，收款人身份取登录态，不信任前端入参。
+     */
     @GetMapping("/rebates")
-    public ApiResult<List<CapacityRebateSettlement>> myRebates(@RequestParam Long subscriberUserId) {
+    @RequirePermission("capacity:subscribe")
+    public ApiResult<List<CapacityRebateSettlement>> myRebates() {
+        Long subscriberUserId = AuthContext.currentUserId();
+        if (subscriberUserId == null) {
+            throw BizException.of(40301, "error.permission.denied");
+        }
         return ApiResult.ok(capacityBookingService.listRebatesBySubscriber(subscriberUserId));
     }
 
