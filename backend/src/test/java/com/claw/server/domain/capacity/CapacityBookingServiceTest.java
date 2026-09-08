@@ -24,6 +24,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -32,6 +34,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -39,6 +42,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -47,7 +51,9 @@ import static org.mockito.Mockito.when;
  * {@link CapacityBookingService} 纯逻辑单元测试（不依赖 Spring / 真实 PG）。
  *
  * <p>覆盖：① 发布计划（默认回佣规则）；② 定购预付（复式记账 D 定购方 / C 厂家托管）；
- * ③ 租赁完成自动回佣（按 unit_count/total_units 二次拆分 + 尾差补首条）。
+ * ③ 租赁完成自动回佣（按 unit_count/total_units 二次拆分 + 尾差补首条）；
+ * ④ V84「一订户一行、重复预定累加」：二次定购累加到同一行（不新增行）、记账只记本次增量；
+ * ⑤ V84 唯一索引冲突（并发重复预定）被拦成 40973 / HTTP 409，不外泄数据库细节。
  *
  * <p>资金域隔离：所有余额/流水写入经 {@link AccountService}/{@link LedgerService}，
  * 本测试验证服务确实通过这两个出口，而非直接持有 ledger 仓储（与 ArchUnit 铁律一致）。
@@ -314,19 +320,109 @@ class CapacityBookingServiceTest {
     }
 
     @Test
-    @DisplayName("PARALLEL：同一订户二次定购（top-up）不被 40971 拒绝，累计不超总容量")
-    void parallel_subscribe_allowsTopUp() {
+    @DisplayName("PARALLEL：首次定购新增一行（无既有 ACTIVE 行时走 insert）")
+    void parallel_subscribe_firstTimeCreatesRow() {
         CapacityPlan plan = CapacityPlan.builder().id(1L).assetId(1L).ownerUserId(900L)
                 .totalUnits(30).subscribedUnits(0).unitPrice(new BigDecimal("10.00"))
                 .capacityType(CapacityType.PARALLEL).rebateRate(new BigDecimal("0.10"))
                 .status(CapacityPlanStatus.OPEN).build();
         when(planRepository.findById(1L)).thenReturn(Optional.of(plan));
-        // 第一次已订 5 份（PARALLEL 不查 exists，只查累计份数）
-        when(subscriptionRepository.sumUnitCountByPlanIdAndSubscriberUserId(1L, 200L)).thenReturn(5L);
+        // 尚无累计份数；既有 ACTIVE 行查询未打桩 → Optional.empty()（Mockito 对 Optional 返回类型的默认值）
+        when(subscriptionRepository.sumUnitCountByPlanIdAndSubscriberUserId(1L, 200L)).thenReturn(0L);
 
-        CapacitySubscription sub = service.subscribe(1L, 200L, 5); // 5 + 5 = 10 <= 30
+        CapacitySubscription sub = service.subscribe(1L, 200L, 5);
+
         assertEquals(CapacitySubscriptionStatus.ACTIVE, sub.getStatus());
         assertEquals(5, sub.getUnitCount());
+        assertEquals(0, sub.getPrepaidAmount().compareTo(new BigDecimal("50.00")));
+    }
+
+    @Test
+    @DisplayName("PARALLEL：同一订户二次定购 → 累加到同一行（不新增行），金额/份数为两次之和，记账只记本次增量")
+    void parallel_subscribe_secondTimeAccumulatesOnSameRow() {
+        CapacityPlan plan = CapacityPlan.builder().id(1L).assetId(1L).ownerUserId(900L)
+                .totalUnits(30).subscribedUnits(5).unitPrice(new BigDecimal("10.00"))
+                .capacityType(CapacityType.PARALLEL).rebateRate(new BigDecimal("0.10"))
+                .status(CapacityPlanStatus.OPEN).build();
+        when(planRepository.findById(1L)).thenReturn(Optional.of(plan));
+        // 第一次已订 5 份
+        when(subscriptionRepository.sumUnitCountByPlanIdAndSubscriberUserId(1L, 200L)).thenReturn(5L);
+        CapacitySubscription existing = CapacitySubscription.builder().id(100L).planId(1L)
+                .subscriberUserId(200L).unitCount(5).prepaidAmount(new BigDecimal("50.00"))
+                .status(CapacitySubscriptionStatus.ACTIVE).build();
+        when(subscriptionRepository.findByPlanIdAndSubscriberUserIdAndStatusAndDeletedFalse(
+                1L, 200L, CapacitySubscriptionStatus.ACTIVE)).thenReturn(Optional.of(existing));
+
+        CapacitySubscription sub = service.subscribe(1L, 200L, 3);
+
+        // ① 累加到既有行：还是 id=100 那一行
+        assertEquals(100L, sub.getId());
+        // ② 份数 = 5 + 3 = 8；金额 = 50.00 + 30.00 = 80.00
+        assertEquals(8, sub.getUnitCount());
+        assertEquals(0, sub.getPrepaidAmount().compareTo(new BigDecimal("80.00")));
+        assertEquals(CapacitySubscriptionStatus.ACTIVE, sub.getStatus());
+        assertNotNull(sub.getPaidAt());
+        // ③ 表里仍只有 1 行：所有 save 过的实体去重后只有一个 id
+        ArgumentCaptor<CapacitySubscription> subCap = ArgumentCaptor.forClass(CapacitySubscription.class);
+        verify(subscriptionRepository, atLeastOnce()).save(subCap.capture());
+        assertEquals(1, subCap.getAllValues().stream()
+                .map(CapacitySubscription::getId)
+                .distinct()
+                .count());
+
+        // ④ 记账金额 = 本次增量 10.00 × 3 = 30.00，不是累加后的 80.00（历史部分上次已划转）
+        ArgumentCaptor<List<LedgerRequests.Entry>> cap = ArgumentCaptor.forClass(List.class);
+        verify(ledgerService).postEntries(eq(BizType.CAPACITY_SUBSCRIPTION), eq("CAPSUB-100"), cap.capture());
+        List<LedgerRequests.Entry> entries = cap.getValue();
+        assertEquals(2, entries.size());
+        assertEquals(LedgerRequests.Direction.D, entries.get(0).direction());
+        assertEquals(LedgerRequests.Direction.C, entries.get(1).direction());
+        assertEquals(0, entries.get(0).amount().compareTo(new BigDecimal("30.00")));
+        assertEquals(0, entries.get(1).amount().compareTo(new BigDecimal("30.00")));
+
+        // ⑤ 计划进度只加本次增量：5 + 3 = 8
+        assertEquals(8, plan.getSubscribedUnits());
+    }
+
+    @Test
+    @DisplayName("PARALLEL：累加后超出总容量仍抛 40972")
+    void parallel_subscribe_accumulateExceedsCapacity_rejected() {
+        CapacityPlan plan = CapacityPlan.builder().id(1L).assetId(1L).ownerUserId(900L)
+                .totalUnits(30).subscribedUnits(5).unitPrice(new BigDecimal("10.00"))
+                .capacityType(CapacityType.PARALLEL).rebateRate(new BigDecimal("0.10"))
+                .status(CapacityPlanStatus.OPEN).build();
+        when(planRepository.findById(1L)).thenReturn(Optional.of(plan));
+        when(subscriptionRepository.sumUnitCountByPlanIdAndSubscriberUserId(1L, 200L)).thenReturn(5L);
+
+        // 已订 5 份 + 本次 30 份 = 35 > 30
+        BizException ex = assertThrows(BizException.class, () -> service.subscribe(1L, 200L, 30));
+        assertEquals(40972, ex.getCode());
+    }
+
+    @Test
+    @DisplayName("唯一索引冲突：DataIntegrityViolationException 被转成 40973（HTTP 409），绝不 500、不吐数据库细节")
+    void subscribe_uniqueConstraintViolation_translatedTo409() {
+        CapacityPlan plan = CapacityPlan.builder().id(1L).assetId(1L).ownerUserId(900L)
+                .totalUnits(30).subscribedUnits(0).unitPrice(new BigDecimal("10.00"))
+                .capacityType(CapacityType.PARALLEL).rebateRate(new BigDecimal("0.10"))
+                .status(CapacityPlanStatus.OPEN).build();
+        when(planRepository.findById(1L)).thenReturn(Optional.of(plan));
+        when(subscriptionRepository.sumUnitCountByPlanIdAndSubscriberUserId(1L, 200L)).thenReturn(0L);
+        when(subscriptionRepository.findByPlanIdAndSubscriberUserIdAndStatusAndDeletedFalse(
+                1L, 200L, CapacitySubscriptionStatus.ACTIVE)).thenReturn(Optional.empty());
+        // 模拟并发下两个请求同时判定「无既有行」，其中一个 insert 撞 uq_cap_sub_active
+        when(subscriptionRepository.save(any(CapacitySubscription.class)))
+                .thenThrow(new DataIntegrityViolationException(
+                        "duplicate key value violates unique constraint \"uq_cap_sub_active\""));
+
+        BizException ex = assertThrows(BizException.class, () -> service.subscribe(1L, 200L, 3));
+
+        assertEquals(40973, ex.getCode());
+        assertEquals(HttpStatus.CONFLICT, ex.httpStatus());
+        // 数据库约束名/字段值绝不能出现在返回给前端的 message 里
+        assertFalse(ex.getMessage().contains("uq_cap_sub_active"));
+        assertFalse(ex.getMessage().contains("duplicate key"));
+        assertFalse(ex.getMessage().contains("plan_id"));
     }
 
     @Test

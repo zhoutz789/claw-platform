@@ -19,6 +19,7 @@ import com.claw.server.domain.sharedpool.RentalOrder;
 import com.claw.server.domain.sharedpool.RentalOrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -70,7 +71,8 @@ public class CapacityBookingService {
      * <p>相比 V71 的 9 字段全手填版本，本方法只收「使用者必须且只能自己决定」的参数：
      * <ul>
      *   <li>{@code ownerUserId} 由调用方从登录态带出（不再是请求体字段），杜绝冒用他人身份建计划；</li>
-     *   <li>{@code capacityType} 固定 {@link CapacityType#PARALLEL}（并行共享额度，允许 top-up）；</li>
+     *   <li>{@code capacityType} 固定 {@link CapacityType#PARALLEL}（并行共享额度；
+     *       V84 起重复预定走「一订户一行、累加」而非多行 top-up，见 {@link #subscribe}）；</li>
      *   <li>{@code rebateRate} 不再入参，统一取 system_config 的 CAPACITY_REBATE_RATE_DEFAULT
      *       并夹紧到 CAPACITY_REBATE_RATE_MAX，保证同类计划口径一致；</li>
      *   <li>{@code assetId} / {@code poolEntryId} 不再入参（V81 已置空列可空）。</li>
@@ -147,7 +149,21 @@ public class CapacityBookingService {
     /**
      * 用户定购容量单位：预付产能款直付厂家托管（平台不经手资金池）。
      *
-     * @return 定购记录（已落 ledger 预付单据）
+     * <p><b>V84 语义订正：一订户一行，重复预定累加。</b>
+     * V71 建的部分唯一索引 {@code uq_cap_sub_active}
+     * （{@code UNIQUE (plan_id, subscriber_user_id) WHERE deleted = FALSE AND status = 'ACTIVE'}）
+     * 已经强制「同一订户在同一计划下至多一行 ACTIVE 定购」，所以同一订户再次预定时应当
+     * <b>累加到既有那一行</b>（unit_count / prepaid_amount 相加），而不是再插一行 ——
+     * 后者必然撞唯一索引，此前正是因此直接抛裸 500 并把 PSQLException 细节吐给了前端。
+     * 此处选择改代码而不是改索引：索引已在演示/生产库生效，改索引的迁移风险远大于改
+     * 写入路径；且「我的预订」列表按「一订户一行」展示也更符合用户预期。
+     *
+     * <p>金额口径：重复预定时本次记账的金额是<b>本次新增份数对应的预付款</b>
+     * （unit_price × 本次 unit_count），<b>不是</b>累加后的总额 —— 总额里属于上一次的
+     * 部分早已在上一次记账时划转给厂家，再划一次就是双重扣款。
+     *
+     * @return 定购记录（首次预定=新增行；重复预定=累加后的<b>同一行</b>）
+     * @throws BizException 40973 error.capacity.subscription.duplicate（并发下撞唯一索引，HTTP 409）
      */
     @Transactional
     public CapacitySubscription subscribe(Long planId, Long subscriberUserId, Integer unitCount) {
@@ -159,9 +175,13 @@ public class CapacityBookingService {
         if (unitCount == null || unitCount <= 0) {
             throw BizException.invalidParam("error.capacity.unit.invalid");
         }
-        // ④ CapacityType 语义分支：
-        // SERIAL（串行独占）：至多一个定购行，重复定购直接拒绝（40971）；
-        // PARALLEL（并行共享）：允许多行 top-up，但单订户累计份数不得超总容量（40972）。
+        // ④ CapacityType 语义分支（V84 订正）：
+        // SERIAL（串行独占）：至多一个定购行，重复定购直接拒绝（40971）—— 串行容量是排他的
+        //   优先权，加份数没有业务含义，故不累加；
+        // PARALLEL（并行共享）：一订户一行，重复定购累加到既有 ACTIVE 行（不再允许多行
+        //   top-up —— 多行会撞 uq_cap_sub_active 抛 DataIntegrityViolationException，必须避免），
+        //   且单订户累计份数不得超总容量（40972）。
+        CapacitySubscription existing = null;
         if (plan.getCapacityType() == CapacityType.SERIAL) {
             if (subscriptionRepository.existsByPlanIdAndSubscriberUserIdAndDeletedFalse(planId, subscriberUserId)) {
                 throw BizException.of(40971, "error.capacity.already.subscribed");
@@ -175,41 +195,70 @@ public class CapacityBookingService {
             if (already + unitCount > plan.getTotalUnits()) {
                 throw BizException.of(40972, "error.capacity.units.exceed");
             }
+            // 定位既有 ACTIVE 行：命中 → 累加；未命中 → 新增。
+            existing = subscriptionRepository
+                    .findByPlanIdAndSubscriberUserIdAndStatusAndDeletedFalse(
+                            planId, subscriberUserId, CapacitySubscriptionStatus.ACTIVE)
+                    .orElse(null);
         }
 
+        // 本次新增份数对应的预付款（重复预定时也只是增量，不含历史已付部分）
         BigDecimal prepaid = plan.getUnitPrice().multiply(BigDecimal.valueOf(unitCount))
                 .setScale(4, RoundingMode.HALF_UP);
 
-        // 先存定购（拿 id 作幂等键），再记账
-        CapacitySubscription sub = CapacitySubscription.builder()
-                .planId(planId)
-                .subscriberUserId(subscriberUserId)
-                .unitCount(unitCount)
-                .prepaidAmount(prepaid)
-                .status(CapacitySubscriptionStatus.ACTIVE)
-                .build();
-        sub = subscriptionRepository.save(sub);
+        try {
+            CapacitySubscription sub;
+            if (existing != null) {
+                // ---- 重复预定：累加到既有行，不 insert（insert 必然撞 uq_cap_sub_active）----
+                sub = existing;
+                int baseUnits = sub.getUnitCount() == null ? 0 : sub.getUnitCount();
+                BigDecimal basePrepaid = sub.getPrepaidAmount() == null ? BigDecimal.ZERO : sub.getPrepaidAmount();
+                sub.setUnitCount(baseUnits + unitCount);
+                sub.setPrepaidAmount(basePrepaid.add(prepaid));
+            } else {
+                // ---- 首次预定：新增一行（先存拿 id 作记账幂等键）----
+                sub = subscriptionRepository.save(CapacitySubscription.builder()
+                        .planId(planId)
+                        .subscriberUserId(subscriberUserId)
+                        .unitCount(unitCount)
+                        .prepaidAmount(prepaid)
+                        .status(CapacitySubscriptionStatus.ACTIVE)
+                        .build());
+            }
 
-        // 预付产能款：借 定购方账户，贷 厂家(计划方)账户 —— 资金直付厂家托管，平台不持池
-        Long subAccountId = accountService.getOrCreateUserAccount(subscriberUserId).getId();
-        Long ownerAccountId = accountService.getOrCreateUserAccount(plan.getOwnerUserId()).getId();
-        LedgerViews.TxnResult prepaidTxn = ledgerService.postEntries(BizType.CAPACITY_SUBSCRIPTION,
-                "CAPSUB-" + sub.getId(),
-                List.of(
-                        new LedgerRequests.Entry(subAccountId, LedgerRequests.Direction.D, prepaid, "容量预订预付"),
-                        new LedgerRequests.Entry(ownerAccountId, LedgerRequests.Direction.C, prepaid, "容量预订预付(厂家托管)")
-                ));
-        sub.setLedgerTxnId(prepaidTxn.txnId().toString());
-        // V81：付款即完成（无独立收银台），记账成功后打付款时间戳。
-        sub.setPaidAt(Instant.now());
-        subscriptionRepository.save(sub);
+            // 预付产能款：借 定购方账户，贷 厂家(计划方)账户 —— 资金直付厂家托管，平台不持池。
+            // 金额恒为本笔增量 prepaid：历史部分已在上次记账时划转，不得重复划转。
+            Long subAccountId = accountService.getOrCreateUserAccount(subscriberUserId).getId();
+            Long ownerAccountId = accountService.getOrCreateUserAccount(plan.getOwnerUserId()).getId();
+            LedgerViews.TxnResult prepaidTxn = ledgerService.postEntries(BizType.CAPACITY_SUBSCRIPTION,
+                    "CAPSUB-" + sub.getId(),
+                    List.of(
+                            new LedgerRequests.Entry(subAccountId, LedgerRequests.Direction.D, prepaid, "容量预订预付"),
+                            new LedgerRequests.Entry(ownerAccountId, LedgerRequests.Direction.C, prepaid, "容量预订预付(厂家托管)")
+                    ));
+            sub.setLedgerTxnId(prepaidTxn.txnId().toString());
+            // V81：付款即完成（无独立收银台），记账成功后打付款时间戳。
+            sub.setPaidAt(Instant.now());
+            sub.setUpdatedAt(Instant.now());
+            subscriptionRepository.save(sub);
 
-        // 进度计数
-        plan.setSubscribedUnits(plan.getSubscribedUnits() + unitCount);
-        planRepository.save(plan);
+            // 进度计数：只加本次增量（不是累加后的总份数，否则历史份数会被重复计入）
+            plan.setSubscribedUnits(plan.getSubscribedUnits() + unitCount);
+            planRepository.save(plan);
 
-        log.info("容量定购 planId={} subscriber={} units={} prepaid={}", planId, subscriberUserId, unitCount, prepaid);
-        return sub;
+            log.info("容量定购 planId={} subscriber={} units={} prepaid={} 累加={} 累加后份数={}",
+                    planId, subscriberUserId, unitCount, prepaid, existing != null, sub.getUnitCount());
+            return sub;
+        } catch (DataIntegrityViolationException e) {
+            // 并发下两个请求同时判定「无既有行」并走到 insert，必有一个撞 uq_cap_sub_active。
+            // 这里必须拦成 4xx：① 绝不允许裸 500（污染告警、看起来像服务端炸了）；
+            // ② 绝不能把 e.getMessage() 透出去 —— 它含约束名与字段值（库结构细节，属信息外泄）。
+            // BizException 是 RuntimeException，抛出后 Spring 会把整个事务回滚，撞索引的
+            // 脏 session 不会被提交，这正是想要的行为。
+            log.warn("容量定购撞唯一约束（并发重复预定）planId={} subscriber={} 已拒：{}",
+                    planId, subscriberUserId, e.getClass().getSimpleName());
+            throw BizException.of(40973, "error.capacity.subscription.duplicate");
+        }
     }
 
     /**

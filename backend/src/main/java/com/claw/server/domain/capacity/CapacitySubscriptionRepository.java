@@ -17,6 +17,20 @@ public interface CapacitySubscriptionRepository extends JpaRepository<CapacitySu
 
     Optional<CapacitySubscription> findByPlanIdAndSubscriberUserIdAndDeletedFalse(Long planId, Long subscriberUserId);
 
+    /**
+     * V84：同一订户在同一计划下<b>唯一的一行 ACTIVE 定购</b>。
+     *
+     * <p>对应 V71 建的部分唯一索引 {@code uq_cap_sub_active}
+     * （{@code UNIQUE (plan_id, subscriber_user_id) WHERE deleted = FALSE AND status = 'ACTIVE'}）。
+     * 「一订户一行、重复预定累加」语义下，重复预定必须先定位到这一行做累加，
+     * 而不是再插一行（后者必然撞唯一索引）。
+     *
+     * <p>与既有的 {@link #findByPlanIdAndSubscriberUserIdAndDeletedFalse} 区别：那个不带
+     * status 条件，会把已 REFUNDED / CANCELLED 的历史行也捞出来，不能用于累加判定。
+     */
+    Optional<CapacitySubscription> findByPlanIdAndSubscriberUserIdAndStatusAndDeletedFalse(
+            Long planId, Long subscriberUserId, CapacitySubscriptionStatus status);
+
     boolean existsByPlanIdAndSubscriberUserIdAndDeletedFalse(Long planId, Long subscriberUserId);
 
     /**
