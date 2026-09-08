@@ -43,7 +43,7 @@ export default function StationConsignment() {
   // 合格证弹窗
   const [certOpen, setCertOpen] = useState(false);
   const [cert, setCert] = useState(null);
-  // 寄售入库弹窗（本站自主发起，只需设备 ID）
+  // 寄售入库弹窗（本站自主发起；支持扫码枪，设备编号 / 设备 ID 都收）
   const [inboundOpen, setInboundOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [inboundForm] = Form.useForm();
@@ -119,7 +119,11 @@ export default function StationConsignment() {
     }
     setSubmitting(true);
     try {
-      await stationConsignmentInbound(Number(String(v.deviceId).trim()));
+      // 扫码枪扫出来的是「DEV-000123」这类带前缀的编号，纯数字才当作设备主键
+      const raw = String(v.deviceInput ?? '').trim();
+      await stationConsignmentInbound(
+        /^\d+$/.test(raw) ? { deviceId: Number(raw) } : { deviceNo: raw },
+      );
       message.success('入库成功');
       setInboundOpen(false);
       load();
@@ -248,25 +252,12 @@ export default function StationConsignment() {
       >
         <Form form={inboundForm} layout="vertical" style={{ marginTop: 12 }}>
           <Form.Item
-            name="deviceId"
-            label="设备 ID / 设备编号"
+            name="deviceInput"
+            label="设备编号 / 设备 ID"
             extra="入库站点为当前登录账号所属服务站，无需选择"
-            rules={[
-              { required: true, message: '请输入设备 ID / 设备编号' },
-              {
-                validator: (_, val) => {
-                  const raw = val == null ? '' : String(val).trim();
-                  if (raw === '') return Promise.resolve();
-                  const n = Number(raw);
-                  if (!Number.isInteger(n) || n <= 0) {
-                    return Promise.reject(new Error('设备 ID 必须为正整数'));
-                  }
-                  return Promise.resolve();
-                },
-              },
-            ]}
+            rules={[{ required: true, message: '请扫码或输入设备编号 / 设备 ID' }]}
           >
-            <Input placeholder="请扫码输入或手工填写设备 ID / 设备编号" allowClear />
+            <Input placeholder="请扫码或输入设备编号 / 设备 ID" allowClear />
           </Form.Item>
         </Form>
       </Modal>

@@ -93,9 +93,17 @@ export const listMyInventory = ({
 export const getInventoryStats = ({ manufacturerId, stationId } = {}) =>
   api.get('/v1/admin/inventory/stats', { params: cleanParams({ manufacturerId, stationId }) });
 
-/** 寄售入库（服务站侧发起）：站点由登录站长作用域带出、厂家由货权字段带出，只需传设备 ID。 */
-export const stationConsignmentInbound = (deviceId) =>
-  api.post('/v1/station/consignment/inbound', { deviceId });
+/**
+ * 寄售入库（服务站侧发起）：站点由登录站长作用域带出、厂家由货权字段带出。
+ *
+ * 设备标识二选一（支持扫码枪）：
+ *  · deviceNo —— 扫码得到的设备编号（如 DEV-000123，带前缀，非纯数字）
+ *  · deviceId —— 设备纯数字主键
+ * 两个都传时后端以 deviceId 为准；axios 序列化会丢掉 undefined 的键，
+ * 所以只传其中一个时请求体里只会有一个字段。
+ */
+export const stationConsignmentInbound = ({ deviceId, deviceNo } = {}) =>
+  api.post('/v1/station/consignment/inbound', { deviceId, deviceNo });
 
 /* --------------------------------- 调拨单 --------------------------------- */
 
