@@ -230,8 +230,11 @@ public class CapacityBookingService {
             // 金额恒为本笔增量 prepaid：历史部分已在上次记账时划转，不得重复划转。
             Long subAccountId = accountService.getOrCreateUserAccount(subscriberUserId).getId();
             Long ownerAccountId = accountService.getOrCreateUserAccount(plan.getOwnerUserId()).getId();
+            // 记账幂等键必须<b>每笔付款唯一</b>：一订户一行后，重复预定复用同一 sub.getId()，
+            // 若只用 "CAPSUB-{subId}" 会被账本的幂等保护判为重复过账（40950）而付不了第二次款。
+            // 这里拼上「本次过账后的累计份数」——它随每次预定严格递增，既唯一又可重放。
             LedgerViews.TxnResult prepaidTxn = ledgerService.postEntries(BizType.CAPACITY_SUBSCRIPTION,
-                    "CAPSUB-" + sub.getId(),
+                    "CAPSUB-" + sub.getId() + "-" + sub.getUnitCount(),
                     List.of(
                             new LedgerRequests.Entry(subAccountId, LedgerRequests.Direction.D, prepaid, "容量预订预付"),
                             new LedgerRequests.Entry(ownerAccountId, LedgerRequests.Direction.C, prepaid, "容量预订预付(厂家托管)")

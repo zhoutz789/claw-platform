@@ -184,7 +184,9 @@ class CapacityBookingServiceTest {
 
         // 复式记账：1 借 1 贷，金额均为 30.00
         ArgumentCaptor<List<LedgerRequests.Entry>> cap = ArgumentCaptor.forClass(List.class);
-        verify(ledgerService).postEntries(eq(BizType.CAPACITY_SUBSCRIPTION), eq("CAPSUB-" + sub.getId()), cap.capture());
+        // 记账幂等键带累计份数后缀，保证同一订户每次付款都唯一（否则第二次付款被账本判重复过账）
+        verify(ledgerService).postEntries(eq(BizType.CAPACITY_SUBSCRIPTION),
+                eq("CAPSUB-" + sub.getId() + "-" + sub.getUnitCount()), cap.capture());
         List<LedgerRequests.Entry> entries = cap.getValue();
         assertEquals(2, entries.size());
         LedgerRequests.Entry debit = entries.get(0);
@@ -372,7 +374,8 @@ class CapacityBookingServiceTest {
 
         // ④ 记账金额 = 本次增量 10.00 × 3 = 30.00，不是累加后的 80.00（历史部分上次已划转）
         ArgumentCaptor<List<LedgerRequests.Entry>> cap = ArgumentCaptor.forClass(List.class);
-        verify(ledgerService).postEntries(eq(BizType.CAPACITY_SUBSCRIPTION), eq("CAPSUB-100"), cap.capture());
+        // 追加后累计 8 份，幂等键为 CAPSUB-100-8（唯一，不会被账本判为重复过账）
+        verify(ledgerService).postEntries(eq(BizType.CAPACITY_SUBSCRIPTION), eq("CAPSUB-100-8"), cap.capture());
         List<LedgerRequests.Entry> entries = cap.getValue();
         assertEquals(2, entries.size());
         assertEquals(LedgerRequests.Direction.D, entries.get(0).direction());
