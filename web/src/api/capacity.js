@@ -16,6 +16,20 @@ export const createPlan = (body) => api.post('/v1/admin/capacity/plans', body);
 export const listPlans = (ownerUserId) =>
   api.get('/v1/admin/capacity/plans?ownerUserId=' + ownerUserId);
 
+/**
+ * V81：按商品查询容量计划（「商品列表 → 容量预定」按钮点开即查）。
+ * 后端 GET /v1/admin/capacity/plans?productId=，返回 List，前端取第一条展示。
+ */
+export const listPlansByProduct = (productId) =>
+  api.get('/v1/admin/capacity/plans?productId=' + encodeURIComponent(productId));
+
+/**
+ * V81：查询某容量计划下的预定订单（抽屉内只读表格用）。
+ * 后端 GET /v1/admin/capacity/plans/{id}/subscriptions。
+ */
+export const listPlanSubscriptions = (planId) =>
+  api.get('/v1/admin/capacity/plans/' + encodeURIComponent(planId) + '/subscriptions');
+
 /** 订阅（定购）某一容量计划的单位数。 */
 export const subscribe = (body) => api.post('/v1/capacity/subscribe', body);
 
@@ -58,6 +72,8 @@ export const listPendingRefunds = () => api.get('/v1/admin/station-contracts/pen
 export default {
   createPlan,
   listPlans,
+  listPlansByProduct,
+  listPlanSubscriptions,
   subscribe,
   listSubscriptions,
   listOpenPlans,

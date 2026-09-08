@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Table, Button, Tag, Space, message, Spin, Empty } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
+import { Perm } from '../components/Perm';
+import CapacityPlanDrawer from '../components/CapacityPlanDrawer';
 import api from '../api';
 
 /* 商品列表（D 期）——商品 = products（厂家发布）。对照 increment3-d-goods-wizard.html 的商品列表区。 */
@@ -10,6 +12,9 @@ export default function GoodsList() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [goods, setGoods] = useState([]);
+  // 容量预定抽屉：capProduct 为当前点击的商品行，数据全部由商品 ID 联动带出。
+  const [capOpen, setCapOpen] = useState(false);
+  const [capProduct, setCapProduct] = useState(null);
 
   const load = () => {
     setLoading(true);
@@ -32,6 +37,12 @@ export default function GoodsList() {
     navigator.clipboard?.writeText(link).then(() => message.success('分享链接已复制')).catch(() => message.info(link));
   };
 
+  /** 打开容量预定抽屉：只带当前商品行进去，其余数据由接口联动。 */
+  const openCapacity = (g) => {
+    setCapProduct(g || null);
+    setCapOpen(true);
+  };
+
   return (
     <PageCard title="商品列表" extra={<Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/product-wizard')}>+ 发布商品</Button>}>
       <Spin spinning={loading}>
@@ -52,6 +63,9 @@ export default function GoodsList() {
                 <Space>
                   <Button size="small" icon={<EditOutlined />} onClick={() => navigate('/product-wizard?editId=' + g.id)}>编辑</Button>
                   <Button size="small" onClick={() => copyShare(g)}>复制分享</Button>
+                  <Perm code="mfg:capacity:view">
+                    <Button size="small" onClick={() => openCapacity(g)}>容量预定</Button>
+                  </Perm>
                   <Button size="small" danger icon={<DeleteOutlined />} onClick={() => del(g.id)}>删除</Button>
                 </Space>
               ),
@@ -59,6 +73,11 @@ export default function GoodsList() {
           ]}
         />
       </Spin>
+      <CapacityPlanDrawer
+        open={capOpen}
+        product={capProduct}
+        onClose={() => setCapOpen(false)}
+      />
     </PageCard>
   );
 }
