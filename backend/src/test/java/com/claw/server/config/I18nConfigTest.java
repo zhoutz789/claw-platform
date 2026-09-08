@@ -64,6 +64,33 @@ class I18nConfigTest {
     }
 
     /**
+     * V82 服务站寄售入库：新增的 6 个业务码必须有中文与英文文案。
+     *
+     * <p><b>为什么加这个断言：</b>{@link I18nConfig#messageSource()} 开了
+     * {@code useCodeAsDefaultMessage(true)}，缺文案时<b>不报错也不告警</b>，直接把裸
+     * {@code messageCode} 原样返回 —— 操作员看到的是
+     * {@code inventory.custody.held.by.other.station} 这种天书。新接口的错误码尤其容易漏配，
+     * 这里把「每个码都能取到非裸 key 的文案」钉成回归。
+     */
+    @Test
+    void stationConsignmentInboundCodesHaveCopy() {
+        List<String> codes = List.of(
+                "station.consignment.inbound.station_required",   // 40301 非服务站主体
+                "station.consignment.inbound.device_required",    // 10001 缺 deviceId
+                "inventory.custody.duplicate.inbound",            // 40945 本站重复入库
+                "inventory.custody.held.by.other.station",        // 40944 他站已占有
+                "inventory.owner_manufacturer.missing",           // 40943 台账缺货权方
+                "inventory.not.found");                           // 40401 设备不在台账
+
+        for (String code : codes) {
+            assertNotEquals(code, messageSource.getMessage(code, null, Locale.forLanguageTag("zh")),
+                    "messages_zh.properties 缺少 " + code + " 的中文文案（客户端会看到裸 key）");
+            assertNotEquals(code, messageSource.getMessage(code, null, Locale.ENGLISH),
+                    "messages_en.properties 缺少 " + code + " 的英文兜底文案");
+        }
+    }
+
+    /**
      * 断言：给定 {@code Accept-Language} 解析出的 locale 能取到预期文案。
      *
      * @param tag             语言标签，如 {@code zh} / {@code zh-CN}

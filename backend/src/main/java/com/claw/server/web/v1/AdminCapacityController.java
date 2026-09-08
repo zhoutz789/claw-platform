@@ -50,12 +50,23 @@ public class AdminCapacityController {
     }
 
     /**
-     * 按商品查容量计划（前端「容量预定」按钮点开即查，取第一条展示）。
+     * 查容量计划。
+     *
+     * <p>带 {@code productId} → 按商品查（前端「容量预定」按钮点开即查，取第一条展示）；
+     * 不带 → 返回<b>当前登录用户自己发布</b>的计划（只读总览页用）。
+     * 两种入口都不要求使用者手填任何 ID。
      */
     @GetMapping("/plans")
     @RequirePermission("mfg:capacity:view")
-    public ApiResult<List<CapacityPlan>> listPlans(@RequestParam Long productId) {
-        return ApiResult.ok(capacityBookingService.listPlansByProduct(productId));
+    public ApiResult<List<CapacityPlan>> listPlans(@RequestParam(required = false) Long productId) {
+        if (productId != null) {
+            return ApiResult.ok(capacityBookingService.listPlansByProduct(productId));
+        }
+        Long uid = AuthContext.currentUserId();
+        if (uid == null) {
+            return ApiResult.ok(List.of());
+        }
+        return ApiResult.ok(capacityBookingService.listPlans(uid));
     }
 
     /**

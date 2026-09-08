@@ -55,21 +55,17 @@ public class InventoryService {
     private final InventoryStatsQuery statsQuery;
 
     /**
-     * 发货至服务站：建立寄售占有权（consignment_custodies），库存转为寄售在站（Q2 占有权转移）。
+     * 批量发货至服务站（额度按<b>整批</b>校验，避免逐台放行后总量超标）。
      *
      * <p>增量 C 新增两道闸：
      * <ol>
      *   <li>{@code OrgWritableGuard} —— 服务站被平台禁用时禁止新货入站（Q7：只切新增）；</li>
      *   <li>{@code CreditLimitService} C1 —— 本次入站货值 + 已占用货值不得突破授信额度（硬阻断）。</li>
      * </ol>
-     */
-    @Transactional
-    public void shipToStation(Long deviceId, Long stationId, Long manufacturerId, Long operatorId) {
-        shipToStationBatch(List.of(deviceId), stationId, manufacturerId, operatorId);
-    }
-
-    /**
-     * 批量发货至服务站（额度按<b>整批</b>校验，避免逐台放行后总量超标）。
+     *
+     * <p>V82 起本方法是寄售入库的<b>唯一</b>写入入口（经 {@link #stationConsignmentInbound}），
+     * 不再对外提供单台重载 —— 单台发货曾以 {@code shipToStation(Long, ...)} 暴露，
+     * 那正是被下线的「厂家选站分拨」入口，留着会被后人误当成复活入口（见 git V82）。
      *
      * @throws BizException 40340 org.disabled.readonly（服务站已禁用）
      * @throws BizException 40941 credit.limit.exceeded（超出授信额度）
