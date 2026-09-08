@@ -1,15 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  App, Alert, Button, Descriptions, Modal, Select, Space, Table,
+  App, Button, Descriptions, Form, Input, Modal, Select, Space, Table,
 } from 'antd';
-import { ReloadOutlined, FileSearchOutlined, EyeOutlined } from '@ant-design/icons';
+import { ReloadOutlined, FileSearchOutlined, EyeOutlined, InboxOutlined } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import { Perm } from '../components/Perm';
 import {
   EnumTag, EMPTY, fmtTime, useSupplyOptions,
 } from '../components/supplyShared';
-import { getCertificateByDevice, getInventoryByDevice, listInventory, listMyInventory } from '../api/supplyChain';
+import {
+  getCertificateByDevice,
+  getInventoryByDevice,
+  listInventory,
+  listMyInventory,
+  stationConsignmentInbound,
+} from '../api/supplyChain';
 import { DEVICE_LIFECYCLE_LABEL } from '../enums';
 
 /**
@@ -18,6 +24,7 @@ import { DEVICE_LIFECYCLE_LABEL } from '../enums';
  * 服务站只持有「寄售占有权」，货权始终归厂家（不垫资、不持货权，只赚提成）。
  * 数据范围：用户仅可见所属 / 附近服务站库存（R2 / Q7），本页按服务站过滤查询。
  * 对接后端 AdminInventoryController：GET /admin/inventory?stationId= 与 GET /admin/inventory/device/{deviceId}。
+ * 寄售入库（POST /api/v1/station/consignment/inbound）由本站自主发起，权限码 station:consignment:inbound。
  */
 export default function StationConsignment() {
   const { t } = useTranslation(['common', 'supply']);
@@ -36,6 +43,10 @@ export default function StationConsignment() {
   // 合格证弹窗
   const [certOpen, setCertOpen] = useState(false);
   const [cert, setCert] = useState(null);
+  // 寄售入库弹窗（本站自主发起，只需设备 ID）
+  const [inboundOpen, setInboundOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [inboundForm] = Form.useForm();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -88,6 +99,34 @@ export default function StationConsignment() {
       setCert(d);
     } catch (e) {
       message.error(`${t('supply:production.cert.notFound')}（${e.message}）`);
+    }
+  };
+
+  /** 打开寄售入库弹窗：站点取登录站长作用域，无需选择。 */
+  const openInbound = () => {
+    setInboundOpen(true);
+    inboundForm.resetFields();
+  };
+
+  /** 提交寄售入库：后端按登录站长作用域落库，错误文案（额度超标 / 已被其它站占有等）原样透出。 */
+  const submitInbound = async () => {
+    let v;
+    try {
+      v = await inboundForm.validateFields();
+    } catch (err) {
+      // 校验未过：交由表单展示错误，不提示、不提交
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await stationConsignmentInbound(Number(String(v.deviceId).trim()));
+      message.success('入库成功');
+      setInboundOpen(false);
+      load();
+    } catch (e) {
+      message.error(e.message || '入库失败');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -176,14 +215,14 @@ export default function StationConsignment() {
           <Button icon={<ReloadOutlined />} onClick={load} loading={loading}>
             {t('action.refresh')}
           </Button>
+          <Perm code="station:consignment:inbound">
+            <Button type="primary" icon={<InboxOutlined />} onClick={openInbound}>
+              寄售入库
+            </Button>
+          </Perm>
         </Space>
       }
     >
-      {/* 后端本轮未提供收货接口，此处显式提示，避免用户误以为页面漏做功能 */}
-      <Perm code="station:consignment:receive">
-        <Alert type="warning" showIcon style={{ marginBottom: 12 }} message={t('supply:stationConsignment.receiveTodo')} />
-      </Perm>
-
       <Table
         rowKey="id"
         loading={loading}
@@ -193,6 +232,44 @@ export default function StationConsignment() {
         scroll={{ x: 'max-content' }}
         pagination={{ pageSize: 10, showSizeChanger: true }}
       />
+
+      {/* 寄售入库：单台设备，站点由登录站长作用域带出，厂家由设备货权带出 */}
+      <Modal
+        title="寄售入库"
+        open={inboundOpen}
+        onOk={submitInbound}
+        confirmLoading={submitting}
+        onCancel={() => setInboundOpen(false)}
+        okText="确认入库"
+        cancelText="取消"
+        destroyOnClose
+        maskClosable={!submitting}
+        width={480}
+      >
+        <Form form={inboundForm} layout="vertical" style={{ marginTop: 12 }}>
+          <Form.Item
+            name="deviceId"
+            label="设备 ID / 设备编号"
+            extra="入库站点为当前登录账号所属服务站，无需选择"
+            rules={[
+              { required: true, message: '请输入设备 ID / 设备编号' },
+              {
+                validator: (_, val) => {
+                  const raw = val == null ? '' : String(val).trim();
+                  if (raw === '') return Promise.resolve();
+                  const n = Number(raw);
+                  if (!Number.isInteger(n) || n <= 0) {
+                    return Promise.reject(new Error('设备 ID 必须为正整数'));
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
+          >
+            <Input placeholder="请扫码输入或手工填写设备 ID / 设备编号" allowClear />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       <Modal
         title={t('supply:stationConsignment.detail')}

@@ -93,8 +93,9 @@ export const listMyInventory = ({
 export const getInventoryStats = ({ manufacturerId, stationId } = {}) =>
   api.get('/v1/admin/inventory/stats', { params: cleanParams({ manufacturerId, stationId }) });
 
-/** 发货至服务站：建立寄售占有权（Q2 占有权转移点）。 */
-export const shipToStation = (body) => api.post('/v1/admin/inventory/ship', body);
+/** 寄售入库（服务站侧发起）：站点由登录站长作用域带出、厂家由货权字段带出，只需传设备 ID。 */
+export const stationConsignmentInbound = (deviceId) =>
+  api.post('/v1/station/consignment/inbound', { deviceId });
 
 /* --------------------------------- 调拨单 --------------------------------- */
 
@@ -237,7 +238,7 @@ export default {
   getInventoryByDevice,
   listMyInventory,
   getInventoryStats,
-  shipToStation,
+  stationConsignmentInbound,
   listTransfers,
   getTransfer,
   createTransfer,

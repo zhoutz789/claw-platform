@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  App, Button, Descriptions, Form, InputNumber, Modal, Select, Space, Table, Tabs,
+  App, Alert, Button, Descriptions, Modal, Select, Space, Table, Tabs,
 } from 'antd';
-import { ReloadOutlined, SendOutlined, FileSearchOutlined } from '@ant-design/icons';
+import { ReloadOutlined, FileSearchOutlined } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import { Perm } from '../components/Perm';
 import {
   EnumTag, EMPTY, fmtTime, useSupplyOptions,
 } from '../components/supplyShared';
 import {
-  getCertificateByDevice, listInventory, listMyInventory, shipToStation,
+  getCertificateByDevice, listInventory, listMyInventory,
 } from '../api/supplyChain';
 import {
   DEVICE_LIFECYCLE_LABEL, OWNERSHIP_TYPE, OWNERSHIP_TYPE_LABEL,
@@ -22,13 +22,14 @@ import {
  * 双视图：
  *   - 自有库存 OWNED_BY_MFG：货权与占有权均在厂家；
  *   - 寄售库存 CONSIGNED：货权在厂家，占有权在下挂服务站（服务站仅寄售占有，不垫资）。
- * 「发货到站」调用 /admin/inventory/ship 建立寄售占有权，是 Q2 约定的占有权转移点。
+ * 寄售入库改由服务站侧自主发起（POST /api/v1/station/consignment/inbound），
+ * 本页为厂家库存只读视图：不再提供「发货到站」，原 /admin/inventory/ship 已由后端下线。
  * 对接后端 AdminInventoryController（/api/v1/admin/inventory）。
  */
 export default function MfgInventory() {
   const { t } = useTranslation(['common', 'supply']);
   const { message } = App.useApp();
-  const { manufacturerOptions, stationOptions, productName, stationName } = useSupplyOptions();
+  const { manufacturerOptions, productName, stationName } = useSupplyOptions();
 
   const [tab, setTab] = useState('OWNED_BY_MFG');
   const [manufacturerId, setManufacturerId] = useState(undefined);
@@ -36,12 +37,6 @@ export default function MfgInventory() {
   const [loading, setLoading] = useState(false);
   // 模块三 · 自动作用域：未手选厂家时，走 /me 取当前绑定厂家的双视图（零手选出数）。
   const [autoView, setAutoView] = useState(null);
-
-  // 发货到站弹窗
-  const [shipOpen, setShipOpen] = useState(false);
-  const [shipRow, setShipRow] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [shipForm] = Form.useForm();
 
   // 合格证弹窗
   const [certOpen, setCertOpen] = useState(false);
@@ -72,37 +67,6 @@ export default function MfgInventory() {
   }, [manufacturerId, tab, message, t]);
 
   useEffect(() => { load(); }, [load]);
-
-  const openShip = (record) => {
-    setShipRow(record);
-    setShipOpen(true);
-    shipForm.resetFields();
-    shipForm.setFieldsValue({
-      deviceId: record.deviceId ?? record.assetId ?? null,
-      manufacturerId: record.ownerManufacturerId ?? manufacturerId ?? null,
-      stationId: record.holderStationId ?? null,
-    });
-  };
-
-  /** 发货到站：建立寄售占有权（货权仍归厂家）。 */
-  const submitShip = async () => {
-    const v = await shipForm.validateFields();
-    setSubmitting(true);
-    try {
-      await shipToStation({
-        deviceId: v.deviceId,
-        stationId: v.stationId,
-        manufacturerId: v.manufacturerId,
-      });
-      message.success(t('supply:mfgInventory.msg.shipped'));
-      setShipOpen(false);
-      load();
-    } catch (e) {
-      message.error(t('msg.opFailed', { msg: e.message }));
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   /** 查看合格证（生成即写库不可事后补，查不到即无）。 */
   const viewCert = async (deviceId) => {
@@ -163,15 +127,10 @@ export default function MfgInventory() {
     {
       title: t('table.actions'),
       key: '_actions',
-      width: 200,
+      width: 130,
       fixed: 'right',
       render: (_, r) => (
         <Space size="small">
-          <Perm code="mfg:transfer:create">
-            <Button size="small" type="link" icon={<SendOutlined />} onClick={() => openShip(r)}>
-              {t('supply:mfgInventory.ship')}
-            </Button>
-          </Perm>
           <Perm code="mfg:certificate:view">
             <Button
               size="small"
@@ -221,6 +180,14 @@ export default function MfgInventory() {
         </Space>
       }
     >
+      {/* 寄售入库改由服务站侧发起，本页只保留只读视图，避免厂家越权操作他人数据 */}
+      <Alert
+        type="info"
+        showIcon
+        style={{ marginBottom: 12 }}
+        message="寄售入库由服务站自主发起，厂家不再分拨到站。本页为厂家库存只读视图；需要按站点查看分布请前往『库存总览』。"
+      />
+
       <Tabs
         activeKey={tab}
         onChange={setTab}
@@ -230,41 +197,6 @@ export default function MfgInventory() {
           children: table,
         }))}
       />
-
-      {/* 发货到站：建立寄售占有权 */}
-      <Modal
-        title={t('supply:mfgInventory.ship')}
-        open={shipOpen}
-        onOk={submitShip}
-        confirmLoading={submitting}
-        onCancel={() => setShipOpen(false)}
-        destroyOnClose
-        width={520}
-      >
-        <Form form={shipForm} layout="vertical" style={{ marginTop: 12 }}>
-          <Form.Item
-            name="deviceId"
-            label={t('supply:mfgInventory.field.deviceId')}
-            rules={[{ required: true, message: t('form.required', { label: t('supply:mfgInventory.field.deviceId') }) }]}
-          >
-            <InputNumber style={{ width: '100%' }} disabled={shipRow?.deviceId != null} />
-          </Form.Item>
-          <Form.Item
-            name="manufacturerId"
-            label={t('supply:mfgInventory.field.manufacturerId')}
-            rules={[{ required: true, message: t('form.required', { label: t('supply:mfgInventory.field.manufacturerId') }) }]}
-          >
-            <Select showSearch optionFilterProp="label" allowClear options={manufacturerOptions} />
-          </Form.Item>
-          <Form.Item
-            name="stationId"
-            label={t('supply:mfgInventory.field.stationId')}
-            rules={[{ required: true, message: t('form.required', { label: t('supply:mfgInventory.field.stationId') }) }]}
-          >
-            <Select showSearch optionFilterProp="label" allowClear options={stationOptions} />
-          </Form.Item>
-        </Form>
-      </Modal>
 
       {/* 合格证 */}
       <Modal
