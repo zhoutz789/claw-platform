@@ -83,11 +83,23 @@ public final class StationRequests {
     /**
      * V82 · 服务站寄售入库（POST /api/v1/station/consignment/inbound）。
      *
-     * <p>入参<b>只有 deviceId</b>：站点 ID 由登录站长的作用域带出、厂家 ID 由
-     * {@code inventory.owner_manufacturer_id}（货权方）带出，二者均不接受前端指定，
-     * 从入参层面杜绝「厂家替服务站选站分拨」的越权与误操作。
+     * <p><b>设备标识二选一</b>（V82 扫码枪改造）：
+     * <ul>
+     *   <li>{@code deviceId} —— 设备主键，原有入参；</li>
+     *   <li>{@code deviceNo} —— 设备编号（{@code claw.devices.device_no}，扫码枪扫出来的
+     *       往往是「DEV-000123」这类带前缀的编号而非纯数字主键）。</li>
+     * </ul>
+     * 二者<b>必须有一个</b>，另一个可空；两个都传时以 {@code deviceId} 为准。
+     * 之所以不用 {@code @NotNull}：Bean Validation 无法表达「二选一」，且本 DTO 的
+     * {@code @RequestBody} 未标注 {@code @Valid}，实际由
+     * {@code StationConsignmentController} 手写校验（缺则 10001）。
+     *
+     * <p>站点 ID 由登录站长的作用域带出、厂家 ID 由 {@code inventory.owner_manufacturer_id}
+     * （货权方）带出，二者均不接受前端指定 —— 从入参层面杜绝「厂家替服务站选站分拨」
+     * 的越权与误操作。
      */
     public record StationConsignmentInbound(
-            @NotNull Long deviceId) {
+            Long deviceId,
+            String deviceNo) {
     }
 }

@@ -133,6 +133,38 @@ public class InventoryService {
     }
 
     /**
+     * 按<b>设备编号</b>入库（V82 扫码枪改造 · 入参适配层）。
+     *
+     * <p>现场用扫码枪入库时，扫出来的是 {@code devices.device_no}（如 {@code DEV-000123}）
+     * 这类带前缀的编号，不是纯数字主键。本方法只做一件事：<b>把编号翻译成主键</b>，
+     * 然后原样委托给 {@link #stationConsignmentInbound(Long, Long, Long)} ——
+     * 因此<b>不是一条并行的入库逻辑</b>，落库仍走
+     * {@code stationConsignmentInbound → shipToStationBatch → shipOne} 同一条写入链
+     * （四处写入 + 授信硬阻断 + 货权不转移，语义与按 ID 入库完全一致）。
+     *
+     * @param deviceNo 扫码得到的设备编号（{@code claw.devices.device_no}），前后空白会被 trim
+     * @param stationId 占有站（当前登录站长自有站）
+     * @param operatorId 操作人（可为 null，记生命周期事件用）
+     * @return 与按 ID 入库完全一致的入库结果
+     * @throws BizException 10001 编号为空白（等价于没扫到）
+     * @throws BizException 40401 device.not.found.by.no（编号在 {@code devices} 里查不到）
+     * @throws BizException 其它与 {@link #stationConsignmentInbound} 完全一致（40401/40943/
+     *         40944/40945/40941/40340）
+     */
+    @Transactional
+    public InventoryViews.ConsignmentInboundResult stationConsignmentInboundByNo(
+            String deviceNo, Long stationId, Long operatorId) {
+        String no = deviceNo == null ? null : deviceNo.trim();
+        if (no == null || no.isEmpty()) {
+            throw BizException.invalidParam("station.consignment.inbound.device_required");
+        }
+        Long deviceId = deviceRepository.findByDeviceNo(no)
+                .map(Device::getId)
+                .orElseThrow(() -> BizException.of(40401, "device.not.found.by.no", no));
+        return stationConsignmentInbound(deviceId, stationId, operatorId);
+    }
+
+    /**
      * 取货权方：{@code inventory.owner_manufacturer_id} 恒为厂家，入库动作不改变货权。
      * 缺失即失败关闭 —— 宁可拒绝入库，也不允许产生一条无货权方的寄售占有权。
      */

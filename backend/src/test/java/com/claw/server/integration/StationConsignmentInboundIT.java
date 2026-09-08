@@ -129,6 +129,116 @@ class StationConsignmentInboundIT extends AbstractIntegrationTest {
     }
 
     /* ================================================================== */
+    /* ①b 扫码枪：按设备编号（device_no）入库                                */
+    /* ================================================================== */
+
+    @Test
+    @DisplayName("扫码枪：按设备编号入库成功，落库结果与按 ID 入库逐项一致（同一条写入链）")
+    void inboundByDeviceNoWritesExactlyLikeById() {
+        String tag = uuid();
+        Long manufacturerId = insertManufacturer(tag);
+        Long stationId = insertStation(tag + "-A");
+
+        // 一台走「扫码编号」路径、一台走「主键」路径，两条路径的落库必须逐项一致
+        Long byNoDeviceId = insertDevice(tag + "-n", manufacturerId, 1);
+        String deviceNo = "DEV-" + tag + "-1";
+        setDeviceNo(byNoDeviceId, deviceNo);
+        Long byIdDeviceId = insertDevice(tag + "-i", manufacturerId, 2);
+
+        var byNo = inventoryService.stationConsignmentInboundByNo(deviceNo, stationId, null);
+        var byId = inventoryService.stationConsignmentInbound(byIdDeviceId, stationId, null);
+
+        // ① 返回值：编号被正确翻译成主键，货权/站点与按 ID 入库完全一致
+        assertEquals(byNoDeviceId, byNo.deviceId(), "设备编号必须被正确翻译成设备主键");
+        assertEquals(byIdDeviceId, byId.deviceId());
+        assertEquals(byId.manufacturerId(), byNo.manufacturerId(), "货权厂家都必须由 inventory.owner_manufacturer_id 带出");
+        assertEquals(byId.stationId(), byNo.stationId());
+        assertNotNull(byNo.custodyId(), "按编号入库也要回带占有权 ID，便于前端回显");
+        assertNotNull(byNo.inboundAt(), "按编号入库也要回带入站时点");
+
+        // ② claw.consignment_custodies：与按 ID 入库逐项比对
+        assertEquals(countActiveCustody(byIdDeviceId), countActiveCustody(byNoDeviceId),
+                "按编号入库后应同按 ID 一样只有一条未结束占有权");
+        assertEquals(1, countActiveCustody(byNoDeviceId));
+        assertEquals(holderStationOf(byIdDeviceId), holderStationOf(byNoDeviceId));
+        assertEquals(custodyManufacturerOf(byIdDeviceId), custodyManufacturerOf(byNoDeviceId));
+        assertEquals(custodyStatusOf(byIdDeviceId), custodyStatusOf(byNoDeviceId));
+        assertEquals(stationId, holderStationOf(byNoDeviceId));
+        assertEquals(manufacturerId, custodyManufacturerOf(byNoDeviceId));
+        assertEquals("ACTIVE", custodyStatusOf(byNoDeviceId));
+
+        // ③ claw.inventory：与按 ID 入库逐项比对，且货权不转移
+        assertEquals(inv(byIdDeviceId, "ownership_type"), inv(byNoDeviceId, "ownership_type"));
+        assertEquals(inv(byIdDeviceId, "current_status"), inv(byNoDeviceId, "current_status"));
+        assertEquals("CONSIGNED", inv(byNoDeviceId, "ownership_type"));
+        assertEquals("AT_STATION", inv(byNoDeviceId, "current_status"));
+        assertEquals(stationId, lng("SELECT holder_station_id FROM claw.inventory WHERE device_id = ?", byNoDeviceId));
+        assertNotNull(lng("SELECT custody_id FROM claw.inventory WHERE device_id = ?", byNoDeviceId));
+        assertNotNull(jdbc.queryForObject(
+                "SELECT inbound_at FROM claw.inventory WHERE device_id = ?", java.sql.Timestamp.class, byNoDeviceId));
+        assertEquals(manufacturerId, ownerManufacturerOf(byNoDeviceId), "入库动作不得改变货权方");
+
+        // ④ 设备生命周期状态 + RECEIVE 事件
+        assertEquals(deviceLifecycleStatus(byIdDeviceId), deviceLifecycleStatus(byNoDeviceId));
+        assertEquals("AT_STATION", deviceLifecycleStatus(byNoDeviceId));
+        assertEquals(countLifecycleEvents(byIdDeviceId, "RECEIVE"), countLifecycleEvents(byNoDeviceId, "RECEIVE"));
+        assertEquals(1, countLifecycleEvents(byNoDeviceId, "RECEIVE"));
+        assertEquals(stationId, lng("SELECT station_id FROM claw.lifecycle_events "
+                + "WHERE device_id = ? AND event_type = 'RECEIVE'", byNoDeviceId));
+
+        // ⑤ 复用同一写入链的旁证：同一编号重复扫码，命中与按 ID 完全相同的 40945
+        BizException dup = assertThrows(BizException.class,
+                () -> inventoryService.stationConsignmentInboundByNo(deviceNo, stationId, null),
+                "按编号重复入库必须和按 ID 重复入库走同一套拦截");
+        assertEquals(40945, dup.getCode());
+        assertEquals("inventory.custody.duplicate.inbound", dup.getMessageCode());
+    }
+
+    @Test
+    @DisplayName("40401：扫码编号在系统里查不到设备 → HTTP 404，且一处都不写")
+    void unknownDeviceNoRejectedAndWritesNothing() {
+        String tag = uuid();
+        Long manufacturerId = insertManufacturer(tag);
+        Long stationId = insertStation(tag + "-A");
+        // 先放一台真实设备在台账里：证明下面的「零写入」不是因为库里本来就没数据
+        Long existingDeviceId = insertDevice(tag, manufacturerId, 1);
+
+        // 快照口径限定在本用例独占的站点上，不受其它用例历史数据干扰
+        int custodyBefore = countByStation("claw.consignment_custodies", "holder_station_id", stationId);
+        int eventsBefore = countByStation("claw.lifecycle_events", "station_id", stationId);
+        int atStationBefore = countByStation("claw.inventory", "holder_station_id", stationId);
+        assertEquals(0, custodyBefore);
+        assertEquals(0, eventsBefore);
+        assertEquals(0, atStationBefore);
+
+        BizException e = assertThrows(BizException.class,
+                () -> inventoryService.stationConsignmentInboundByNo("NO-SUCH-" + tag, stationId, null),
+                "扫到的编号查不到设备必须明确报错，不能静默建一条无主占有权");
+        assertEquals(40401, e.getCode());
+        assertEquals("device.not.found.by.no", e.getMessageCode());
+        assertEquals(HttpStatus.NOT_FOUND, e.httpStatus());
+
+        // 一处都不写：本站点下没有新增任何占有权 / 生命周期事件 / 在站库存
+        assertEquals(custodyBefore, countByStation("claw.consignment_custodies", "holder_station_id", stationId),
+                "编号查不到时不得新增占有权");
+        assertEquals(eventsBefore, countByStation("claw.lifecycle_events", "station_id", stationId),
+                "编号查不到时不得写生命周期事件");
+        assertEquals(atStationBefore, countByStation("claw.inventory", "holder_station_id", stationId),
+                "编号查不到时不得把任何库存改成在站");
+        // 既有设备也不受牵连
+        assertEquals(0, countActiveCustody(existingDeviceId));
+        assertEquals("PRODUCING", inv(existingDeviceId, "current_status"));
+        assertEquals(0, countLifecycleEvents(existingDeviceId, "RECEIVE"));
+
+        // 边界：空白编号等价于没扫到 → 10001（HTTP 400），而不是 404
+        BizException blank = assertThrows(BizException.class,
+                () -> inventoryService.stationConsignmentInboundByNo("   ", stationId, null));
+        assertEquals(10001, blank.getCode());
+        assertEquals("station.consignment.inbound.device_required", blank.getMessageCode());
+        assertEquals(HttpStatus.BAD_REQUEST, blank.httpStatus());
+    }
+
+    /* ================================================================== */
     /* ② 安全断言（最关键）：请求体里的 stationId / manufacturerId 被忽略     */
     /* ================================================================== */
 
@@ -156,7 +266,8 @@ class StationConsignmentInboundIT extends AbstractIntegrationTest {
         StationRequests.StationConsignmentInbound parsed =
                 objectMapper.readValue(body, StationRequests.StationConsignmentInbound.class);
         assertEquals(deviceId, parsed.deviceId());
-        assertEquals(List.of("deviceId"), recordComponents());
+        // V82 扫码枪改造：DTO 多了 deviceNo（设备编号），但站点/厂家仍不在入参里
+        assertEquals(List.of("deviceId", "deviceNo"), recordComponents());
 
         mockMvc.perform(post(INBOUND_URL).contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isOk())
@@ -477,6 +588,14 @@ class StationConsignmentInboundIT extends AbstractIntegrationTest {
         return deviceId;
     }
 
+    /**
+     * 给设备写上设备编号（{@code claw.devices.device_no}）—— 扫码枪扫的就是这个值。
+     * 不改 {@link #insertDevice} 签名（其它用例都在用），只在需要时补一笔 UPDATE。
+     */
+    private void setDeviceNo(Long deviceId, String deviceNo) {
+        jdbc.update("UPDATE claw.devices SET device_no = ? WHERE id = ?", deviceNo, deviceId);
+    }
+
     /** 建资产 + 设备 + 库存行，但<b>不填货权方</b>（模拟厂家未补全台账，用于 40943）。 */
     private Long insertDeviceWithoutOwner(String tag, int seq) {
         Long assetId = jdbc.queryForObject(
@@ -624,6 +743,21 @@ class StationConsignmentInboundIT extends AbstractIntegrationTest {
         Integer n = jdbc.queryForObject(
                 "SELECT count(*) FROM claw.onboarding_credit_blocks WHERE principal_id = ?",
                 Integer.class, stationId);
+        return n == null ? 0 : n;
+    }
+
+    /** 取 claw.inventory 上某个字段（用于「按编号入库 vs 按 ID 入库」逐项比对）。 */
+    private String inv(Long deviceId, String column) {
+        return str("SELECT " + column + " FROM claw.inventory WHERE device_id = ?", deviceId);
+    }
+
+    /**
+     * 按站点统计行数（用于「失败关闭：一处都不写」断言）。
+     * 口径限定在本用例独占的站点上，避免被其它用例的历史数据干扰。
+     */
+    private int countByStation(String table, String stationColumn, Long stationId) {
+        Integer n = jdbc.queryForObject(
+                "SELECT count(*) FROM " + table + " WHERE " + stationColumn + " = ?", Integer.class, stationId);
         return n == null ? 0 : n;
     }
 
