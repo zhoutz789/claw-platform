@@ -2,7 +2,7 @@
 //
 // 全部对接 claw-platform/backend 的真实 Controller：
 //   AdminCapacityController         /api/v1/admin/capacity/plans
-//   CapacityController              /api/v1/capacity/subscribe | /subscriptions | /plans/open | /rebates
+//   CapacityController              /api/v1/capacity/subscribe | /subscriptions | /rebates
 //   AdminStationContractController  /api/v1/admin/station-contracts/*
 // 风格与 station.js / supplyChain.js 保持一致：直接基于 src/api.js 的 axios 实例。
 import api from '../api.js';
@@ -12,9 +12,12 @@ import api from '../api.js';
 /** 创建容量计划（资产入池后对外预售容量）。 */
 export const createPlan = (body) => api.post('/v1/admin/capacity/plans', body);
 
-/** 按业主用户查询其名下的容量计划列表。 */
-export const listPlans = (ownerUserId) =>
-  api.get('/v1/admin/capacity/plans?ownerUserId=' + ownerUserId);
+/**
+ * 查询「我发布的」容量计划列表（无参）。
+ * 后端 GET /v1/admin/capacity/plans：productId 为可选参数，不传即按当前登录用户返回其发布的计划。
+ * 注意：后端早已不支持 ownerUserId 入参，前端一律不要拼任何查询条件。
+ */
+export const listMyPlans = () => api.get('/v1/admin/capacity/plans');
 
 /**
  * V81：按商品查询容量计划（「商品列表 → 容量预定」按钮点开即查）。
@@ -33,17 +36,17 @@ export const listPlanSubscriptions = (planId) =>
 /** 订阅（定购）某一容量计划的单位数。 */
 export const subscribe = (body) => api.post('/v1/capacity/subscribe', body);
 
-/** 按订阅用户查询其预订记录。 */
-export const listSubscriptions = (subscriberUserId) =>
-  api.get('/v1/capacity/subscriptions?subscriberUserId=' + subscriberUserId);
+/**
+ * 查询当前登录用户的预订记录（无参）。
+ * 后端 GET /v1/capacity/subscriptions：订户由登录态带出，前端不得传 subscriberUserId。
+ */
+export const listSubscriptions = () => api.get('/v1/capacity/subscriptions');
 
-/** 查询某资产对外开放的可订阅容量计划（用于看板进度关联）。 */
-export const listOpenPlans = (assetId) =>
-  api.get('/v1/capacity/plans/open?assetId=' + assetId);
-
-/** 按订阅用户查询其回佣结算记录。 */
-export const listRebates = (subscriberUserId) =>
-  api.get('/v1/capacity/rebates?subscriberUserId=' + subscriberUserId);
+/**
+ * 查询当前登录用户的回佣结算记录（无参）。
+ * 后端 GET /v1/capacity/rebates：同 subscriptions，由登录态带出。
+ */
+export const listRebates = () => api.get('/v1/capacity/rebates');
 
 /* ----------------------- 缺口② · 服务站合约（Station Contract） ----------------------- */
 
@@ -71,12 +74,11 @@ export const listPendingRefunds = () => api.get('/v1/admin/station-contracts/pen
 
 export default {
   createPlan,
-  listPlans,
+  listMyPlans,
   listPlansByProduct,
   listPlanSubscriptions,
   subscribe,
   listSubscriptions,
-  listOpenPlans,
   listRebates,
   listStationContracts,
   exitContract,

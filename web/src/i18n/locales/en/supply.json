@@ -127,7 +127,6 @@
       "own": "Own inventory",
       "consigned": "Consigned inventory"
     },
-    "ship": "Ship to station",
     "viewCert": "View certificate",
     "col": {
       "id": "Inventory ID",
@@ -139,15 +138,6 @@
       "currentStatus": "Lifecycle status",
       "holderStationId": "Holding station",
       "inboundAt": "Consigned inbound at"
-    },
-    "field": {
-      "deviceId": "Device ID",
-      "stationId": "Destination station",
-      "manufacturerId": "Manufacturer"
-    },
-    "msg": {
-      "shipped": "Shipped to station; consigned custody established",
-      "selectRow": "Please pick a device first"
     }
   },
   "stationConsignment": {
@@ -164,7 +154,6 @@
       "inboundAt": "Consigned inbound at"
     },
     "detail": "Custody detail",
-    "receiveTodo": "The receive endpoint (POST /api/v1/admin/inventory/receive, permission station:consignment:receive) is not provided by the backend in this round.",
     "cert": "View certificate"
   },
   "transfers": {

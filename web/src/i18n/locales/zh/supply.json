@@ -127,7 +127,6 @@
       "own": "自有库存",
       "consigned": "寄售库存"
     },
-    "ship": "发货到站",
     "viewCert": "查看合格证",
     "col": {
       "id": "库存ID",
@@ -139,15 +138,6 @@
       "currentStatus": "流通状态",
       "holderStationId": "持有服务站",
       "inboundAt": "入寄售库时间"
-    },
-    "field": {
-      "deviceId": "设备ID",
-      "stationId": "目标服务站",
-      "manufacturerId": "厂家"
-    },
-    "msg": {
-      "shipped": "已发货到站，寄售占有权已建立",
-      "selectRow": "请先选择一台设备"
     }
   },
   "stationConsignment": {
@@ -164,7 +154,6 @@
       "inboundAt": "入寄售库时间"
     },
     "detail": "占有权详情",
-    "receiveTodo": "收货确认接口（POST /api/v1/admin/inventory/receive，权限码 station:consignment:receive）后端本轮未提供，暂不可操作。",
     "cert": "查看合格证"
   },
   "transfers": {

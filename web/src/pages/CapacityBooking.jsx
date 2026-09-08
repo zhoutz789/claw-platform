@@ -4,16 +4,13 @@
 // 既填得多又容易填错。V81 起建计划与预定全部收敛到「商品列表 → 容量预定」抽屉里联动完成，
 // 本页只保留查询表格：容量计划 / 我的预订 / 回佣看板。
 //
-// 说明：后端没有「当前登录用户」接口，因此「我的预订」「回佣看板」保留一个用户 ID 查询条件
-// （纯查询，不是新增/编辑入口）；容量计划改为按商品查询（GET /plans?productId=）。
-import { useState } from 'react';
-import { Alert, App, Button, Card, Empty, InputNumber, Space, Table, Tabs, Tag } from 'antd';
+// 说明：后端三个查询接口均已改为由登录态带出身份（/plans 不传 productId 即返回当前用户发布的计划、
+// /subscriptions 与 /rebates 无参），因此本页不再出现任何让用户填 ID 的输入框：
+// 进页面自动加载当前 Tab，切 Tab 自动加载对应数据。
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, App, Card, Empty, Table, Tabs, Tag } from 'antd';
 import PageCard from '../components/PageCard';
-import {
-  listPlansByProduct,
-  listSubscriptions,
-  listRebates,
-} from '../api/capacity';
+import { listMyPlans, listSubscriptions, listRebates } from '../api/capacity';
 
 // 状态 → antd Tag 颜色，覆盖容量计划 / 预订 / 回佣常见状态值。
 const STATUS_COLOR = {
@@ -79,97 +76,65 @@ function fmtRate(v) {
 export default function CapacityBooking() {
   const { message } = App.useApp();
 
-  // 容量计划：按商品查询。
-  const [productId, setProductId] = useState(null);
+  // 当前 Tab（进页面即自动加载该 Tab 数据，切 Tab 重新加载）。
+  const [activeTab, setActiveTab] = useState('plans');
+
+  // 容量计划：当前登录用户自己发布的计划（无参）。
   const [plans, setPlans] = useState([]);
   const [loadingPlans, setLoadingPlans] = useState(false);
 
-  // 我的预订 / 回佣看板：按用户查询（后端无当前登录用户接口，故保留查询条件）。
-  const [userId, setUserId] = useState(null);
+  // 我的预订 / 回佣看板：均由登录态带出订户（无参）。
   const [subs, setSubs] = useState([]);
   const [loadingSubs, setLoadingSubs] = useState(false);
   const [rebates, setRebates] = useState([]);
   const [loadingRebates, setLoadingRebates] = useState(false);
 
-  /** 按商品查询容量计划。 */
-  const loadPlans = () => {
-    if (!productId) {
-      message.warning('请先填写商品 ID');
-      return;
-    }
+  /** 统一的失败提示。 */
+  const fail = useCallback((e) => message.error((e && e.message) || '查询失败'), [message]);
+
+  /** 查询我发布的容量计划（无参，后端按登录态返回）。 */
+  const loadPlans = useCallback(() => {
     setLoadingPlans(true);
-    listPlansByProduct(productId)
+    listMyPlans()
       .then((d) => setPlans(Array.isArray(d) ? d : []))
-      .catch((e) => { message.error(e.message || '查询失败'); setPlans([]); })
+      .catch((e) => { fail(e); setPlans([]); })
       .finally(() => setLoadingPlans(false));
-  };
+  }, [fail]);
 
-  /** 按用户查询我的预订。 */
-  const loadSubs = () => {
-    if (!userId) {
-      message.warning('请先填写用户 ID');
-      return;
-    }
+  /** 查询我的预订（无参，订户由登录态带出）。 */
+  const loadSubs = useCallback(() => {
     setLoadingSubs(true);
-    listSubscriptions(userId)
+    listSubscriptions()
       .then((d) => setSubs(Array.isArray(d) ? d : []))
-      .catch((e) => { message.error(e.message || '查询失败'); setSubs([]); })
+      .catch((e) => { fail(e); setSubs([]); })
       .finally(() => setLoadingSubs(false));
-  };
+  }, [fail]);
 
-  /** 按用户查询回佣结算明细。 */
-  const loadRebates = () => {
-    if (!userId) {
-      message.warning('请先填写用户 ID');
-      return;
-    }
+  /** 查询我的回佣结算明细（无参，订户由登录态带出）。 */
+  const loadRebates = useCallback(() => {
     setLoadingRebates(true);
-    listRebates(userId)
+    listRebates()
       .then((d) => setRebates(Array.isArray(d) ? d : []))
-      .catch((e) => { message.error(e.message || '查询失败'); setRebates([]); })
+      .catch((e) => { fail(e); setRebates([]); })
       .finally(() => setLoadingRebates(false));
-  };
+  }, [fail]);
 
-  /** 查询条件行（纯查询，不含任何新增/编辑入口）。
-   * @param {Object} o 参数
-   * @param {string} o.label 输入框前缀
-   * @param {number|null} o.value 当前值
-   * @param {Function} o.onChange 变更回调
-   * @param {Function} o.onQuery 查询回调
-   * @param {boolean} o.loading 查询中
-   * @returns {JSX.Element} 查询条
-   */
-  const filterBar = ({ label, value, onChange, onQuery, loading }) => (
-    <Space style={{ marginBottom: 12 }}>
-      <span>{label}</span>
-      <InputNumber
-        min={1}
-        precision={0}
-        value={value}
-        onChange={onChange}
-        placeholder="ID"
-        style={{ width: 160 }}
-      />
-      <Button type="primary" onClick={onQuery} loading={loading}>查询</Button>
-    </Space>
-  );
+  // 进页面 / 切 Tab 自动加载，无需任何手填查询条件。
+  useEffect(() => {
+    if (activeTab === 'plans') loadPlans();
+    else if (activeTab === 'subs') loadSubs();
+    else loadRebates();
+  }, [activeTab, loadPlans, loadSubs, loadRebates]);
 
   const planTab = (
     <Card size="small" title="容量计划">
-      {filterBar({
-        label: '商品 ID',
-        value: productId,
-        onChange: setProductId,
-        onQuery: loadPlans,
-        loading: loadingPlans,
-      })}
       <Table
         rowKey="id"
         dataSource={plans}
         loading={loadingPlans}
         pagination={false}
         size="small"
-        locale={{ emptyText: <Empty description="暂无数据，请在「商品列表 → 容量预定」中创建，或输入商品 ID 查询" /> }}
+        locale={{ emptyText: <Empty description="暂无数据，请在「商品列表 → 容量预定」中创建" /> }}
         columns={[
           { title: '计划ID', dataIndex: 'id', width: 80 },
           { title: '商品ID', dataIndex: 'productId', width: 90 },
@@ -191,13 +156,6 @@ export default function CapacityBooking() {
 
   const subTab = (
     <Card size="small" title="我的预订">
-      {filterBar({
-        label: '用户 ID',
-        value: userId,
-        onChange: setUserId,
-        onQuery: loadSubs,
-        loading: loadingSubs,
-      })}
       <Table
         rowKey="id"
         dataSource={subs}
@@ -220,13 +178,6 @@ export default function CapacityBooking() {
 
   const rebateTab = (
     <Card size="small" title="回佣看板">
-      {filterBar({
-        label: '用户 ID',
-        value: userId,
-        onChange: setUserId,
-        onQuery: loadRebates,
-        loading: loadingRebates,
-      })}
       <Table
         rowKey="id"
         dataSource={rebates}
@@ -256,6 +207,8 @@ export default function CapacityBooking() {
         message="容量计划请在『商品列表 → 容量预定』中创建与预订，本页仅供查询。"
       />
       <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
         items={[
           { key: 'plans', label: '容量计划', children: planTab },
           { key: 'subs', label: '我的预订', children: subTab },

@@ -127,7 +127,6 @@
       "own": "",
       "consigned": ""
     },
-    "ship": "",
     "viewCert": "",
     "col": {
       "id": "",
@@ -139,15 +138,6 @@
       "currentStatus": "",
       "holderStationId": "",
       "inboundAt": ""
-    },
-    "field": {
-      "deviceId": "",
-      "stationId": "",
-      "manufacturerId": ""
-    },
-    "msg": {
-      "shipped": "",
-      "selectRow": ""
     }
   },
   "stationConsignment": {
@@ -164,7 +154,6 @@
       "inboundAt": ""
     },
     "detail": "",
-    "receiveTodo": "",
     "cert": ""
   },
   "transfers": {

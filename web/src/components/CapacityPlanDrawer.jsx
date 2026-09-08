@@ -170,11 +170,19 @@ export default function CapacityPlanDrawer({ open, product, onClose }) {
   const percent = total > 0 ? Math.min(Math.round((subscribed / total) * 100), 100) : 0;
   const payable = (Number(unitCount) || 0) * unitPrice;
 
+  // 计划说明（风险提示与操作方法）为空 → 禁止付款：没有风险告知就不能让人付钱。
+  const descMissing = Boolean(plan) && String(plan.planDesc || '').trim() === '';
+  const DESC_MISSING_TIP = '该计划尚未填写风险说明，无法预定，请联系发布方补充';
+
   /**
    * 打开二次确认弹窗：先校验份数，剩余不足直接拦下。
    * @returns {void}
    */
   const openPay = () => {
+    if (descMissing) {
+      message.warning(DESC_MISSING_TIP);
+      return;
+    }
     const n = Number(unitCount);
     if (!n || n < 1) {
       message.warning('请先填写预定份数');
@@ -325,6 +333,9 @@ export default function CapacityPlanDrawer({ open, product, onClose }) {
                 />
               </Space>
             )}
+            {descMissing && (
+              <span style={{ color: '#a8071a', fontSize: 12 }}>{DESC_MISSING_TIP}</span>
+            )}
             <Button onClick={onClose}>关闭</Button>
             {!plan && (
               <Perm code="mfg:capacity:create">
@@ -333,7 +344,7 @@ export default function CapacityPlanDrawer({ open, product, onClose }) {
             )}
             {plan && remaining > 0 && (
               <Perm code="capacity:subscribe">
-                <Button type="primary" onClick={openPay}>确认付款</Button>
+                <Button type="primary" onClick={openPay} disabled={descMissing}>确认付款</Button>
               </Perm>
             )}
           </Space>
@@ -422,7 +433,7 @@ export default function CapacityPlanDrawer({ open, product, onClose }) {
           onCancel={() => setPayOpen(false)}
           okText="确认付款"
           cancelText="取消"
-          okButtonProps={{ disabled: !agreed, loading: paying }}
+          okButtonProps={{ disabled: !agreed || descMissing, loading: paying }}
           onOk={doPay}
         >
           <p style={{ fontSize: 16 }}>
