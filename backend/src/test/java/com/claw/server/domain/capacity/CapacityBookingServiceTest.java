@@ -106,15 +106,23 @@ class CapacityBookingServiceTest {
     }
 
     @Test
-    @DisplayName("发布计划：状态 OPEN，默认回佣规则随计划 rate 落库")
+    @DisplayName("发布计划：状态 OPEN、类型 PARALLEL、默认回佣规则随计划 rate 落库")
     void createPlan_defaultsOpenAndRule() {
-        CapacityPlan plan = service.createPlan(1L, 10L, 900L, 30, new BigDecimal("10.00"),
-                CapacityType.SERIAL, new BigDecimal("0.10"), Instant.now(), Instant.now().plusSeconds(86400));
+        // 计划挂在商品 1 上，发布方 900（登录态带出）；回佣率取配置默认 0.10
+        when(systemConfigRepository.findByConfigKeyAndDeletedFalse("CAPACITY_REBATE_RATE_DEFAULT"))
+                .thenReturn(Optional.of(SystemConfig.builder()
+                        .configKey("CAPACITY_REBATE_RATE_DEFAULT").configValue("0.10").build()));
+
+        CapacityPlan plan = service.createPlan(1L, 900L, 30, new BigDecimal("10.00"),
+                Instant.now(), Instant.now().plusSeconds(86400), "风险提示：不保本；操作方法：填份数付款");
 
         assertEquals(CapacityPlanStatus.OPEN, plan.getStatus());
         assertEquals(30, plan.getTotalUnits());
         assertEquals(0, plan.getSubscribedUnits());
-        assertEquals(CapacityType.SERIAL, plan.getCapacityType());
+        assertEquals(1L, plan.getProductId());
+        assertEquals(900L, plan.getOwnerUserId());
+        // V81：容量类型固定 PARALLEL（并行共享，允许 top-up）
+        assertEquals(CapacityType.PARALLEL, plan.getCapacityType());
 
         ArgumentCaptor<CapacityRebateRule> ruleCap = ArgumentCaptor.forClass(CapacityRebateRule.class);
         verify(rebateRuleRepository, times(1)).save(ruleCap.capture());
@@ -122,6 +130,20 @@ class CapacityBookingServiceTest {
         assertEquals(plan.getId(), rule.getPlanId());
         assertEquals(0, rule.getRebateRate().compareTo(new BigDecimal("0.10")));
         assertEquals("ACTIVE", rule.getStatus());
+    }
+
+    @Test
+    @DisplayName("发布计划：缺商品 / 缺份数 / 缺单价 / 缺说明 均参数校验失败")
+    void createPlan_missingRequiredFields_throws() {
+        String desc = "风险提示：不保本；操作方法：填份数付款";
+        assertThrows(BizException.class, () -> service.createPlan(null, 900L, 30,
+                new BigDecimal("10.00"), null, null, desc));
+        assertThrows(BizException.class, () -> service.createPlan(1L, 900L, 0,
+                new BigDecimal("10.00"), null, null, desc));
+        assertThrows(BizException.class, () -> service.createPlan(1L, 900L, 30,
+                null, null, null, desc));
+        assertThrows(BizException.class, () -> service.createPlan(1L, 900L, 30,
+                new BigDecimal("10.00"), null, null, "   "));
     }
 
     @Test
@@ -140,6 +162,8 @@ class CapacityBookingServiceTest {
         assertEquals(0, sub.getPrepaidAmount().compareTo(new BigDecimal("30.00")));
         assertEquals(CapacitySubscriptionStatus.ACTIVE, sub.getStatus());
         assertNotNull(sub.getLedgerTxnId());
+        // V81：付款即完成，落库时写付款时间戳
+        assertNotNull(sub.getPaidAt());
 
         // 进度 +1
         assertEquals(3, plan.getSubscribedUnits());
@@ -343,27 +367,30 @@ class CapacityBookingServiceTest {
     }
 
     @Test
-    @DisplayName("createPlan：rebateRate 超上限抛 40973")
-    void createPlan_rebateRateExceedsMax_throws() {
+    @DisplayName("createPlan：回佣率取配置默认，并被上限 CAPACITY_REBATE_RATE_MAX 夹紧")
+    void createPlan_rebateRateClampedToMax() {
+        // 配置默认被误配成 0.50（> 上限 0.30），落库前夹紧到 0.30，不因脏配置越界
+        when(systemConfigRepository.findByConfigKeyAndDeletedFalse("CAPACITY_REBATE_RATE_DEFAULT"))
+                .thenReturn(Optional.of(SystemConfig.builder()
+                        .configKey("CAPACITY_REBATE_RATE_DEFAULT").configValue("0.50").build()));
         when(systemConfigRepository.findByConfigKeyAndDeletedFalse("CAPACITY_REBATE_RATE_MAX"))
                 .thenReturn(Optional.of(SystemConfig.builder()
                         .configKey("CAPACITY_REBATE_RATE_MAX").configValue("0.30").build()));
 
-        BizException ex = assertThrows(BizException.class, () -> service.createPlan(
-                1L, 10L, 900L, 30, new BigDecimal("10.00"), CapacityType.SERIAL,
-                new BigDecimal("0.50"), Instant.now(), Instant.now().plusSeconds(86400)));
-        assertEquals(40973, ex.getCode());
+        CapacityPlan plan = service.createPlan(1L, 900L, 30, new BigDecimal("10.00"),
+                null, null, "风险提示：不保本；操作方法：填份数付款");
+        assertEquals(0, plan.getRebateRate().compareTo(new BigDecimal("0.30")));
     }
 
     @Test
-    @DisplayName("createPlan：rebateRate 为 null 时取配置默认 0.10")
-    void createPlan_nullRebateRate_usesDefault() {
+    @DisplayName("createPlan：回佣率缺省时取配置默认 0.10")
+    void createPlan_usesConfiguredDefault() {
         when(systemConfigRepository.findByConfigKeyAndDeletedFalse("CAPACITY_REBATE_RATE_DEFAULT"))
                 .thenReturn(Optional.of(SystemConfig.builder()
                         .configKey("CAPACITY_REBATE_RATE_DEFAULT").configValue("0.10").build()));
 
-        CapacityPlan plan = service.createPlan(1L, 10L, 900L, 30, new BigDecimal("10.00"),
-                CapacityType.SERIAL, null, Instant.now(), Instant.now().plusSeconds(86400));
+        CapacityPlan plan = service.createPlan(1L, 900L, 30, new BigDecimal("10.00"),
+                null, null, "风险提示：不保本；操作方法：填份数付款");
         assertEquals(0, plan.getRebateRate().compareTo(new BigDecimal("0.10")));
     }
 }

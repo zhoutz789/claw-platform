@@ -61,36 +61,57 @@ public class CapacityBookingService {
     private static final BigDecimal SCALE4 = BigDecimal.valueOf(4);
 
     /**
-     * 发布容量预订计划。
+     * 发布容量预订计划（V81 简化入参：挂商品 + 份数 + 单价 + 窗口 + 计划说明）。
+     *
+     * <p>相比 V71 的 9 字段全手填版本，本方法只收「使用者必须且只能自己决定」的参数：
+     * <ul>
+     *   <li>{@code ownerUserId} 由调用方从登录态带出（不再是请求体字段），杜绝冒用他人身份建计划；</li>
+     *   <li>{@code capacityType} 固定 {@link CapacityType#PARALLEL}（并行共享额度，允许 top-up）；</li>
+     *   <li>{@code rebateRate} 不再入参，统一取 system_config 的 CAPACITY_REBATE_RATE_DEFAULT
+     *       并夹紧到 CAPACITY_REBATE_RATE_MAX，保证同类计划口径一致；</li>
+     *   <li>{@code assetId} / {@code poolEntryId} 不再入参（V81 已置空列可空）。</li>
+     * </ul>
+     *
+     * @param productId   关联商品（必填，前端「容量预定」按钮联动带入，不可手改）
+     * @param ownerUserId 计划发布方（厂家），取自登录态
+     * @param totalUnits  总容量单位数（必填，&gt; 0）
+     * @param unitPrice   每单位产能预付款（必填，&gt; 0）
+     * @param windowStart 预订窗口起（选填）
+     * @param windowEnd   预订窗口止（选填）
+     * @param planDesc    计划说明（风险提示 + 操作方法，必填，客户侧只读展示）
      */
     @Transactional
-    public CapacityPlan createPlan(Long assetId, Long poolEntryId, Long ownerUserId,
-                                   Integer totalUnits, BigDecimal unitPrice,
-                                   CapacityType capacityType, BigDecimal rebateRate,
-                                   Instant windowStart, Instant windowEnd) {
+    public CapacityPlan createPlan(Long productId, Long ownerUserId, Integer totalUnits,
+                                   BigDecimal unitPrice, Instant windowStart, Instant windowEnd,
+                                   String planDesc) {
+        if (productId == null) {
+            throw BizException.invalidParam("error.capacity.product.required");
+        }
+        if (ownerUserId == null) {
+            throw BizException.invalidParam("error.capacity.owner.required");
+        }
         if (totalUnits == null || totalUnits <= 0) {
             throw BizException.invalidParam("error.capacity.units.invalid");
         }
-
-        // ⑤ 回佣率：缺省取配置默认（CAPACITY_REBATE_RATE_DEFAULT，兜底 0.10）；
-        // 显式传入但超上限（CAPACITY_REBATE_RATE_MAX，兜底 0.30）则拒绝建计划。
-        BigDecimal effectiveRebateRate;
-        if (rebateRate == null) {
-            effectiveRebateRate = defaultRebateRate();
-        } else if (rebateRate.compareTo(maxRebateRate()) > 0) {
-            throw BizException.of(40973, "error.capacity.rebate.rate.exceed");
-        } else {
-            effectiveRebateRate = rebateRate;
+        if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            throw BizException.invalidParam("error.capacity.price.invalid");
+        }
+        if (planDesc == null || planDesc.isBlank()) {
+            throw BizException.invalidParam("error.capacity.desc.required");
         }
 
+        // 回佣率不再由前端传：统一取配置默认（CAPACITY_REBATE_RATE_DEFAULT，兜底 0.10），
+        // 并夹紧到上限（CAPACITY_REBATE_RATE_MAX，兜底 0.30），防止配置被改大后越界。
+        BigDecimal effectiveRebateRate = defaultRebateRate().min(maxRebateRate());
+
         CapacityPlan plan = CapacityPlan.builder()
-                .assetId(assetId)
-                .poolEntryId(poolEntryId)
+                .productId(productId)
                 .ownerUserId(ownerUserId)
                 .totalUnits(totalUnits)
                 .subscribedUnits(0)
                 .unitPrice(unitPrice)
-                .capacityType(capacityType != null ? capacityType : CapacityType.SERIAL)
+                .planDesc(planDesc.trim())
+                .capacityType(CapacityType.PARALLEL)
                 .rebateRate(effectiveRebateRate)
                 .windowStart(windowStart)
                 .windowEnd(windowEnd)
@@ -106,8 +127,8 @@ public class CapacityBookingService {
                 .status("ACTIVE")
                 .build());
 
-        log.info("发布容量预订计划 planId={} assetId={} totalUnits={} owner={}",
-                plan.getId(), assetId, totalUnits, ownerUserId);
+        log.info("发布容量预订计划 planId={} productId={} totalUnits={} owner={}",
+                plan.getId(), productId, totalUnits, ownerUserId);
         return plan;
     }
 
@@ -167,6 +188,8 @@ public class CapacityBookingService {
                         new LedgerRequests.Entry(ownerAccountId, LedgerRequests.Direction.C, prepaid, "容量预订预付(厂家托管)")
                 ));
         sub.setLedgerTxnId(prepaidTxn.txnId().toString());
+        // V81：付款即完成（无独立收银台），记账成功后打付款时间戳。
+        sub.setPaidAt(Instant.now());
         subscriptionRepository.save(sub);
 
         // 进度计数
@@ -330,6 +353,30 @@ public class CapacityBookingService {
     @Transactional(readOnly = true)
     public List<CapacityPlan> listPlans(Long ownerUserId) {
         return planRepository.findByOwnerUserIdAndDeletedFalse(ownerUserId);
+    }
+
+    /**
+     * V81：按商品查容量计划（前端「容量预定」按钮按 productId 拉取，取第一条展示）。
+     *
+     * @return 该商品下的容量计划（按 id 升序，通常 0 或 1 条）；无计划时返回空列表
+     */
+    @Transactional(readOnly = true)
+    public List<CapacityPlan> listPlansByProduct(Long productId) {
+        if (productId == null) {
+            return List.of();
+        }
+        return planRepository.findByProductIdAndDeletedFalse(productId);
+    }
+
+    /**
+     * V81：某容量计划下的预定订单列表（厂家侧只读表格：谁、订了几份、付了多少、何时付）。
+     */
+    @Transactional(readOnly = true)
+    public List<CapacitySubscription> listSubscriptionsByPlan(Long planId) {
+        if (planId == null) {
+            return List.of();
+        }
+        return subscriptionRepository.findByPlanIdAndDeletedFalse(planId);
     }
 
     /** 用户视角：列出自己参与的定购记录。 */

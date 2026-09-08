@@ -43,6 +43,13 @@ public class CapacitySubscription {
 
     private String ledgerTxnId;
 
+    /**
+     * 付款完成时间（V81 新增）。
+     *
+     * <p>容量预定是「填份数 → 付款」一次完成：记账成功即视为已付款，落库时写 now()。
+     */
+    private Instant paidAt;
+
     @Builder.Default
     private Long tenantId = 1L;
 

@@ -14,6 +14,9 @@ public interface CapacityPlanRepository extends JpaRepository<CapacityPlan, Long
 
     List<CapacityPlan> findByOwnerUserIdAndDeletedFalse(Long ownerUserId);
 
+    /** V81：按商品查容量计划（前端「容量预定」按钮按 productId 取，取第一条展示）。 */
+    List<CapacityPlan> findByProductIdAndDeletedFalse(Long productId);
+
     List<CapacityPlan> findByAssetIdAndStatusAndDeletedFalse(Long assetId, CapacityPlanStatus status);
 
     List<CapacityPlan> findByPoolEntryIdAndDeletedFalse(Long poolEntryId);

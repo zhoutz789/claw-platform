@@ -26,10 +26,32 @@ public class CapacityPlan {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    /**
+     * 资产（老流程按资产建计划；V81 起改为按商品建计划，故此列可空）。
+     *
+     * <p>V81 已将该列在库上去掉 NOT NULL：新入口是商品详情页的「容量预定」按钮，
+     * 计划挂在 {@link #productId} 上，建计划时并不要求先绑定资产。
+     */
     private Long assetId;
 
+    /**
+     * 关联商品（claw.products.id，V81 新增）。
+     *
+     * <p>容量预定入口挂在厂家发布的商品上：前端点「容量预定」按钮直接带 productId 进出，
+     * 计划与商品联动、不可手改，避免出现「计划挂在 A 商品、订单却来自 B 商品」的错配。
+     */
+    private Long productId;
+
     private Long poolEntryId;
+
+    /**
+     * 计划说明（V81 新增，TEXT）：风险提示 + 操作方法。
+     *
+     * <p>厂家建计划时填一次，客户侧只读展示 —— 同一计划对所有客户说法一致，
+     * 不在前端各写一份、也不允许订户改写。
+     */
+    @Column(name = "plan_desc", columnDefinition = "text")
+    private String planDesc;
 
     @Column(nullable = false)
     private Long ownerUserId;
