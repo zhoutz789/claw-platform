@@ -79,4 +79,15 @@ public final class StationRequests {
             Instant periodStart,
             Instant periodEnd) {
     }
+
+    /**
+     * V82 · 服务站寄售入库（POST /api/v1/station/consignment/inbound）。
+     *
+     * <p>入参<b>只有 deviceId</b>：站点 ID 由登录站长的作用域带出、厂家 ID 由
+     * {@code inventory.owner_manufacturer_id}（货权方）带出，二者均不接受前端指定，
+     * 从入参层面杜绝「厂家替服务站选站分拨」的越权与误操作。
+     */
+    public record StationConsignmentInbound(
+            @NotNull Long deviceId) {
+    }
 }

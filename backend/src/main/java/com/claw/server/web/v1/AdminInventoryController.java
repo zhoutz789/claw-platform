@@ -15,8 +15,6 @@ import com.claw.server.domain.inventory.InventoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -99,17 +97,18 @@ public class AdminInventoryController {
         return ApiResult.ok(inventoryService.statsOf(scope));
     }
 
-    /** 发货至服务站：建立寄售占有权（Q2 占有权转移点）。写链路零改动。 */
-    @PostMapping("/ship")
-    @RequirePermission("mfg:transfer:create")
-    public ApiResult<Void> shipToStation(@RequestBody ShipReq req) {
-        Long op = AuthContext.currentUserId();
-        inventoryService.shipToStation(req.deviceId(), req.stationId(), req.manufacturerId(), op);
-        return ApiResult.ok();
-    }
-
-    public record ShipReq(Long deviceId, Long stationId, Long manufacturerId) {
-    }
+    // ------------------------------------------------------------------
+    // V82 下线说明（寄售入库发起方改造）：
+    // 原「POST /ship 厂家选站发货到服务站」端点（权限 mfg:transfer:create，
+    // 入参 ShipReq(deviceId, stationId, manufacturerId)）已删除。
+    // 寄售入库自 V82 起改由服务站自主发起：
+    //   POST /api/v1/station/consignment/inbound
+    //   （StationConsignmentController，权限 station:consignment:inbound；
+    //    站点 ID 由登录站长作用域带出、厂家 ID 由 inventory.owner_manufacturer_id 带出，
+    //    均不来自入参；写入链路完整复用 InventoryService.shipToStationBatch → shipOne）。
+    // 厂家不再分拨到站 —— 「谁操作数据是谁的，谁的数据是谁的」；
+    // 厂家侧只保留本控制器的只读库存视图（list / device/{id} / me / stats）。
+    // ------------------------------------------------------------------
 
     /** 枚举参数校验（非法值 → 400，而非 500）。 */
     private static OwnershipType parseOwnership(String s) {

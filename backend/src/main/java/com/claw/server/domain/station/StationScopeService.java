@@ -1,5 +1,6 @@
 package com.claw.server.domain.station;
 
+import com.claw.server.common.api.BizException;
 import com.claw.server.common.dto.StationViews;
 import com.claw.server.domain.inventory.InventoryScope;
 import com.claw.server.domain.inventory.InventoryScopeService;
@@ -39,6 +40,25 @@ public class StationScopeService {
     public StationViews.StationScopeView resolveView(Long overrideStationId) {
         InventoryScope.ScopeInfo info = inventoryScopeService.resolveCurrent(null, overrideStationId);
         return new StationViews.StationScopeView(overrideStationId, info.scopeLevel().name(), toAllowed(info));
+    }
+
+    /**
+     * 解析当前登录账号<b>唯一的自有服务站 ID</b>（V82 · 寄售入库用）。
+     *
+     * <p>与 {@link #allowedStationIds} 的区别：后者是「能看到哪些站」（厂家=下属站集合、
+     * 平台管理员=不限制），本方法是「我本人就是哪个站」，只有 STATION 主体能给出确定答案。
+     * 寄售入库必须落在操作者自己的站上 —— 「谁操作数据是谁的」，故此处失败关闭：
+     * 厂家主体、平台管理员、未绑定主体一律拒绝，而不是回退到某个"第一个允许的站"。
+     *
+     * @return 当前账号绑定的服务站 ID（永不返回 null）
+     * @throws com.claw.server.common.api.BizException 40301 当前账号不是一个确定的服务站主体
+     */
+    public Long currentStationId() {
+        InventoryScope.ScopeInfo info = inventoryScopeService.resolveCurrent(null, null);
+        if (info.scopeLevel() != InventoryScope.ScopeLevel.STATION || info.effectiveStationId() == null) {
+            throw BizException.of(40301, "station.consignment.inbound.station_required");
+        }
+        return info.effectiveStationId();
     }
 
     private List<Long> toAllowed(InventoryScope.ScopeInfo info) {

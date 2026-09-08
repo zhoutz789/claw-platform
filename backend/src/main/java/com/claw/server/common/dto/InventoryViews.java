@@ -137,4 +137,25 @@ public final class InventoryViews {
             int limit
     ) {
     }
+
+    /**
+     * V82 · 寄售入库结果（POST /api/v1/station/consignment/inbound 出参）。
+     *
+     * <p>只回显基础类型，不暴露 {@code unitValue / valueCurrency / unitValueSource}
+     * 等授信域敏感字段（与 InventoryRowView 同一约束）。
+     *
+     * @param deviceId 入库设备
+     * @param stationId 占有站（由登录站长作用域带出，非入参）
+     * @param manufacturerId 货权厂家（由 inventory.owner_manufacturer_id 带出，非入参）
+     * @param custodyId 新建/接管的寄售占有权 ID
+     * @param inboundAt 入站时点
+     */
+    public record ConsignmentInboundResult(
+            Long deviceId,
+            Long stationId,
+            Long manufacturerId,
+            Long custodyId,
+            Instant inboundAt
+    ) {
+    }
 }

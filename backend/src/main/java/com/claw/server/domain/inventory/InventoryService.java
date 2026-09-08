@@ -31,6 +31,13 @@ import java.util.stream.Collectors;
  *
  * <p>运营库存台账（inventory，每设备一行）与寄售占有权（consignment_custodies）1:1。
  * 本服务负责把设备从厂家自有库「发货至服务站」：建立寄售占有权 + 库存转为寄售在站（Q2 占有权转移点）。
+ *
+ * <p><b>V82 变更（寄售入库发起方改造）</b>：寄售入库自 V82 起改由服务站自主发起
+ * （{@code POST /api/v1/station/consignment/inbound} → {@link #stationConsignmentInbound}），
+ * <b>厂家不再分拨到站</b>（{@code POST /api/v1/admin/inventory/ship} 已下线）。
+ * 理由：厂家替服务站选站会把服务站数据暴露给厂家、且极易误操作 —— 「谁操作数据是谁的」。
+ * 厂家侧只保留只读库存视图（{@code listScoped} / {@code statsOf}）。
+ * 入库的写入语义（四处写入 + 授信硬阻断）未变，仍由 {@link #shipToStationBatch} → {@link #shipOne} 承担。
  */
 @Service
 @RequiredArgsConstructor
@@ -87,6 +94,84 @@ public class InventoryService {
         for (Long deviceId : deviceIds) {
             shipOne(deviceId, stationId, manufacturerId, operatorId);
         }
+    }
+
+    // ===================== V82 · 服务站自主寄售入库 =====================
+
+    /**
+     * 服务站自主寄售入库（V82 · POST /api/v1/station/consignment/inbound 的领域入口）。
+     *
+     * <p>与已下线的厂家分拨（{@code POST /api/v1/admin/inventory/ship}）的唯一区别是
+     * <b>发起方与两个 ID 的来源</b>：
+     * <ul>
+     *   <li>stationId 由登录站长的作用域带出（Controller 层 {@code StationScopeService#currentStationId}）；</li>
+     *   <li>manufacturerId 由 {@code inventory.owner_manufacturer_id}（货权方，恒为厂家）带出，
+     *       不来自入参 —— 货权不因入库动作发生任何转移。</li>
+     * </ul>
+     * 写入语义与旧分拨链路<b>完全一致</b>：本方法解析出货权方后直接复用
+     * {@link #shipToStationBatch}，即 OrgWritableGuard 禁用守卫 + 货值快照 +
+     * 授信额度硬阻断 + {@link #shipOne} 四处写入（占有权 / 库存 / 设备状态 / 生命周期事件）。
+     *
+     * @param deviceId 入库设备
+     * @param stationId 占有站（当前登录站长自有站）
+     * @param operatorId 操作人（可为 null，记生命周期事件用）
+     * @return 入库结果（货权厂家 + 占有权 ID + 入站时点）
+     * @throws BizException 40401 inventory.not.found（设备不在库存台账中）
+     * @throws BizException 40943 inventory.owner_manufacturer.missing（台账缺货权方，无法入库）
+     * @throws BizException 40944 inventory.custody.held.by.other.station（已被其它站占有）
+     * @throws BizException 40945 inventory.custody.duplicate.inbound（本站重复入库）
+     * @throws BizException 40941 credit.limit.exceeded（超出服务站授信额度）
+     * @throws BizException 40340 org.disabled.readonly（服务站已被平台禁用）
+     */
+    @Transactional
+    public InventoryViews.ConsignmentInboundResult stationConsignmentInbound(
+            Long deviceId, Long stationId, Long operatorId) {
+        Long manufacturerId = resolveOwnerManufacturerId(deviceId);
+        assertCustodyInboundable(deviceId, stationId);
+        shipToStationBatch(List.of(deviceId), stationId, manufacturerId, operatorId);
+
+        Inventory saved = inventoryRepository.findByDeviceId(deviceId)
+                .orElseThrow(() -> BizException.of(40401, "inventory.not.found"));
+        return new InventoryViews.ConsignmentInboundResult(
+                deviceId, stationId, manufacturerId, saved.getCustodyId(), saved.getInboundAt());
+    }
+
+    /**
+     * 取货权方：{@code inventory.owner_manufacturer_id} 恒为厂家，入库动作不改变货权。
+     * 缺失即失败关闭 —— 宁可拒绝入库，也不允许产生一条无货权方的寄售占有权。
+     */
+    private Long resolveOwnerManufacturerId(Long deviceId) {
+        Inventory inv = inventoryRepository.findByDeviceId(deviceId)
+                .orElseThrow(() -> BizException.of(40401, "inventory.not.found"));
+        Long manufacturerId = inv.getOwnerManufacturerId();
+        if (manufacturerId == null) {
+            throw BizException.of(40943, "inventory.owner_manufacturer.missing");
+        }
+        return manufacturerId;
+    }
+
+    /**
+     * 占有权占用校验（V82 新增，防止误操作与跨站抢货）。
+     *
+     * <p>旧分拨链路 {@link #shipOne} 允许覆盖写入（无条件改 holderStationId），那是"厂家
+     * 主动分拨"的语义；改由服务站自主入库后，必须给出明确提示 —— 否则扫码重复提交会
+     * 静默改掉别人的占有权。仅对 <b>ACTIVE 且已归属某站</b>的占有权拦截；占有权已结束
+     * （TRANSFERRED_OUT / RETURNED / RELEASED）视为可重新入库（如回流后再次入站）。
+     *
+     * @throws BizException 40944 已被其它站占有
+     * @throws BizException 40945 本站重复入库
+     */
+    private void assertCustodyInboundable(Long deviceId, Long stationId) {
+        ConsignmentCustody current = custodyRepository.findByDeviceIdAndEndedAtIsNull(deviceId).orElse(null);
+        if (current == null
+                || current.getStatus() != CustodyStatus.ACTIVE
+                || current.getHolderStationId() == null) {
+            return;
+        }
+        if (stationId.equals(current.getHolderStationId())) {
+            throw BizException.of(40945, "inventory.custody.duplicate.inbound");
+        }
+        throw BizException.of(40944, "inventory.custody.held.by.other.station", current.getHolderStationId());
     }
 
     /** 单台设备的实际发货动作（校验通过后执行）。 */
