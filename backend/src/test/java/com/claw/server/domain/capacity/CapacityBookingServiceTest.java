@@ -111,6 +111,9 @@ class CapacityBookingServiceTest {
         when(accountService.getOrCreatePlatformAccount(eq(AccountType.MASTER)))
                 .thenReturn(Account.builder().id(777L).accountType(AccountType.MASTER).build());
 
+        // V85 预付款验余额：默认余额充足；需要「余额不足」的用例自己覆盖这个桩
+        when(ledgerService.getBalance(anyLong())).thenReturn(new BigDecimal("1000000.00"));
+
         // 记账：返回带 uuid 的 TxnResult（不校验金额，仅确认出口被调用）
         when(ledgerService.postEntries(any(), anyString(), anyList())).thenAnswer(inv -> {
             List<?> entries = inv.getArgument(2);
@@ -400,6 +403,47 @@ class CapacityBookingServiceTest {
         // 已订 5 份 + 本次 30 份 = 35 > 30
         BizException ex = assertThrows(BizException.class, () -> service.subscribe(1L, 200L, 30));
         assertEquals(40972, ex.getCode());
+    }
+
+    @Test
+    @DisplayName("V85：预付款余额不足直接拒绝（40974），既不记账也不落定购行——不允许透支")
+    void subscribe_insufficientBalanceRejected() {
+        CapacityPlan plan = CapacityPlan.builder().id(1L).productId(1L).ownerUserId(900L)
+                .totalUnits(100).subscribedUnits(0).unitPrice(new BigDecimal("10.00"))
+                .capacityType(CapacityType.PARALLEL).rebateRate(new BigDecimal("0.10"))
+                .status(CapacityPlanStatus.OPEN).build();
+        when(planRepository.findById(1L)).thenReturn(Optional.of(plan));
+        when(subscriptionRepository.sumUnitCountByPlanIdAndSubscriberUserId(1L, 500L)).thenReturn(null);
+        when(subscriptionRepository.findByPlanIdAndSubscriberUserIdAndStatusAndDeletedFalse(
+                1L, 500L, CapacitySubscriptionStatus.ACTIVE)).thenReturn(Optional.empty());
+        // 订户账户只有 5.00，本次应付 3 × 10.00 = 30.00 → 必须被拒
+        when(ledgerService.getBalance(500L)).thenReturn(new BigDecimal("5.00"));
+
+        BizException ex = assertThrows(BizException.class, () -> service.subscribe(1L, 500L, 3));
+        assertEquals(40974, ex.getCode());
+
+        // 关键：一分钱都没划走，也没有留下任何定购行
+        verify(ledgerService, times(0)).postEntries(any(), anyString(), anyList());
+        verify(subscriptionRepository, times(0)).save(any(CapacitySubscription.class));
+    }
+
+    @Test
+    @DisplayName("V85：余额刚好等于应付金额时允许预定（边界不应误杀）")
+    void subscribe_balanceExactlyEnoughAccepted() {
+        CapacityPlan plan = CapacityPlan.builder().id(1L).productId(1L).ownerUserId(900L)
+                .totalUnits(100).subscribedUnits(0).unitPrice(new BigDecimal("10.00"))
+                .capacityType(CapacityType.PARALLEL).rebateRate(new BigDecimal("0.10"))
+                .status(CapacityPlanStatus.OPEN).build();
+        when(planRepository.findById(1L)).thenReturn(Optional.of(plan));
+        when(subscriptionRepository.sumUnitCountByPlanIdAndSubscriberUserId(1L, 500L)).thenReturn(null);
+        when(subscriptionRepository.findByPlanIdAndSubscriberUserIdAndStatusAndDeletedFalse(
+                1L, 500L, CapacitySubscriptionStatus.ACTIVE)).thenReturn(Optional.empty());
+        // 余额 30.00 == 应付 30.00
+        when(ledgerService.getBalance(500L)).thenReturn(new BigDecimal("30.00"));
+
+        CapacitySubscription sub = service.subscribe(1L, 500L, 3);
+        assertEquals(3, sub.getUnitCount());
+        verify(ledgerService).postEntries(eq(BizType.CAPACITY_SUBSCRIPTION), anyString(), anyList());
     }
 
     @Test

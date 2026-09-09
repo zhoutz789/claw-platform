@@ -78,10 +78,16 @@ public class LedgerService {
             Account account = accountRepository.findByIdForUpdate(e.accountId())
                     .orElseThrow(() -> BizException.notFound("error.account.not.found"));
             if (e.direction() == LedgerRequests.Direction.D) {
-                // 平台 MASTER 清算/汇总户作为内部记账对冲侧（如 PROJECT_LEDGER）时豁免余额不足校验：
-                // 它不是真实资金账户，余额允许零/负（项目维度记账：项目户 + / 平台汇总户 -），
-                // 对应 V37 迁移已放宽 accounts.balance 的 CHECK 约束（仅 MASTER 允许为负）。
-                boolean isPlatformOffset = account.getAccountType() == AccountType.MASTER;
+                // 豁免余额不足校验的只有「平台内部户」——即 MASTER 且 userId 为 NULL 的清算/汇总户
+                // （对应 V37 迁移放宽 accounts.balance CHECK 约束的那一种）。它作为内部记账对冲侧
+                // （如 PROJECT_LEDGER：项目户 + / 平台汇总户 -），不是真实资金账户，余额允许零/负。
+                //
+                // ★V85 修正：此前判定条件只写了 `accountType == MASTER`，而「用户主账户」的类型同样是
+                // MASTER（见 AccountType 注释：总账户=用户/平台主账户），导致【所有用户】都被误豁免、
+                // 余额可以被扣成负数（容量预定预付款即由此透支成功）。现补上 `userId == NULL`，
+                // 只有真正没有归属用户的平台内部户才豁免。
+                boolean isPlatformOffset = account.getAccountType() == AccountType.MASTER
+                        && account.getUserId() == null;
                 if (!isPlatformOffset && account.getBalance().compareTo(e.amount()) < 0) {
                     throw BizException.of(42251, "error.ledger.insufficient");
                 }

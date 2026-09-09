@@ -206,6 +206,15 @@ public class CapacityBookingService {
         BigDecimal prepaid = plan.getUnitPrice().multiply(BigDecimal.valueOf(unitCount))
                 .setScale(4, RoundingMode.HALF_UP);
 
+        // 预付款必须验余额，不允许透支（V85）。
+        // 放在建行与记账之前做显式预检：① 给调用方「容量预定」场景下的明确提示，
+        // 而不是账本层笼统的 error.ledger.insufficient；② 余额不足时一行都不写。
+        Long subAccountId = accountService.getOrCreateUserAccount(subscriberUserId).getId();
+        BigDecimal balance = ledgerService.getBalance(subAccountId);
+        if (balance.compareTo(prepaid) < 0) {
+            throw BizException.of(40974, "error.capacity.balance.insufficient");
+        }
+
         try {
             CapacitySubscription sub;
             if (existing != null) {
@@ -228,7 +237,6 @@ public class CapacityBookingService {
 
             // 预付产能款：借 定购方账户，贷 厂家(计划方)账户 —— 资金直付厂家托管，平台不持池。
             // 金额恒为本笔增量 prepaid：历史部分已在上次记账时划转，不得重复划转。
-            Long subAccountId = accountService.getOrCreateUserAccount(subscriberUserId).getId();
             Long ownerAccountId = accountService.getOrCreateUserAccount(plan.getOwnerUserId()).getId();
             // 记账幂等键必须<b>每笔付款唯一</b>：一订户一行后，重复预定复用同一 sub.getId()，
             // 若只用 "CAPSUB-{subId}" 会被账本的幂等保护判为重复过账（40950）而付不了第二次款。
