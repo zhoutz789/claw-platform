@@ -48,7 +48,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * </ul>
  */
 @SpringBootTest
-@TestPropertySource(properties = "claw.security.dev-open-access=true")
+@TestPropertySource(properties = {
+        "claw.security.dev-open-access=true",
+        "claw.security.dev-open-access-ack=true"
+})
 class AdminInventoryControllerMeStatsIT extends AbstractIntegrationTest {
 
     @Autowired

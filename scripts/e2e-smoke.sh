@@ -115,7 +115,7 @@ JAR=$(ls backend/target/claw-server-*.jar 2>/dev/null | grep -v sources | head -
 
 # ---------- 3. 启动应用 ----------
 echo "[3/5] 启动应用（真库 profile, ddl-auto=none + Flyway）..."
-nohup java -Dclaw.security.dev-open-access=true -jar "$JAR" \
+nohup java -Dclaw.security.dev-open-access=true -Dclaw.security.dev-open-access-ack=true -jar "$JAR" \
   --server.port=$APP_PORT \
   --spring.datasource.url=jdbc:postgresql://localhost:$PG_PORT/claw \
   --spring.datasource.username=claw \

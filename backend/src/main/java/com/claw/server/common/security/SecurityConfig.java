@@ -29,6 +29,14 @@ public class SecurityConfig {
     @Value("${claw.security.dev-open-access:false}")
     private boolean devOpenAccess;
 
+    /**
+     * 生产护栏：dev-open-access 会放开全部接口与鉴权，属高危开关。
+     * 仅当本开关 {@code claw.security.dev-open-access-ack=true} 同时显式设置时才允许启用，
+     * 防止生产环境因误传 -Dclaw.security.dev-open-access=true 而被整体放开。
+     */
+    @Value("${claw.security.dev-open-access-ack:false}")
+    private boolean devOpenAccessAck;
+
     public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
     }
@@ -40,6 +48,16 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         if (devOpenAccess) {
+            // 生产护栏：dev-open-access 会放开全部接口与鉴权，属高危开关。
+            // 必须同时显式设置 claw.security.dev-open-access-ack=true 方能启用，
+            // 防止生产环境因误传 -Dclaw.security.dev-open-access=true 而被整体放开。
+            if (!devOpenAccessAck) {
+                throw new IllegalStateException(
+                        "安全护栏拦截：claw.security.dev-open-access=true 但缺少 "
+                                + "claw.security.dev-open-access-ack=true 显式确认。"
+                                + "该开关会放开全部接口与鉴权，禁止在生产环境启用；"
+                                + "仅允许本地开发/联调时同时设置两个开关。");
+            }
             // 开发态：放开全部接口，直接对接真实数据库体验。
             http.authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         } else {
