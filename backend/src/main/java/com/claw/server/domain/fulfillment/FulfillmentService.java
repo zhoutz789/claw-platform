@@ -1,7 +1,9 @@
 package com.claw.server.domain.fulfillment;
 
 import com.claw.server.common.api.BizException;
+import com.claw.server.common.dto.LedgerRequests;
 import com.claw.server.common.enums.AccountType;
+import com.claw.server.common.enums.BizType;
 import com.claw.server.common.enums.CustodyStatus;
 import com.claw.server.common.enums.FulfillmentStatus;
 import com.claw.server.common.enums.LifecycleStatus;
@@ -16,6 +18,7 @@ import com.claw.server.domain.iot.Device;
 import com.claw.server.domain.iot.DeviceRepository;
 import com.claw.server.domain.ledger.Account;
 import com.claw.server.domain.ledger.AccountService;
+import com.claw.server.domain.ledger.LedgerService;
 import com.claw.server.domain.lifecycle.LifecycleEvent;
 import com.claw.server.domain.lifecycle.LifecycleEventRepository;
 import com.claw.server.domain.onboarding.OnboardingCreditBlock;
@@ -58,6 +61,8 @@ public class FulfillmentService {
     private final DeviceRepository deviceRepository;
     /** 资金域只能通过 AccountService 交互（ArchUnit：资金域仓储不允许跨域访问）。 */
     private final AccountService accountService;
+    /** 复式记账引擎：任何 balance 变动都必须经它产生借贷分录，禁止直接改 Account.balance。 */
+    private final LedgerService ledgerService;
     private final LifecycleEventRepository lifecycleRepository;
     private final DeviceAuthorizationRepository deviceAuthorizationRepository;
     private final PrincipalBindingRepository bindingRepository;
@@ -117,7 +122,7 @@ public class FulfillmentService {
         o.setExpireAt(Instant.now().plus(Duration.ofDays(days)));
         o.setUpdatedAt(Instant.now());
         o = orderRepository.save(o);
-        freezeFunds(o.getCustomerUserId(), o.getTotalAmount());
+        freezeFunds(o.getCustomerUserId(), o.getTotalAmount(), o.getOrderNo());
         return o;
     }
 
@@ -248,13 +253,21 @@ public class FulfillmentService {
         return o;
     }
 
+    /**
+     * 取消订单：释放冻结并原路退回（Q6 不自动全额退款，退回动作本身仍须落账本）。
+     *
+     * <p>重复取消（已 CANCELLED / 已 EXPIRED）一并拦住：解冻是一次性记账动作，
+     * 幂等键为 (bizType, bizRef)，重放会被账本判 40950 重复过账。
+     */
     @Transactional
     public FulfillmentOrder cancel(Long orderId) {
         FulfillmentOrder o = load(orderId);
-        if (o.getStatus() == FulfillmentStatus.SETTLED || o.getStatus() == FulfillmentStatus.PICKED_UP) {
+        FulfillmentStatus s = o.getStatus();
+        if (s == FulfillmentStatus.SETTLED || s == FulfillmentStatus.PICKED_UP
+                || s == FulfillmentStatus.CANCELLED || s == FulfillmentStatus.EXPIRED) {
             throw BizException.of(40919, "order.not.cancellable");
         }
-        releaseFreeze(o.getCustomerUserId(), o.getFrozenAmount());
+        releaseFreeze(o.getCustomerUserId(), o.getFrozenAmount(), o.getOrderNo());
         o.setStatus(FulfillmentStatus.CANCELLED);
         o.setUpdatedAt(Instant.now());
         return orderRepository.save(o);
@@ -267,7 +280,7 @@ public class FulfillmentService {
         if (o.getStatus() != FulfillmentStatus.PAID_FROZEN && o.getStatus() != FulfillmentStatus.PENDING_PAYMENT) {
             return o;
         }
-        releaseFreeze(o.getCustomerUserId(), o.getFrozenAmount());
+        releaseFreeze(o.getCustomerUserId(), o.getFrozenAmount(), o.getOrderNo());
         o.setStatus(FulfillmentStatus.EXPIRED);
         o.setUpdatedAt(Instant.now());
         return orderRepository.save(o);
@@ -297,24 +310,49 @@ public class FulfillmentService {
                 .orElseThrow(() -> BizException.of(40401, "fulfillment.order.not.found"));
     }
 
-    /** 复用 ledger 冻结列：冻结用户资金（无外部网关，模拟充值+冻结）。 */
-    private void freezeFunds(Long userId, BigDecimal amount) {
+    /**
+     * 冻结用户资金（无外部网关，模拟充值 + 冻结）。
+     *
+     * <p>balance 的变动一律走 {@link LedgerService#postEntries} 产生借贷分录，禁止直接改
+     * {@code Account.balance}——否则资金流水不可审计，也绕过了账本的余额校验。
+     * 方向与 {@code PaymentService} 的 {@link BizType#RECHARGE} 一致：平台内部户借，用户 SUB 户贷。
+     *
+     * <p>{@code frozen} 只是冻结标记、不是账本概念，仍经 {@link AccountService#saveAccount} 直接维护。
+     * 顺序上<b>先落 frozen、后记账</b>：postEntries 会以 SELECT ... FOR UPDATE 重新读账户行并按最新余额加减，
+     * 若在记账之后再回写本对象，会把账本刚更新的 balance 覆盖回旧值。
+     */
+    private void freezeFunds(Long userId, BigDecimal amount, String bizRef) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
         Account acc = accountService.getOrCreateSubAccount(userId, AccountType.SUB);
-        acc.setBalance(nz(acc.getBalance()).add(amount));
         acc.setFrozen(nz(acc.getFrozen()).add(amount));
         accountService.saveAccount(acc);
+        // 模拟充值入账：平台内部户借，用户 SUB 户贷（平台内部户豁免余额校验，允许为负）
+        Account platform = accountService.getOrCreatePlatformAccount(AccountType.MASTER);
+        ledgerService.postEntries(BizType.RECHARGE, bizRef, List.of(
+                new LedgerRequests.Entry(platform.getId(), LedgerRequests.Direction.D, amount, "履约冻结入账"),
+                new LedgerRequests.Entry(acc.getId(), LedgerRequests.Direction.C, amount, "履约冻结入账")));
     }
 
-    private void releaseFreeze(Long userId, BigDecimal amount) {
+    /**
+     * 解冻退还：与 {@link #freezeFunds} 严格对称 —— frozen 减多少，balance 就经反向分录退多少。
+     *
+     * <p>方向与 {@code PaymentService} 的「提现失败退回」一致：用户 SUB 户借，平台内部户贷。
+     * bizRef 追加 {@code ":RELEASE"} 后缀，避开账本 (bizType, bizRef) 幂等键与冻结那笔冲突。
+     */
+    private void releaseFreeze(Long userId, BigDecimal amount, String bizRef) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
         Account acc = accountService.getOrCreateSubAccount(userId, AccountType.SUB);
         acc.setFrozen(nz(acc.getFrozen()).subtract(amount).max(BigDecimal.ZERO));
         accountService.saveAccount(acc);
+        // 原路退回：用户 SUB 户借，平台内部户贷
+        Account platform = accountService.getOrCreatePlatformAccount(AccountType.MASTER);
+        ledgerService.postEntries(BizType.REFUND, bizRef + ":RELEASE", List.of(
+                new LedgerRequests.Entry(acc.getId(), LedgerRequests.Direction.D, amount, "履约解冻退回"),
+                new LedgerRequests.Entry(platform.getId(), LedgerRequests.Direction.C, amount, "履约解冻退回")));
     }
 
     private BigDecimal nz(BigDecimal v) {
