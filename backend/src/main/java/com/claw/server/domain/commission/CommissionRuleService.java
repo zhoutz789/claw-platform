@@ -143,4 +143,83 @@ public class CommissionRuleService {
         }
         return commission.max(BigDecimal.ZERO);
     }
+
+    /**
+     * 命中提成规则的明细（含规则主键与快照），供履约结算留存审计与金额计算复用。
+     *
+     * <p>在 {@link #resolveCommission} 的匹配口径上增加<b>生效期校验</b>：仅采纳
+     * effective_from/effective_to 窗口包含当前时刻（或起止为空）的规则；命中后返回规则 id、
+     * 快照 JSON 与计算出的提成额（含 min/max 封顶保底，结果 max(ZERO)）。
+     */
+    public record CommissionDetail(Long ruleId, String ruleSnapshot, BigDecimal commission) {}
+
+    @Transactional(readOnly = true)
+    public CommissionDetail resolveCommissionDetail(Long manufacturerId, Long productId, BigDecimal saleAmount) {
+        if (saleAmount == null) {
+            saleAmount = BigDecimal.ZERO;
+        }
+        Instant now = Instant.now();
+        CommissionRule best = null;
+        if (productId != null) {
+            best = ruleRepository.findByManufacturerIdAndProductIdAndEnabledTrue(manufacturerId, productId)
+                    .orElse(null);
+        }
+        if (best == null) {
+            best = ruleRepository.findByManufacturerIdAndEnabledTrue(manufacturerId).stream()
+                    .filter(r -> isEffective(r, now))
+                    .max(Comparator.comparingInt(CommissionRule::getPriority)).orElse(null);
+        }
+        if (best == null) {
+            best = ruleRepository.findByManufacturerIdIsNullAndEnabledTrue().stream()
+                    .filter(r -> isEffective(r, now))
+                    .max(Comparator.comparingInt(CommissionRule::getPriority)).orElse(null);
+        }
+        if (best == null) {
+            return new CommissionDetail(null, null, BigDecimal.ZERO);
+        }
+        BigDecimal commission = computeCommission(best, saleAmount);
+        return new CommissionDetail(best.getId(), buildSnapshot(best), commission);
+    }
+
+    /** 生效期校验：effective_from/effective_to 为空表示无限制；窗口必须包含 now。 */
+    private boolean isEffective(CommissionRule r, Instant now) {
+        if (r.getEffectiveFrom() != null && now.isBefore(r.getEffectiveFrom())) {
+            return false;
+        }
+        if (r.getEffectiveTo() != null && now.isAfter(r.getEffectiveTo())) {
+            return false;
+        }
+        return true;
+    }
+
+    /** 按规则计算提成：RATE → 基数×rate；AMOUNT → 定额；含 min/max 封顶保底，结果 max(ZERO)。 */
+    private BigDecimal computeCommission(CommissionRule best, BigDecimal saleAmount) {
+        BigDecimal commission;
+        if ("RATE".equals(best.getCommissionType()) && best.getRate() != null) {
+            commission = saleAmount.multiply(best.getRate());
+        } else if ("AMOUNT".equals(best.getCommissionType()) && best.getAmount() != null) {
+            commission = best.getAmount();
+        } else {
+            commission = BigDecimal.ZERO;
+        }
+        if (best.getMinAmount() != null && commission.compareTo(best.getMinAmount()) < 0) {
+            commission = best.getMinAmount();
+        }
+        if (best.getMaxAmount() != null && commission.compareTo(best.getMaxAmount()) > 0) {
+            commission = best.getMaxAmount();
+        }
+        return commission.max(BigDecimal.ZERO);
+    }
+
+    /** 规则快照 JSON（审计留痕，手动拼接避免引入额外依赖）。 */
+    private String buildSnapshot(CommissionRule r) {
+        return String.format(
+                "{\"id\":%d,\"type\":\"%s\",\"rate\":%s,\"amount\":%s,\"min\":%s,\"max\":%s,\"priority\":%d}",
+                r.getId(), r.getCommissionType(),
+                r.getRate() == null ? "null" : r.getRate().toPlainString(),
+                r.getAmount() == null ? "null" : r.getAmount().toPlainString(),
+                r.getMinAmount() == null ? "null" : r.getMinAmount().toPlainString(),
+                r.getMaxAmount() == null ? "null" : r.getMaxAmount().toPlainString(),
+                r.getPriority() == null ? 0 : r.getPriority());
+    }
 }

@@ -54,6 +54,55 @@ public class FulfillmentSettlement {
 
     private String ledgerTxnId;
 
+    /** 订单总金额（结算恒等式右端；V87 新增）。 */
+    @Builder.Default
+    private BigDecimal totalAmount = BigDecimal.ZERO;
+
+    /** 本次结算实际采用的物流费率（如 0；违法率按 0 处理并告警，V87 新增）。 */
+    @Builder.Default
+    private BigDecimal logisticsFeeRate = BigDecimal.ZERO;
+
+    /** 命中提成规则主键（快照溯源，V87 新增）。 */
+    private Long commissionRuleId;
+
+    /** 命中提成规则快照 JSON（审计留痕，V87 新增）。 */
+    @Column(columnDefinition = "TEXT")
+    private String commissionRuleSnapshot;
+
+    /** 下单用户 id（释放其冻结，V87 新增）。 */
+    private Long customerUserId;
+
+    /** 结算币种（默认 USD，V87 新增）。 */
+    @Builder.Default
+    private String currency = "USD";
+
+    /** 触发本次结算的 outbox 事件 id（溯源，V87 新增）。 */
+    private Long sourceEventId;
+
+    /** 挂起/失败原因码（如 COMMISSION_RULE_MISSING / PAYEE_ACCOUNT_MISSING / INVALID_AMOUNT，V87 新增）。 */
+    private String reasonCode;
+
+    /** 挂起/失败详情（V87 新增）。 */
+    @Column(columnDefinition = "VARCHAR(512)")
+    private String failReason;
+
+    /** 重试次数（V87 新增）。 */
+    @Builder.Default
+    private Integer retryCount = 0;
+
+    /** 结算成功时间（V87 新增）。 */
+    private Instant settledAt;
+
+    /** 处理人（人工介入时填写，V87 新增）。 */
+    private Long handledBy;
+
+    /** 处理时间（V87 新增）。 */
+    private Instant handledAt;
+
+    /** 处理备注（V87 新增）。 */
+    @Column(columnDefinition = "VARCHAR(512)")
+    private String handleRemark;
+
     @Column(nullable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();

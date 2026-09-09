@@ -52,6 +52,14 @@ public class StationInventoryMovement {
     /** 操作人。 */
     private Long operatorId;
 
+    /** V89：归属的履约订单（结算产生此流水时回填；存量全 NULL，结算扫描据此排除）。 */
+    @Column(name = "fulfillment_order_id")
+    private Long fulfillmentOrderId;
+
+    /** V89：归属的结算单（履约结算回填）。 */
+    @Column(name = "fulfillment_settlement_id")
+    private Long fulfillmentSettlementId;
+
     @Builder.Default
     private Long tenantId = 1L;
 

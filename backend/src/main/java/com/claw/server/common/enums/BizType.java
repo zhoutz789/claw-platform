@@ -36,5 +36,7 @@ public enum BizType {
     /** 容量预订预付（V71：用户定购产能单位，预付产能款直付厂家托管）。 */
     CAPACITY_SUBSCRIPTION,
     /** 容量回佣（V71：从厂家 owner_share 计提，按定购单位比例自动分成）。 */
-    CAPACITY_REBATE
+    CAPACITY_REBATE,
+    /** 履约异步结算（取货扫码触发：释放冻结 + 服务站提成 + 厂家货款，复用 ledger 双记账）。 */
+    FULFILLMENT_SETTLEMENT
 }

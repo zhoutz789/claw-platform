@@ -127,7 +127,7 @@ class StationSettlementServiceTest {
 
     private void stubCommonReads(List<StationInventoryMovement> movements, String price) {
         when(scopeService.allowedStationIds(STATION_ID)).thenReturn(List.of(STATION_ID));
-        when(movementRepository.findByStationIdAndDeltaQtyLessThanAndCreatedAtBetween(STATION_ID, 0, START, END))
+        when(movementRepository.findByStationIdAndDeltaQtyLessThanAndFulfillmentOrderIdIsNullAndCreatedAtBetween(STATION_ID, 0, START, END))
                 .thenReturn(movements);
         when(productSkuRepository.findBySkuCode(SKU)).thenReturn(Optional.of(sku(price)));
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(
@@ -224,7 +224,7 @@ class StationSettlementServiceTest {
     @DisplayName("健壮性：SKU 在 product_skus 中不存在 → 该笔跳过，三金额全 0，不抛异常")
     void generate_unknownSkuIsSkipped() {
         when(scopeService.allowedStationIds(STATION_ID)).thenReturn(List.of(STATION_ID));
-        when(movementRepository.findByStationIdAndDeltaQtyLessThanAndCreatedAtBetween(STATION_ID, 0, START, END))
+        when(movementRepository.findByStationIdAndDeltaQtyLessThanAndFulfillmentOrderIdIsNullAndCreatedAtBetween(STATION_ID, 0, START, END))
                 .thenReturn(List.of(consume(1L, -3)));
         when(productSkuRepository.findBySkuCode(SKU)).thenReturn(Optional.empty());
         when(systemConfigRepository.findByConfigKeyAndDeletedFalse("STATION_LOGISTICS_FEE_RATE"))
@@ -258,7 +258,7 @@ class StationSettlementServiceTest {
 
         // ② 跨层仓储：只读，读完即无更多交互（若有隐藏写会立刻失败）
         verify(movementRepository)
-                .findByStationIdAndDeltaQtyLessThanAndCreatedAtBetween(STATION_ID, 0, START, END);
+                .findByStationIdAndDeltaQtyLessThanAndFulfillmentOrderIdIsNullAndCreatedAtBetween(STATION_ID, 0, START, END);
         verifyNoMoreInteractions(movementRepository);
         verify(movementRepository, never()).save(any());
         verify(movementRepository, never()).saveAll(anyList());

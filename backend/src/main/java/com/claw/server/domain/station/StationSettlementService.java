@@ -55,8 +55,9 @@ public class StationSettlementService {
         Instant end = req.periodEnd() != null ? req.periodEnd() : Instant.now();
 
         // 消耗数据源：该站时间窗内 delta_qty<0 的出入库流水（结算只读引用）
+        // V89：排除已归属履约订单的流水，避免履约结算产生的扣减被服务站周期结算重复计入
         List<StationInventoryMovement> consumptions = movementRepository
-                .findByStationIdAndDeltaQtyLessThanAndCreatedAtBetween(req.stationId(), 0, start, end);
+                .findByStationIdAndDeltaQtyLessThanAndFulfillmentOrderIdIsNullAndCreatedAtBetween(req.stationId(), 0, start, end);
 
         BigDecimal rate = logisticsRate();
         BigDecimal totalValue = BigDecimal.ZERO;
