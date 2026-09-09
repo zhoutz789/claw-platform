@@ -71,8 +71,10 @@ public class SecurityConfig {
                     "/api/v1/jurisdictions/**",
                     // 支付网关回调 webhook：以共享密钥 X-Callback-Token 鉴权（见 PaymentController.verifyCallbackAuth），
                     // 不走用户 JWT，故在此放行由网关直连；未配置密钥时接口 fail-closed 拒绝。
-                    "/api/v1/payments/**/callback",
-                    "/api/v1/payments/**/fail",
+                    // 注意：Spring Security 6 默认 PathPatternParser 要求 ** 仅能出现在路径末尾，
+                    // 回调路径按控制器实际路由（单段资源 id）写成 * 通配，避免 "No more pattern data allowed after **" 解析异常。
+                    "/api/v1/payments/*/callback",
+                    "/api/v1/payments/txns/*/fail",
                     "/swagger-ui.html",
                     "/swagger-ui/**",
                     "/v3/api-docs/**",
