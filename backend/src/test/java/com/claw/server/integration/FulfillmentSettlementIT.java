@@ -441,9 +441,12 @@ class FulfillmentSettlementIT extends AbstractIntegrationTest {
     }
 
     private void insertLogisticsRate(String value) {
+        // upsert：STATION_LOGISTICS_FEE_RATE 是全局唯一配置，测试反复跑会撞唯一约束；
+        // 用 ON CONFLICT 覆盖为本次要验证的值，避免 DuplicateKey 打断测试。
         jdbc.update(
                 "INSERT INTO claw.system_config (config_key, config_value, category, description, data_type, editable, tenant_id, deleted) "
-                        + "VALUES ('STATION_LOGISTICS_FEE_RATE', ?, '费率', '物流费率', 'NUMBER', true, 1, false)",
+                        + "VALUES ('STATION_LOGISTICS_FEE_RATE', ?, '费率', '物流费率', 'NUMBER', true, 1, false) "
+                        + "ON CONFLICT (config_key) DO UPDATE SET config_value = EXCLUDED.config_value, deleted = false",
                 value);
     }
 

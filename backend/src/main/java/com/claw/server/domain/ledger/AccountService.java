@@ -20,10 +20,18 @@ public class AccountService {
 
     private final AccountRepository accountRepository;
 
-    /** 平台内部户（MASTER / RESIDUAL_RESERVE / BATTERY_FUND / VEHICLE_RISK），不存在则创建。 */
+    /**
+     * 平台内部户（MASTER / RESIDUAL_RESERVE / BATTERY_FUND / VEHICLE_RISK），不存在则创建。
+     *
+     * <p>★必须用 {@code findFirstBy...OrderByIdAsc} 而非 {@code findBy...}：平台内部户的
+     * {@code user_id} 为 NULL，而 {@code accounts} 的唯一约束在 PostgreSQL 下对 NULL 互不相等
+     * （NULL != NULL），故<b>无法阻止重复平台户</b>。历史并发/重复调用会在库中累积多条
+     * user_id=NULL 的同类账户，此时 {@code findBy}（返回 Optional 单条）会抛
+     * {@code NonUniqueResultException} 直接打断资金链路。取 id 最小的那条作为权威户即可容忍。
+     */
     @Transactional
     public Account getOrCreatePlatformAccount(AccountType type) {
-        return accountRepository.findByUserIdIsNullAndAccountTypeAndCurrency(type, "USD")
+        return accountRepository.findFirstByUserIdIsNullAndAccountTypeAndCurrencyOrderByIdAsc(type, "USD")
                 .orElseGet(() -> accountRepository.save(Account.builder().accountType(type).build()));
     }
 

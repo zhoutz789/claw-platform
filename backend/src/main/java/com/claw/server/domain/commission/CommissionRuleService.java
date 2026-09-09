@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -161,7 +162,10 @@ public class CommissionRuleService {
         Instant now = Instant.now();
         CommissionRule best = null;
         if (productId != null) {
+            // ★生效期校验同样要作用在最高优先级（厂家+商品）上：命中但已过期的规则必须回退到
+            // 厂家级/平台默认，否则过期规则会被永久采纳（老板明确要求补生效期校验，这里此前漏了）。
             best = ruleRepository.findByManufacturerIdAndProductIdAndEnabledTrue(manufacturerId, productId)
+                    .filter(r -> isEffective(r, now))
                     .orElse(null);
         }
         if (best == null) {
@@ -208,7 +212,9 @@ public class CommissionRuleService {
         if (best.getMaxAmount() != null && commission.compareTo(best.getMaxAmount()) > 0) {
             commission = best.getMaxAmount();
         }
-        return commission.max(BigDecimal.ZERO);
+        // ★统一截断到 4 位小数（项目金额精度 NUMERIC(18,4)）。若不截断，RATE 规则乘出的高精度小数
+        // 会让履约结算的 balance_to_mfg = total − commission 无法与 total 守恒，直接撞 V87 恒等式 CHECK。
+        return commission.max(BigDecimal.ZERO).setScale(4, RoundingMode.HALF_UP);
     }
 
     /** 规则快照 JSON（审计留痕，手动拼接避免引入额外依赖）。 */

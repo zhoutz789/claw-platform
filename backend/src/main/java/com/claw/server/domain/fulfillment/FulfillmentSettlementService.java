@@ -112,9 +112,12 @@ public class FulfillmentSettlementService implements OutboxHandler {
             return;
         }
         FulfillmentSettlement existing = settlementRepository.findByFulfillmentOrderId(orderId).orElse(null);
-        if (existing != null
-                && (existing.getStatus() == SettlementStatus.SETTLED || existing.getStatus() == SettlementStatus.DONE)) {
-            log.debug("结算单已完成，幂等跳过 orderId={}", orderId);
+        if (existing != null) {
+            // ★幂等：只要已存在结算单（无论 SETTLED/DONE/MANUAL/FAILED）就跳过，绝不重复处理。
+            // 此前只拦 SETTLED/DONE，导致 MANUAL 挂起事件在 at-least-once 重投窗口内会再次 suspend，
+            // 撞 UNIQUE(fulfillment_order_id) → 技术异常 → 重试风暴误进死信。
+            // MANUAL/FAILED 的重结算由人工重投接口负责（先重置/删除本条再重投），此处不再重复落单。
+            log.debug("结算单已存在，幂等跳过 orderId={} status={}", orderId, existing.getStatus());
             return;
         }
 
@@ -123,7 +126,7 @@ public class FulfillmentSettlementService implements OutboxHandler {
         if (total.compareTo(ZERO) <= 0) {
             // 金额非正：挂起待人工核对，绝不释放冻结、绝不过账
             suspend(order, eventId, SettlementStep.LOGISTICS, SettlementStatus.MANUAL,
-                    "INVALID_AMOUNT", "订单金额非正，无法结算", null, null, null, null);
+                    "INVALID_AMOUNT", "订单金额非正，无法结算", total, null, null, null);
             return;
         }
         BigDecimal rate = logisticsRate();
