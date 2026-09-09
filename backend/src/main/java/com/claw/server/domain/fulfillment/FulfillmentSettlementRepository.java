@@ -10,4 +10,6 @@ public interface FulfillmentSettlementRepository extends JpaRepository<Fulfillme
     Optional<FulfillmentSettlement> findByFulfillmentOrderId(Long fulfillmentOrderId);
 
     List<FulfillmentSettlement> findByStatus(com.claw.server.common.enums.SettlementStatus status);
+
+    List<FulfillmentSettlement> findByStatusIn(java.util.List<com.claw.server.common.enums.SettlementStatus> statuses);
 }

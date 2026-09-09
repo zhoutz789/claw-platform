@@ -1,11 +1,14 @@
 package com.claw.server.web.v1;
 
 import com.claw.server.common.api.ApiResult;
+import com.claw.server.common.enums.SettlementStatus;
 import com.claw.server.common.security.AuthContext;
 import com.claw.server.common.security.RequirePermission;
 import com.claw.server.domain.fulfillment.FulfillmentOrder;
 import com.claw.server.domain.fulfillment.FulfillmentOrderItem;
 import com.claw.server.domain.fulfillment.FulfillmentService;
+import com.claw.server.domain.fulfillment.FulfillmentSettlement;
+import com.claw.server.domain.fulfillment.FulfillmentSettlementService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +22,7 @@ import java.util.List;
 public class AdminFulfillmentController {
 
     private final FulfillmentService fulfillmentService;
+    private final FulfillmentSettlementService settlementService;
 
     @GetMapping("/orders")
     @RequirePermission("order:view")
