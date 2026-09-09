@@ -2,6 +2,7 @@ package com.claw.server.web.v1;
 
 import com.claw.server.common.api.ApiResult;
 import com.claw.server.common.dto.SettlementViews;
+import com.claw.server.common.security.RequirePermission;
 import com.claw.server.domain.settlement.CrossBorderSettlementService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -18,8 +19,9 @@ public class SettlementController {
 
     private final CrossBorderSettlementService settlementService;
 
-    /** 跨境物资转移结算报价：出口国退税 + 进口国关税/增值税，各自计算。 */
+    /** 跨境物资转移结算报价：出口国退税 + 进口国关税/增值税，各自计算。只读计算，须登录且有查看权限。 */
     @PostMapping("/settlements/cross-border")
+    @RequirePermission("order:view")
     public ApiResult<SettlementViews.CrossBorderQuoteResult> crossBorder(
             @RequestBody SettlementViews.CrossBorderQuoteRequest request) {
         return ApiResult.ok(settlementService.quote(request));

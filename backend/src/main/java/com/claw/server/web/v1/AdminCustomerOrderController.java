@@ -38,6 +38,7 @@ public class AdminCustomerOrderController {
     private final UnitRegistrationService unitRegistrationService;
 
     @PostMapping
+    @RequirePermission("customer-order:create")
     public ApiResult<CustomerOrderView> create(@RequestBody CreateCustomerOrderReq req) {
         return ApiResult.ok(orderService.create(req));
     }
