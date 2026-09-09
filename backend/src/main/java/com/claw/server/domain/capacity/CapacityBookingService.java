@@ -260,6 +260,17 @@ public class CapacityBookingService {
             log.info("容量定购 planId={} subscriber={} units={} prepaid={} 累加={} 累加后份数={}",
                     planId, subscriberUserId, unitCount, prepaid, existing != null, sub.getUnitCount());
             return sub;
+        } catch (BizException e) {
+            // 预检与记账之间存在极小的并发窗口：两个请求都通过了 getBalance 预检，
+            // 但账本用 SELECT ... FOR UPDATE 串行化后，后一个会看到已被扣减的余额并抛 42251。
+            // 资金是安全的（绝不会透支），只是错误码要统一成本领域的 40974，避免前端收到
+            // 账本通用码、也避免同一个业务错误在不同时机返回不同 code。
+            if (e.getCode() == 42251) {
+                log.warn("容量定购并发下余额不足 planId={} subscriber={} amount={} 已拒（账本 42251 → 40974）",
+                        planId, subscriberUserId, prepaid);
+                throw BizException.of(40974, "error.capacity.balance.insufficient");
+            }
+            throw e;
         } catch (DataIntegrityViolationException e) {
             // 并发下两个请求同时判定「无既有行」并走到 insert，必有一个撞 uq_cap_sub_active。
             // 这里必须拦成 4xx：① 绝不允许裸 500（污染告警、看起来像服务端炸了）；

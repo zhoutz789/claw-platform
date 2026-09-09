@@ -447,6 +447,26 @@ class CapacityBookingServiceTest {
     }
 
     @Test
+    @DisplayName("并发窗口：预检通过后账本仍判余额不足（42251）时，统一转成领域码 40974")
+    void subscribe_ledgerInsufficient_translatedTo40974() {
+        CapacityPlan plan = CapacityPlan.builder().id(1L).productId(1L).ownerUserId(900L)
+                .totalUnits(100).subscribedUnits(0).unitPrice(new BigDecimal("10.00"))
+                .capacityType(CapacityType.PARALLEL).rebateRate(new BigDecimal("0.10"))
+                .status(CapacityPlanStatus.OPEN).build();
+        when(planRepository.findById(1L)).thenReturn(Optional.of(plan));
+        when(subscriptionRepository.sumUnitCountByPlanIdAndSubscriberUserId(1L, 500L)).thenReturn(null);
+        when(subscriptionRepository.findByPlanIdAndSubscriberUserIdAndStatusAndDeletedFalse(
+                1L, 500L, CapacitySubscriptionStatus.ACTIVE)).thenReturn(Optional.empty());
+        // 预检时余额充足，但并发下账本加锁后判定不足（模拟 TOCTOU 窗口）
+        when(ledgerService.getBalance(500L)).thenReturn(new BigDecimal("100.00"));
+        when(ledgerService.postEntries(any(), anyString(), anyList()))
+                .thenThrow(BizException.of(42251, "error.ledger.insufficient"));
+
+        BizException ex = assertThrows(BizException.class, () -> service.subscribe(1L, 500L, 3));
+        assertEquals(40974, ex.getCode());
+    }
+
+    @Test
     @DisplayName("唯一索引冲突：DataIntegrityViolationException 被转成 40973（HTTP 409），绝不 500、不吐数据库细节")
     void subscribe_uniqueConstraintViolation_translatedTo409() {
         CapacityPlan plan = CapacityPlan.builder().id(1L).assetId(1L).ownerUserId(900L)
