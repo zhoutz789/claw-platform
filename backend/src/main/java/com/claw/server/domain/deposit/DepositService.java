@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -40,6 +41,16 @@ public class DepositService {
     @Transactional
     public DepositViews.DepositView hold(DepositRequests.Hold req) {
         String depositNo = "DEP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+
+        Account master = accountService.getOrCreateUserAccount(req.userId());
+        Account locked = accountService.getOrCreateSubAccount(req.userId(), AccountType.DEPOSIT_LOCKED);
+        // V85：押金冻结借记的是用户主账户，先显式验余额，不允许透支。
+        // 放在建单与记账之前，余额不足时一行都不写，并给出押金域自己的错误码（而非账本通用 42251）。
+        BigDecimal available = master.getBalance() == null ? BigDecimal.ZERO : master.getBalance();
+        if (available.compareTo(req.amount()) < 0) {
+            throw BizException.of(42261, "error.deposit.balance.insufficient");
+        }
+
         Deposit deposit = depositRepository.save(Deposit.builder()
                 .depositNo(depositNo)
                 .userId(req.userId())
@@ -49,8 +60,6 @@ public class DepositService {
                 .payOrderNo(req.payOrderNo())
                 .build());
 
-        Account master = accountService.getOrCreateUserAccount(req.userId());
-        Account locked = accountService.getOrCreateSubAccount(req.userId(), AccountType.DEPOSIT_LOCKED);
         ledgerService.postEntries(BizType.DEPOSIT_HOLD, depositNo, List.of(
                 new LedgerRequests.Entry(master.getId(), LedgerRequests.Direction.D, req.amount(), "押金冻结"),
                 new LedgerRequests.Entry(locked.getId(), LedgerRequests.Direction.C, req.amount(), "押金冻结 HELD")));
