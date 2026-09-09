@@ -85,12 +85,16 @@ public class AdminFulfillmentController {
         return ApiResult.ok(fulfillmentService.pickupScan(id, req.deviceIds(), op));
     }
 
+    /** 取消履约单：释放冻结资金原路退回（动钱）。须与 pay 同权，防越权释放用户资金。 */
     @PostMapping("/orders/{id}/cancel")
+    @RequirePermission("order:fulfill:pay")
     public ApiResult<FulfillmentOrder> cancel(@PathVariable Long id) {
         return ApiResult.ok(fulfillmentService.cancel(id));
     }
 
+    /** 履约超时：释放冻结资金置 EXPIRED（动钱）。须与 pay 同权，防越权释放用户资金。 */
     @PostMapping("/orders/{id}/expire")
+    @RequirePermission("order:fulfill:pay")
     public ApiResult<FulfillmentOrder> expire(@PathVariable Long id) {
         return ApiResult.ok(fulfillmentService.expire(id));
     }
