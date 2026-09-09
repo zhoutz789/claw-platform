@@ -1,6 +1,7 @@
 package com.claw.server.web.v1;
 
 import com.claw.server.common.api.ApiResult;
+import com.claw.server.common.api.BizException;
 import com.claw.server.common.enums.SettlementStatus;
 import com.claw.server.common.security.AuthContext;
 import com.claw.server.common.security.RequirePermission;
@@ -92,6 +93,73 @@ public class AdminFulfillmentController {
     @PostMapping("/orders/{id}/expire")
     public ApiResult<FulfillmentOrder> expire(@PathVariable Long id) {
         return ApiResult.ok(fulfillmentService.expire(id));
+    }
+
+    /* ===================== 履约结算人工介入（R7 兜底：失败挂起转人工） ===================== */
+
+    /**
+     * 结算单看板：列出待人工处理的结算单。
+     * 默认 MANUAL + FAILED；可 {@code ?status=MANUAL,FAILED} 指定多个，{@code ?orderId=} 过滤单笔订单。
+     */
+    @GetMapping("/settlements")
+    @RequirePermission("order:view")
+    public ApiResult<List<FulfillmentSettlement>> listSettlements(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long orderId) {
+        return ApiResult.ok(settlementService.listSettlements(parseStatuses(status), orderId));
+    }
+
+    /** 结算单详情（含失败原因、处理人、重试次数）。 */
+    @GetMapping("/settlements/{id}")
+    @RequirePermission("order:view")
+    public ApiResult<FulfillmentSettlement> getSettlement(@PathVariable Long id) {
+        return ApiResult.ok(settlementService.getSettlement(id));
+    }
+
+    /**
+     * 人工重结算：针对 MANUAL/FAILED 挂起单，修复根因（绑定收款户 / 配置提成规则 / 校正金额）后，
+     * 重新跑完整资金链路（释放冻结 + 提成 + 货款），结果回填既有行。
+     */
+    @PostMapping("/settlements/{id}/retry")
+    @RequirePermission("order:fulfill:pay")
+    public ApiResult<FulfillmentSettlement> retry(@PathVariable Long id,
+                                                  @RequestBody(required = false) ManualAction req) {
+        return ApiResult.ok(settlementService.retry(id, AuthContext.currentUserId(),
+                req == null ? null : req.remark()));
+    }
+
+    /**
+     * 人工置已处理（行政关闭）：释放用户冻结资金回可用余额（行政退款），结算单置 DONE。
+     * 不给付服务站 / 厂家，适用于「根因无法修复、订单终止 / 退款给用户」的场景。
+     */
+    @PostMapping("/settlements/{id}/resolve")
+    @RequirePermission("order:fulfill:pay")
+    public ApiResult<FulfillmentSettlement> resolve(@PathVariable Long id,
+                                                    @RequestBody(required = false) ManualAction req) {
+        return ApiResult.ok(settlementService.resolve(id, AuthContext.currentUserId(),
+                req == null ? null : req.remark()));
+    }
+
+    /** 解析逗号分隔的 settlement 状态过滤参数；非法值 → 400。 */
+    private List<SettlementStatus> parseStatuses(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        List<SettlementStatus> out = new java.util.ArrayList<>();
+        for (String s : status.split(",")) {
+            String t = s.trim().toUpperCase();
+            if (!t.isEmpty()) {
+                try {
+                    out.add(SettlementStatus.valueOf(t));
+                } catch (IllegalArgumentException e) {
+                    throw BizException.of(BizException.INVALID_PARAM, "settlement.status.invalid", t);
+                }
+            }
+        }
+        return out.isEmpty() ? null : out;
+    }
+
+    public record ManualAction(String remark) {
     }
 
     public record CreateOrder(Long customerUserId, Long manufacturerId, Long stationId, boolean remoteOrder,
