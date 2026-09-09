@@ -204,7 +204,17 @@ public class FulfillmentSettlementService implements OutboxHandler {
                 .createdAt(Instant.now())
                 .updatedAt(Instant.now())
                 .build();
-        settlementRepository.save(settlement);
+        try {
+            // ★saveAndFlush：强制立即 INSERT，使并发双结下的 UNIQUE(fulfillment_order_id) 冲突
+            // 在此处立即抛出、可被捕获。若用 save（延迟 flush），冲突会在事务提交时才抛，
+            // 届时已无法在此收敛，异常会冒泡到 relay 被判技术异常 → 无谓重试。
+            settlementRepository.saveAndFlush(settlement);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // 并发双结：另一事务已插入同一 fulfillment_order_id 并提交。本事务已 rollback-only，
+            // 前面 3 笔记账一并回滚，产生零副作用。幂等跳过、正常返回（不抛），relay 标记 PUBLISHED。
+            log.warn("并发结算冲突（UNIQUE fulfillment_order_id），本事务幂等回滚 orderId={}", orderId);
+            return;
+        }
 
         order.setStatus(FulfillmentStatus.SETTLED);
         order.setSettledAt(Instant.now());
