@@ -6,10 +6,13 @@ import com.claw.server.common.dto.PaymentRequests;
 import com.claw.server.common.dto.PaymentViews;
 import com.claw.server.common.security.AuthContext;
 import com.claw.server.domain.payment.PaymentService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -30,6 +33,17 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
+    @Value("${claw.security.dev-open-access:false}")
+    private boolean devOpenAccess;
+
+    /**
+     * 支付网关回调共享密钥（webhook 鉴权，fail-closed）。
+     * 生产必须配置环境变量 CLAW_PAYMENT_CALLBACK_SECRET；网关在 X-Callback-Token 头携带该值。
+     * 未配置时回调接口拒绝服务，杜绝"任意已登录用户可触发入账"的资金注入漏洞。
+     */
+    @Value("${claw.payment.callback-secret:}")
+    private String callbackSecret;
+
     @PostMapping("/accounts/recharge")
     public ApiResult<PaymentViews.RechargeView> recharge(@Valid @RequestBody PaymentRequests.Recharge req) {
         return ApiResult.ok(paymentService.recharge(requireOperator(), req));
@@ -46,13 +60,16 @@ public class PaymentController {
     }
 
     @PostMapping("/payments/{orderNo}/callback")
-    public ApiResult<PaymentViews.WalletTxnView> callback(@PathVariable String orderNo) {
+    public ApiResult<PaymentViews.WalletTxnView> callback(@PathVariable String orderNo, HttpServletRequest request) {
+        verifyCallbackAuth(request);
         return ApiResult.ok(paymentService.onCallback(orderNo));
     }
 
     @PostMapping("/payments/txns/{txnNo}/fail")
     public ApiResult<PaymentViews.WalletTxnView> fail(@PathVariable String txnNo,
-                                                      @RequestParam(required = false) String reason) {
+                                                      @RequestParam(required = false) String reason,
+                                                      HttpServletRequest request) {
+        verifyCallbackAuth(request);
         return ApiResult.ok(paymentService.failWithdraw(txnNo, reason != null ? reason : "ABA payout failed"));
     }
 
@@ -77,6 +94,44 @@ public class PaymentController {
      * uid == null 这条路径走不到，所以开着 dev 开关冒烟永远是绿的。验证必须关掉该开关，
      * 见 scripts/e2e-smoke.sh 的未认证探测轮。
      */
+    /**
+     * 支付网关回调鉴权（fail-closed）。
+     *
+     * <p>回调是 ABA/Bakong 网关主动推送的 webhook，不应以用户 JWT 鉴权；
+     * 正确做法是校验网关签名/共享密钥。当前以共享密钥 {@code X-Callback-Token} 头做 interim 防护。
+     * 生产必须配置 {@code claw.payment.callback-secret}（环境变量 CLAW_PAYMENT_CALLBACK_SECRET），
+     * 未配置则拒绝（fail-closed），杜绝"任意已登录用户可触发入账"的资金注入漏洞。
+     * dev-open-access 模式下整体放开（本地联调方便）。
+     */
+    private void verifyCallbackAuth(HttpServletRequest request) {
+        if (devOpenAccess) {
+            return;
+        }
+        if (callbackSecret == null || callbackSecret.isBlank()) {
+            throw BizException.unauthorized("error.payment.callback.unauthorized");
+        }
+        String token = request.getHeader("X-Callback-Token");
+        if (token == null || !constantTimeEquals(token, callbackSecret)) {
+            throw BizException.unauthorized("error.payment.callback.unauthorized");
+        }
+    }
+
+    private static boolean constantTimeEquals(String a, String b) {
+        if (a == null || b == null) {
+            return false;
+        }
+        byte[] ab = a.getBytes(StandardCharsets.UTF_8);
+        byte[] bb = b.getBytes(StandardCharsets.UTF_8);
+        if (ab.length != bb.length) {
+            return false;
+        }
+        int result = 0;
+        for (int i = 0; i < ab.length; i++) {
+            result |= ab[i] ^ bb[i];
+        }
+        return result == 0;
+    }
+
     private Long requireOperator() {
         Long uid = AuthContext.currentUserId();
         if (uid == null) {

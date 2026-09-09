@@ -52,6 +52,7 @@ public class AdminRoleController {
     }
 
     @PostMapping
+    @RequirePermission("role:create")
     public ApiResult<RoleView> createRole(@RequestBody RoleReq req) {
         if (roleRepository.findByCode(req.code()).isPresent()) {
             throw new BizException(40901, "role.code.exists");

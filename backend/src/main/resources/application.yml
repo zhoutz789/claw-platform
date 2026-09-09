@@ -63,6 +63,11 @@ claw:
     # 身份证号加密密钥（AES-256-GCM，入驻申请单 id_card_no）。
     # 生产必须通过环境变量 CLAW_ID_CARD_KEY 注入；未配置时回退开发默认密钥并打 WARN（见 IdCardCipher）。
     id-card-key: ${CLAW_ID_CARD_KEY:}
+  payment:
+    # 支付网关回调共享密钥（webhook 鉴权，fail-closed）。
+    # 生产必须配置环境变量 CLAW_PAYMENT_CALLBACK_SECRET；网关在 X-Callback-Token 头携带该值。
+    # 未配置时回调接口拒绝服务（401），杜绝"任意已登录用户可触发入账"的资金注入漏洞。
+    callback-secret: ${CLAW_PAYMENT_CALLBACK_SECRET:}
 
   iot:
     emqx:
