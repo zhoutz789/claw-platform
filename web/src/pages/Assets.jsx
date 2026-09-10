@@ -41,6 +41,15 @@ export default function Assets() {
       render: (_, r) => <Button size="small" type="link" onClick={() => navigate(`/camera-playback?assetNo=${r.assetNo}`)}>历史回放</Button>,
     },
     {
+      title: '任务收益',
+      render: (_, r) => (
+        <Button size="small" type="link"
+          onClick={() => navigate(`/asset-trace?id=${r.id}&tab=taskEarnings`)}>
+          任务收益
+        </Button>
+      ),
+    },
+    {
       title: '创建时间',
       dataIndex: 'createdAt',
       render: (v) => (v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-'),

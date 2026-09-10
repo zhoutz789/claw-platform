@@ -54,7 +54,7 @@ export default function AssetTrace() {  const { t } = useTranslation(['common', 
       <Spin spinning={loading}>
         {!trace && <div style={{ color: 'var(--muted)', padding: 24 }}>{t('common:m477')}</div>}
         {trace && (
-          <Tabs items={[
+          <Tabs defaultActiveKey={params.get('tab') || 'factory'} items={[
             { key: 'factory', label: t('common:m478'), children: <Descriptions column={2} bordered size="small">
               <Descriptions.Item label={t('common:m168')}>{trace.asset?.assetNo}</Descriptions.Item>
               <Descriptions.Item label={t('common:m36')}>{ASSET_TYPE.find((x) => x.value === trace.assetType)?.label || trace.assetType}</Descriptions.Item>
