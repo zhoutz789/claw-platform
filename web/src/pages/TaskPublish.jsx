@@ -38,9 +38,33 @@ const CAPABILITY_ASSET_TYPES = {
 };
 // 任务状态色。状态文案统一走 i18n（task:status.*），此处只保留颜色映射。
 const TASK_STATUS_COLOR = { PENDING: 'default', OPEN: 'blue', ASSIGNED: 'gold', IN_PROGRESS: 'processing', COMPLETED: 'green', SETTLED: 'cyan', CANCELLED: 'red' };
-const SCREEN_TYPE_LABEL = { BODY: '车身', SCREEN: '屏显' };
-const RIDE_TYPE_LABEL = { HAIL: '招手即停', TAXI: '打的' };
-const FARE_MODEL_LABEL = { PER_KM: '按公里', PER_TIME: '按时长', FLAT: '一口价' };
+// 枚举标签只保留「值 → i18n key 后缀」映射，展示时统一 t('task:' + key)。
+// 后端枚举值（BODY / SCREEN / HAIL / TAXI / PER_KM …）不参与翻译，避免改动请求 body。
+const SCREEN_TYPE_LABEL = { BODY: 'ad.body', SCREEN: 'ad.screen' };
+const RIDE_TYPE_LABEL = { HAIL: 'ride.hail', TAXI: 'ride.taxi' };
+const FARE_MODEL_LABEL = { PER_KM: 'ride.perKm', PER_TIME: 'ride.perTime', FLAT: 'ride.flat' };
+
+/**
+ * 物流货物类型：value 为后端存储的中文枚举值（请求 body 原样上报，不可翻译），
+ * labelKey 指向 task:logi.* 的三语标签，用于下拉选项与列表单元格展示。
+ */
+const CARGO_OPTIONS = [
+  { value: '小件包裹', labelKey: 'logi.cargoParcel' },
+  { value: '生鲜', labelKey: 'logi.cargoFresh' },
+  { value: '大件', labelKey: 'logi.cargoBulky' },
+];
+
+/**
+ * 货物类型展示：命中枚举取三语标签，未命中回落原始值，空值显示占位符。
+ * @param {Function} t i18next 的 t 函数
+ * @param {string} [v] 后端返回的货物类型原值
+ * @returns {string} 展示文案
+ */
+const cargoLabel = (t, v) => {
+  if (!v) return '—';
+  const hit = CARGO_OPTIONS.find((o) => o.value === v);
+  return hit ? t(`task:${hit.labelKey}`) : v;
+};
 
 // 任务发布：按子菜单 mode 渲染单个功能（无人机/物流/广告/录像/出租/附近车辆）。
 // 原 TaskPublish 的 Tabs 入口已拆为 6 个独立子页，本组件为共享实现，真实接口逻辑全部保留。
@@ -185,6 +209,7 @@ export default function TaskPublish({ mode }) {
 
 // 物流配送闭环面板：发布方 / 接单方 双视图，覆盖 发布 → 可接单 → 接单 → 进度 → 完成 → 收益 完整链路。
 function LogiPanel({ assets }) {
+  const { t } = useTranslation(['task']);
   const [view, setView] = useState('publisher');
   const [pubForm] = Form.useForm();
   const [pubSubmitting, setPubSubmitting] = useState(false);
@@ -213,7 +238,7 @@ function LogiPanel({ assets }) {
       setPubLoading(true);
       return api.get('/v1/tasks?role=publisher')
         .then((d) => setPubTasks(Array.isArray(d) ? d : (d && d.list) || []))
-        .catch((e) => { message.error('加载我发布的任务失败：' + e.message); setPubTasks([]); })
+        .catch((e) => { message.error(t('task:hall.loadFailed', { message: e.message })); setPubTasks([]); })
         .finally(() => setPubLoading(false));
     },
     []
@@ -224,7 +249,7 @@ function LogiPanel({ assets }) {
       setProvLoading(true);
       return api.get('/v1/tasks?role=provider')
         .then((d) => setProvTasks(Array.isArray(d) ? d : (d && d.list) || []))
-        .catch((e) => { message.error('加载可接单任务失败：' + e.message); setProvTasks([]); })
+        .catch((e) => { message.error(t('task:hall.loadFailed', { message: e.message })); setProvTasks([]); })
         .finally(() => setProvLoading(false));
     },
     []
@@ -247,7 +272,7 @@ function LogiPanel({ assets }) {
             assetId: a.assetId,
           })));
         })
-        .catch((e) => { message.error('加载我的接单失败：' + e.message); setMyAccepted([]); })
+        .catch((e) => { message.error(t('task:hall.loadFailed', { message: e.message })); setMyAccepted([]); })
         .finally(() => setMyLoading(false));
     },
     []
@@ -281,11 +306,11 @@ function LogiPanel({ assets }) {
         cargoType: v.cargoType,
         weightKg: Number(v.weightKg),
       });
-      message.success('物流任务已发布到任务大厅');
+      message.success(t('task:hall.publishSuccess'));
       pubForm.resetFields();
       loadPublished();
     } catch (e) {
-      message.error('发布失败：' + e.message);
+      message.error(t('task:hall.actionFailed', { message: e.message }));
     } finally {
       setPubSubmitting(false);
     }
@@ -294,15 +319,15 @@ function LogiPanel({ assets }) {
   // 接单 → POST /v1/tasks/{id}/accept { assetId }
   const onAccept = async (task) => {
     const assetId = acceptSel[task.id];
-    if (!assetId) { message.warning('请先选择接单资产'); return; }
+    if (!assetId) { message.warning(t('task:hall.needAsset')); return; }
     try {
       await api.post(`/v1/tasks/${task.id}/accept`, { assetId: Number(assetId) });
-      message.success('接单成功，已绑定资产 #' + assetId);
+      message.success(t('task:hall.acceptSuccess') + ' #' + assetId);
       setAcceptSel((p) => ({ ...p, [task.id]: undefined }));
       loadAvailable();
       loadMy();
     } catch (e) {
-      message.error('接单失败：' + e.message);
+      message.error(t('task:hall.actionFailed', { message: e.message }));
     }
   };
 
@@ -310,13 +335,13 @@ function LogiPanel({ assets }) {
   const onProgress = async (item) => {
     const inp = progressInp[item.key] || {};
     const pct = inp.progressPct;
-    if (pct == null || pct < 0 || pct > 100) { message.warning('请输入 0-100 之间的进度'); return; }
+    if (pct == null || pct < 0 || pct > 100) { message.warning(t('task:hall.progressRange')); return; }
     try {
       await api.post(`/v1/tasks/${item.taskId}/progress`, { progressPct: Number(pct), note: inp.note || '' });
-      message.success('进度已更新');
+      message.success(t('task:hall.progressSuccess'));
       loadMy();
     } catch (e) {
-      message.error('更新进度失败：' + e.message);
+      message.error(t('task:hall.actionFailed', { message: e.message }));
     }
   };
 
@@ -324,7 +349,7 @@ function LogiPanel({ assets }) {
   const onComplete = async (item) => {
     try {
       await api.post(`/v1/tasks/${item.taskId}/complete`, {});
-      message.success('任务已完成，已触发结算');
+      message.success(t('task:hall.completeSuccess'));
       loadMy();
       const aid = item.assetId;
       if (aid != null) {
@@ -333,11 +358,11 @@ function LogiPanel({ assets }) {
           const earns = await api.get(`/v1/tasks/assets/${aid}/task-earnings`);
           setEarnings((p) => ({ ...p, [item.key]: Array.isArray(earns) ? earns : [] }));
         } catch (e) {
-          message.warning('收益查询失败：' + e.message);
+          message.warning(t('task:earn.loadFailed') + '：' + e.message);
         }
       }
     } catch (e) {
-      message.error('完成任务失败：' + e.message);
+      message.error(t('task:hall.actionFailed', { message: e.message }));
     }
   };
 
@@ -345,45 +370,54 @@ function LogiPanel({ assets }) {
     <>
       <Card style={{ marginBottom: 14 }}>
         <Form layout="vertical" form={pubForm} onFinish={onPublish}>
-          <Form.Item label="任务标题" name="title" rules={[{ required: true, message: '请输入任务标题' }]}>
-            <Input placeholder="如：柬埔寨跨境生鲜配送" />
+          <Form.Item label={t('task:hall.title_')} name="title"
+            rules={[{ required: true, message: t('task:hall.titlePlaceholder') }]}>
+            <Input placeholder={t('task:hall.titlePlaceholder')} />
           </Form.Item>
           <Space size="large" wrap align="end">
-            <Form.Item label="取货地" name="pickupAddr" rules={[{ required: true, message: '请输入取货地' }]} style={{ minWidth: 200 }}>
-              <Input placeholder="俄罗斯市场站" />
+            <Form.Item label={t('task:logi.pickup')} name="pickupAddr"
+              rules={[{ required: true, message: t('task:logi.pickupPlaceholder') }]} style={{ minWidth: 200 }}>
+              <Input placeholder={t('task:logi.pickupPlaceholder')} />
             </Form.Item>
-            <Form.Item label="收货地" name="dropoffAddr" rules={[{ required: true, message: '请输入收货地' }]} style={{ minWidth: 200 }}>
-              <Input placeholder="金边机场" />
+            <Form.Item label={t('task:logi.dropoff')} name="dropoffAddr"
+              rules={[{ required: true, message: t('task:logi.dropoffPlaceholder') }]} style={{ minWidth: 200 }}>
+              <Input placeholder={t('task:logi.dropoffPlaceholder')} />
             </Form.Item>
-            <Form.Item label="货物类型" name="cargoType" rules={[{ required: true, message: '请选择货物类型' }]}>
-              <Select placeholder="选择货物类型" options={['小件包裹', '生鲜', '大件'].map((v) => ({ label: v, value: v }))} />
+            <Form.Item label={t('task:logi.cargoType')} name="cargoType"
+              rules={[{ required: true, message: t('task:logi.cargoTypePlaceholder') }]}>
+              <Select placeholder={t('task:logi.cargoTypePlaceholder')}
+                options={CARGO_OPTIONS.map((o) => ({ label: t(`task:${o.labelKey}`), value: o.value }))} />
             </Form.Item>
-            <Form.Item label="重量 (kg)" name="weightKg" rules={[{ required: true, message: '请输入重量' }]}>
+            <Form.Item label={`${t('task:logi.weight')} (${t('task:logi.weightUnit')})`} name="weightKg"
+              rules={[{ required: true, message: t('task:logi.weight') }]}>
               <InputNumber min={0} step={0.1} placeholder="12.5" />
             </Form.Item>
-            <Form.Item label="报酬 ($)" name="rewardAmount" rules={[{ required: true, message: '请输入报酬' }]}>
+            <Form.Item label={`${t('task:hall.reward')} ($)`} name="rewardAmount"
+              rules={[{ required: true, message: t('task:hall.reward') }]}>
               <InputNumber min={1} step={0.01} placeholder="5.00" />
             </Form.Item>
-            <Form.Item label="截止时间"><Input placeholder="30 分钟内（可选）" disabled /></Form.Item>
+            <Form.Item label={t('task:logi.deadline')}>
+              <Input placeholder={t('task:logi.deadlinePlaceholder')} disabled />
+            </Form.Item>
           </Space>
-          <Form.Item label="任务描述" name="description" style={{ marginTop: 4 }}>
-            <Input.TextArea rows={2} placeholder="补充说明（可选）" />
+          <Form.Item label={t('task:hall.description')} name="description" style={{ marginTop: 4 }}>
+            <Input.TextArea rows={2} placeholder={t('task:hall.descPlaceholder')} />
           </Form.Item>
-          <Button type="primary" htmlType="submit" loading={pubSubmitting}>发布到任务大厅</Button>
+          <Button type="primary" htmlType="submit" loading={pubSubmitting}>{t('task:hall.publish')}</Button>
         </Form>
       </Card>
-      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>我发布的物流任务</h4>
+      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>{t('task:hall.published')}</h4>
       {pubLoading ? <Spin /> : pubTasks.length === 0 ? (
-        <Empty description="暂无已发布的任务" />
+        <Empty description={t('task:hall.emptyPublished')} />
       ) : (
         <Table rowKey="id" pagination={false} dataSource={pubTasks} size="small"
           columns={[
-            { title: '标题', dataIndex: 'title', render: (v) => v || '—' },
-            { title: '报酬', dataIndex: 'rewardAmount', render: (v, r) => `$${(v ?? 0).toFixed(2)} ${r.currency || 'USD'}` },
-            { title: '状态', dataIndex: 'status', render: (s) => <TaskStatusTag status={s} /> },
-            { title: '路线', key: 'route', render: (_, r) => <span>{r.pickupAddr || '—'} → {r.dropoffAddr || '—'}</span> },
-            { title: '货物', dataIndex: 'cargoType', render: (v) => v || '—' },
-            { title: '重量', dataIndex: 'weightKg', render: (v) => (v != null ? `${v} kg` : '—') },
+            { title: t('task:hall.title_'), dataIndex: 'title', render: (v) => v || '—' },
+            { title: t('task:hall.reward'), dataIndex: 'rewardAmount', render: (v, r) => `$${(v ?? 0).toFixed(2)} ${r.currency || 'USD'}` },
+            { title: t('task:hall.status'), dataIndex: 'status', render: (s) => <TaskStatusTag status={s} /> },
+            { title: t('task:logi.route'), key: 'route', render: (_, r) => <span>{r.pickupAddr || '—'} → {r.dropoffAddr || '—'}</span> },
+            { title: t('task:logi.cargo'), dataIndex: 'cargoType', render: (v) => cargoLabel(t, v) },
+            { title: t('task:logi.weight'), dataIndex: 'weightKg', render: (v) => (v != null ? `${v} ${t('task:logi.weightUnit')}` : '—') },
           ]} />
       )}
     </>
@@ -391,31 +425,33 @@ function LogiPanel({ assets }) {
 
   const providerView = (
     <>
-      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>可接单任务</h4>
+      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>{t('task:hall.available')}</h4>
       {provLoading ? <Spin /> : provTasks.length === 0 ? (
-        <Empty description="暂无匹配我方资产能力的可接单任务" />
+        <Empty description={t('task:hall.emptyAvailable')} />
       ) : (
         <Table rowKey="id" pagination={false} dataSource={provTasks} size="small"
           columns={[
-            { title: '标题', dataIndex: 'title', render: (v) => v || '—' },
-            { title: '报酬', dataIndex: 'rewardAmount', render: (v, r) => `$${(v ?? 0).toFixed(2)} ${r.currency || 'USD'}` },
-            { title: '路线', key: 'route', render: (_, r) => <span>{r.pickupAddr || '—'} → {r.dropoffAddr || '—'}</span> },
-            { title: '货物', dataIndex: 'cargoType', render: (v) => v || '—' },
-            { title: '重量', dataIndex: 'weightKg', render: (v) => (v != null ? `${v} kg` : '—') },
+            { title: t('task:hall.title_'), dataIndex: 'title', render: (v) => v || '—' },
+            { title: t('task:hall.reward'), dataIndex: 'rewardAmount', render: (v, r) => `$${(v ?? 0).toFixed(2)} ${r.currency || 'USD'}` },
+            { title: t('task:logi.route'), key: 'route', render: (_, r) => <span>{r.pickupAddr || '—'} → {r.dropoffAddr || '—'}</span> },
+            { title: t('task:logi.cargo'), dataIndex: 'cargoType', render: (v) => cargoLabel(t, v) },
+            { title: t('task:logi.weight'), dataIndex: 'weightKg', render: (v) => (v != null ? `${v} ${t('task:logi.weightUnit')}` : '—') },
             {
-              title: '接单',
+              title: t('task:hall.accept'),
               key: 'act',
               render: (_, task) => (
                 <Space>
                   <Select
-                    placeholder={candidateAssets.length ? '选择资产' : '无可用车辆/电车'}
+                    placeholder={candidateAssets.length ? t('task:hall.selectAsset') : t('task:hall.noAsset')}
                     style={{ width: 200 }}
                     value={acceptSel[task.id]}
                     onChange={(val) => setAcceptSel((p) => ({ ...p, [task.id]: val }))}
                     options={candidateAssets.map((a) => ({ label: `${a.assetNo || a.assetType} · #${a.id}`, value: a.id }))}
                     disabled={candidateAssets.length === 0}
                   />
-                  <Button type="primary" size="small" disabled={candidateAssets.length === 0} onClick={() => onAccept(task)}>接单</Button>
+                  <Button type="primary" size="small" disabled={candidateAssets.length === 0} onClick={() => onAccept(task)}>
+                    {t('task:hall.accept')}
+                  </Button>
                 </Space>
               ),
             },
@@ -423,9 +459,9 @@ function LogiPanel({ assets }) {
       )}
 
       <Divider />
-      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>我的接单</h4>
+      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>{t('task:hall.myAccepted')}</h4>
       {myLoading ? <Spin /> : myAccepted.length === 0 ? (
-        <Empty description="暂无接单记录" />
+        <Empty description={t('task:hall.emptyAccepted')} />
       ) : (
         <List
           itemLayout="vertical"
@@ -443,12 +479,14 @@ function LogiPanel({ assets }) {
                   <Progress percent={Number(item.progressPct) || 0} size="small" />
                 </div>
                 <Space wrap align="end">
-                  <InputNumber min={0} max={100} placeholder="进度%" value={inp.progressPct}
+                  <InputNumber min={0} max={100} placeholder={t('task:hall.progressHint')} value={inp.progressPct}
                     onChange={(val) => setProgressInp((p) => ({ ...p, [item.key]: { ...inp, progressPct: val } }))} />
-                  <Input placeholder="进度备注" style={{ width: 180 }} value={inp.note}
+                  <Input placeholder={t('task:hall.note')} style={{ width: 180 }} value={inp.note}
                     onChange={(e) => setProgressInp((p) => ({ ...p, [item.key]: { ...inp, note: e.target.value } }))} />
-                  <Button size="small" onClick={() => onProgress(item)}>更新进度</Button>
-                  <Button size="small" type="primary" disabled={!canCompleteTask(item.status)} onClick={() => onComplete(item)}>完成</Button>
+                  <Button size="small" onClick={() => onProgress(item)}>{t('task:hall.updateProgress')}</Button>
+                  <Button size="small" type="primary" disabled={!canCompleteTask(item.status)} onClick={() => onComplete(item)}>
+                    {t('task:hall.complete')}
+                  </Button>
                 </Space>
                 <EarningsBlock earnings={earns} assetId={item.assetId} />
               </List.Item>
@@ -603,7 +641,7 @@ function useTaskLoop({ assets, capabilities, taskTypes, assetTypes }) {
           const list = Array.isArray(d) ? d : (d && d.list) || [];
           setPubTasks(list.filter((x) => inScope(x && x.taskType)));
         })
-        .catch((e) => { message.error('加载我发布的任务失败：' + e.message); setPubTasks([]); })
+        .catch((e) => { message.error(t('task:hall.loadFailed', { message: e.message })); setPubTasks([]); })
         .finally(() => setPubLoading(false));
     },
     [inScope]
@@ -617,7 +655,7 @@ function useTaskLoop({ assets, capabilities, taskTypes, assetTypes }) {
           const list = Array.isArray(d) ? d : (d && d.list) || [];
           setProvTasks(list.filter((x) => inScope(x && x.taskType)));
         })
-        .catch((e) => { message.error('加载可接单任务失败：' + e.message); setProvTasks([]); })
+        .catch((e) => { message.error(t('task:hall.loadFailed', { message: e.message })); setProvTasks([]); })
         .finally(() => setProvLoading(false));
     },
     [inScope]
@@ -646,7 +684,7 @@ function useTaskLoop({ assets, capabilities, taskTypes, assetTypes }) {
               assetId: a.assetId,
             })));
         })
-        .catch((e) => { message.error('加载我的接单失败：' + e.message); setMyAccepted([]); })
+        .catch((e) => { message.error(t('task:hall.loadFailed', { message: e.message })); setMyAccepted([]); })
         .finally(() => setMyLoading(false));
     },
     [inScope]
@@ -668,7 +706,7 @@ function useTaskLoop({ assets, capabilities, taskTypes, assetTypes }) {
       pubForm.resetFields();
       loadPublished();
     } catch (e) {
-      message.error('发布失败：' + e.message);
+      message.error(t('task:hall.actionFailed', { message: e.message }));
     } finally {
       setPubSubmitting(false);
     }
@@ -685,7 +723,7 @@ function useTaskLoop({ assets, capabilities, taskTypes, assetTypes }) {
       loadAvailable();
       loadMy();
     } catch (e) {
-      message.error('接单失败：' + e.message);
+      message.error(t('task:hall.actionFailed', { message: e.message }));
     }
   };
 
@@ -699,7 +737,7 @@ function useTaskLoop({ assets, capabilities, taskTypes, assetTypes }) {
       message.success(t('task:hall.progressSuccess'));
       loadMy();
     } catch (e) {
-      message.error('更新进度失败：' + e.message);
+      message.error(t('task:hall.actionFailed', { message: e.message }));
     }
   };
 
@@ -720,7 +758,7 @@ function useTaskLoop({ assets, capabilities, taskTypes, assetTypes }) {
         }
       }
     } catch (e) {
-      message.error('完成任务失败：' + e.message);
+      message.error(t('task:hall.actionFailed', { message: e.message }));
     }
   };
 
@@ -796,6 +834,7 @@ function MyAcceptedList({ loop }) {
 
 // 广告自媒体闭环面板（taskType=AD / capability=AD_DISPLAY）：发布方 / 接单方 双视图。
 function AdPanel({ assets }) {
+  const { t } = useTranslation(['task']);
   const [view, setView] = useState('publisher');
   const loop = useTaskLoop({ assets, capabilities: ['AD_DISPLAY'], taskTypes: ['AD'] });
   const { pubForm, pubSubmitting, pubTasks, pubLoading, provTasks, provLoading } = loop;
@@ -815,53 +854,64 @@ function AdPanel({ assets }) {
       mediaUrl: v.mediaUrl || '',
       displayDuration: v.displayDuration || '',
       screenType: v.screenType || 'BODY',
-    }, '广告任务已发布到任务大厅');
+    }, t('task:hall.publishSuccess'));
   };
 
   const publisherView = (
     <>
       <Card style={{ marginBottom: 14 }}>
-        <Alert type="info" showIcon style={{ marginBottom: 12 }} message="车身 / 屏显媒体任务 → 设备接单展示 → 脱敏录像回传核验。" />
+        <Alert type="info" showIcon style={{ marginBottom: 12 }} message={t('task:ad.hint')} />
         <Form layout="vertical" form={pubForm} onFinish={onPublish}>
-          <Form.Item label="任务标题" name="title" rules={[{ required: true, message: '请输入任务标题' }]}>
-            <Input placeholder="如：金边市区车身广告投放" />
+          <Form.Item label={t('task:hall.title_')} name="title"
+            rules={[{ required: true, message: t('task:hall.titlePlaceholder') }]}>
+            <Input placeholder={t('task:hall.titlePlaceholder')} />
           </Form.Item>
           <Space size="large" wrap align="end">
-            <Form.Item label="广告主" name="advertiser" rules={[{ required: true, message: '请输入广告主' }]} style={{ minWidth: 200 }}>
-              <Input placeholder="品牌 / 商家" />
+            <Form.Item label={t('task:ad.advertiser')} name="advertiser"
+              rules={[{ required: true, message: t('task:ad.advertiser') }]} style={{ minWidth: 200 }}>
+              <Input placeholder={t('task:ad.advertiserPlaceholder')} />
             </Form.Item>
-            <Form.Item label="屏显类型" name="screenType" rules={[{ required: true, message: '请选择屏显类型' }]}>
-              <Select placeholder="选择屏显类型"
-                options={Object.keys(SCREEN_TYPE_LABEL).map((k) => ({ label: SCREEN_TYPE_LABEL[k], value: k }))} />
+            <Form.Item label={t('task:ad.screenType')} name="screenType"
+              rules={[{ required: true, message: t('task:ad.screenType') }]}>
+              <Select placeholder={t('task:ad.screenTypePlaceholder')}
+                options={Object.keys(SCREEN_TYPE_LABEL).map((k) => ({ label: t(`task:${SCREEN_TYPE_LABEL[k]}`), value: k }))} />
             </Form.Item>
-            <Form.Item label="投放时长" name="displayDuration" style={{ minWidth: 160 }}>
-              <Input placeholder="如 1 周 / 30 天" />
+            <Form.Item label={t('task:ad.duration')} name="displayDuration" style={{ minWidth: 160 }}>
+              <Input placeholder={t('task:ad.durationPlaceholder')} />
             </Form.Item>
-            <Form.Item label="报酬 ($)" name="rewardAmount" rules={[{ required: true, message: '请输入报酬' }]}>
+            <Form.Item label={`${t('task:hall.reward')} ($)`} name="rewardAmount"
+              rules={[{ required: true, message: t('task:hall.reward') }]}>
               <InputNumber min={1} step={0.01} placeholder="20.00" />
             </Form.Item>
           </Space>
-          <Form.Item label="素材 URL" name="mediaUrl" style={{ marginTop: 4 }}>
-            <Input placeholder="https://…/ad.mp4（图片 / 视频）" />
+          <Form.Item label={t('task:ad.mediaUrl')} name="mediaUrl" style={{ marginTop: 4 }}>
+            <Input placeholder={t('task:ad.mediaPlaceholder')} />
           </Form.Item>
-          <Form.Item label="任务描述" name="description">
-            <Input.TextArea rows={2} placeholder="补充说明（可选）" />
+          <Form.Item label={t('task:hall.description')} name="description">
+            <Input.TextArea rows={2} placeholder={t('task:hall.descPlaceholder')} />
           </Form.Item>
-          <Button type="primary" htmlType="submit" loading={pubSubmitting}>发布到广告任务大厅</Button>
+          <Button type="primary" htmlType="submit" loading={pubSubmitting}>{t('task:hall.publish')}</Button>
         </Form>
       </Card>
-      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>我发布的广告任务</h4>
+      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>{t('task:hall.published')}</h4>
       {pubLoading ? <Spin /> : pubTasks.length === 0 ? (
-        <Empty description="暂无已发布的广告任务" />
+        <Empty description={t('task:hall.emptyPublished')} />
       ) : (
         <Table rowKey="id" pagination={false} dataSource={pubTasks} size="small"
           columns={[
-            { title: '标题', dataIndex: 'title', render: (v) => v || '—' },
-            { title: '报酬', dataIndex: 'rewardAmount', render: (v, r) => `$${(v ?? 0).toFixed(2)} ${r.currency || 'USD'}` },
-            { title: '状态', dataIndex: 'status', render: (s) => <TaskStatusTag status={s} /> },
-            { title: '广告主', dataIndex: ['ad', 'advertiser'], render: (v, r) => v || (r.ad && r.ad.advertiser) || '—' },
-            { title: '屏显类型', dataIndex: ['ad', 'screenType'], render: (v, r) => { const s = v || (r.ad && r.ad.screenType); return SCREEN_TYPE_LABEL[s] || s || '—'; } },
-            { title: '投放时长', dataIndex: ['ad', 'displayDuration'], render: (v, r) => v || (r.ad && r.ad.displayDuration) || '—' },
+            { title: t('task:hall.title_'), dataIndex: 'title', render: (v) => v || '—' },
+            { title: t('task:hall.reward'), dataIndex: 'rewardAmount', render: (v, r) => `$${(v ?? 0).toFixed(2)} ${r.currency || 'USD'}` },
+            { title: t('task:hall.status'), dataIndex: 'status', render: (s) => <TaskStatusTag status={s} /> },
+            { title: t('task:ad.advertiser'), dataIndex: ['ad', 'advertiser'], render: (v, r) => v || (r.ad && r.ad.advertiser) || '—' },
+            {
+              title: t('task:ad.screenType'),
+              dataIndex: ['ad', 'screenType'],
+              render: (v, r) => {
+                const s = v || (r.ad && r.ad.screenType);
+                return SCREEN_TYPE_LABEL[s] ? t(`task:${SCREEN_TYPE_LABEL[s]}`) : (s || '—');
+              },
+            },
+            { title: t('task:ad.duration'), dataIndex: ['ad', 'displayDuration'], render: (v, r) => v || (r.ad && r.ad.displayDuration) || '—' },
           ]} />
       )}
     </>
@@ -869,23 +919,30 @@ function AdPanel({ assets }) {
 
   const providerView = (
     <>
-      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>可接单广告任务</h4>
+      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>{t('task:hall.available')}</h4>
       {provLoading ? <Spin /> : provTasks.length === 0 ? (
-        <Empty description="暂无匹配我方资产能力的可接单任务" />
+        <Empty description={t('task:hall.emptyAvailable')} />
       ) : (
         <Table rowKey="id" pagination={false} dataSource={provTasks} size="small"
           columns={[
-            { title: '标题', dataIndex: 'title', render: (v) => v || '—' },
-            { title: '报酬', dataIndex: 'rewardAmount', render: (v, r) => `$${(v ?? 0).toFixed(2)} ${r.currency || 'USD'}` },
-            { title: '广告主', dataIndex: ['ad', 'advertiser'], render: (v, r) => v || (r.ad && r.ad.advertiser) || '—' },
-            { title: '屏显类型', dataIndex: ['ad', 'screenType'], render: (v, r) => { const s = v || (r.ad && r.ad.screenType); return SCREEN_TYPE_LABEL[s] || s || '—'; } },
-            { title: '素材 URL', dataIndex: ['ad', 'mediaUrl'], render: (v, r) => v || (r.ad && r.ad.mediaUrl) || '—' },
-            { title: '接单', key: 'act', render: (_, task) => <AcceptCell task={task} loop={loop} /> },
+            { title: t('task:hall.title_'), dataIndex: 'title', render: (v) => v || '—' },
+            { title: t('task:hall.reward'), dataIndex: 'rewardAmount', render: (v, r) => `$${(v ?? 0).toFixed(2)} ${r.currency || 'USD'}` },
+            { title: t('task:ad.advertiser'), dataIndex: ['ad', 'advertiser'], render: (v, r) => v || (r.ad && r.ad.advertiser) || '—' },
+            {
+              title: t('task:ad.screenType'),
+              dataIndex: ['ad', 'screenType'],
+              render: (v, r) => {
+                const s = v || (r.ad && r.ad.screenType);
+                return SCREEN_TYPE_LABEL[s] ? t(`task:${SCREEN_TYPE_LABEL[s]}`) : (s || '—');
+              },
+            },
+            { title: t('task:ad.mediaUrl'), dataIndex: ['ad', 'mediaUrl'], render: (v, r) => v || (r.ad && r.ad.mediaUrl) || '—' },
+            { title: t('task:hall.accept'), key: 'act', render: (_, task) => <AcceptCell task={task} loop={loop} /> },
           ]} />
       )}
 
       <Divider />
-      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>我的接单</h4>
+      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>{t('task:hall.myAccepted')}</h4>
       <MyAcceptedList loop={loop} />
     </>
   );
@@ -900,6 +957,7 @@ function AdPanel({ assets }) {
 
 // 客运 / 打的闭环面板（HAIL_RIDE + TAXI）：发布方 / 接单方 双视图。
 function RidePanel({ assets }) {
+  const { t } = useTranslation(['task']);
   const [view, setView] = useState('publisher');
   const [rideKind, setRideKind] = useState('HAIL_RIDE');
   const loop = useTaskLoop({ assets, capabilities: ['RIDE_HAIL', 'TAXI'], taskTypes: ['HAIL_RIDE', 'TAXI'] });
@@ -926,64 +984,92 @@ function RidePanel({ assets }) {
       estDistanceKm: Number(v.estDistanceKm),
       estDurationMin: Number(v.estDurationMin),
       fareModel: v.fareModel || 'PER_KM',
-    }, rideType === 'TAXI' ? '打的用车任务已发布到任务大厅' : '招手即停任务已发布到任务大厅');
+    }, t('task:hall.publishSuccess'));
   };
 
   const publisherView = (
     <>
       <Card style={{ marginBottom: 14 }}>
         <Space style={{ marginBottom: 12 }} align="center">
-          <Text strong>用车类型：</Text>
+          <Text strong>{t('task:ride.kind')}：</Text>
           <Segmented value={rideKind} onChange={setRideKind}
             options={[
-              { label: '招手即停 (HAIL_RIDE)', value: 'HAIL_RIDE' },
-              { label: '打的 (TAXI)', value: 'TAXI' },
+              { label: `${t('task:type.HAIL_RIDE')} (HAIL_RIDE)`, value: 'HAIL_RIDE' },
+              { label: `${t('task:type.TAXI')} (TAXI)`, value: 'TAXI' },
             ]} />
         </Space>
         <Form layout="vertical" form={pubForm} onFinish={onPublish}>
-          <Form.Item label="任务标题" name="title" rules={[{ required: true, message: '请输入任务标题' }]}>
-            <Input placeholder={rideType === 'TAXI' ? '如：机场接送 · 打的用车' : '如：市区短途 · 招手即停'} />
+          <Form.Item label={t('task:hall.title_')} name="title"
+            rules={[{ required: true, message: t('task:hall.titlePlaceholder') }]}>
+            <Input placeholder={t('task:hall.titlePlaceholder')} />
           </Form.Item>
           <Space size="large" wrap align="end">
-            <Form.Item label="起点" name="originAddr" rules={[{ required: true, message: '请输入起点' }]} style={{ minWidth: 200 }}>
-              <Input placeholder="俄罗斯市场站" />
+            <Form.Item label={t('task:ride.origin')} name="originAddr"
+              rules={[{ required: true, message: t('task:ride.origin') }]} style={{ minWidth: 200 }}>
+              <Input placeholder={t('task:ride.originPlaceholder')} />
             </Form.Item>
-            <Form.Item label="终点" name="destAddr" rules={[{ required: true, message: '请输入终点' }]} style={{ minWidth: 200 }}>
-              <Input placeholder="金边机场" />
+            <Form.Item label={t('task:ride.dest')} name="destAddr"
+              rules={[{ required: true, message: t('task:ride.dest') }]} style={{ minWidth: 200 }}>
+              <Input placeholder={t('task:ride.destPlaceholder')} />
             </Form.Item>
-            <Form.Item label="预估距离 (km)" name="estDistanceKm" rules={[{ required: true, message: '请输入预估距离' }]}>
+            <Form.Item label={`${t('task:ride.estDistance')} (${t('task:ride.kmUnit')})`} name="estDistanceKm"
+              rules={[{ required: true, message: t('task:ride.estDistance') }]}>
               <InputNumber min={0} step={0.1} placeholder="8.5" />
             </Form.Item>
-            <Form.Item label="预估时长 (分)" name="estDurationMin" rules={[{ required: true, message: '请输入预估时长' }]}>
+            <Form.Item label={`${t('task:ride.estDuration')} (${t('task:ride.minUnit')})`} name="estDurationMin"
+              rules={[{ required: true, message: t('task:ride.estDuration') }]}>
               <InputNumber min={0} step={1} placeholder="25" />
             </Form.Item>
-            <Form.Item label="计价方式" name="fareModel" rules={[{ required: true, message: '请选择计价方式' }]}>
-              <Select placeholder="选择计价方式"
-                options={Object.keys(FARE_MODEL_LABEL).map((k) => ({ label: FARE_MODEL_LABEL[k], value: k }))} />
+            <Form.Item label={t('task:ride.fareModel')} name="fareModel"
+              rules={[{ required: true, message: t('task:ride.fareModel') }]}>
+              <Select placeholder={t('task:ride.fareModelPlaceholder')}
+                options={Object.keys(FARE_MODEL_LABEL).map((k) => ({ label: t(`task:${FARE_MODEL_LABEL[k]}`), value: k }))} />
             </Form.Item>
-            <Form.Item label="报酬 ($)" name="rewardAmount" rules={[{ required: true, message: '请输入报酬' }]}>
+            <Form.Item label={`${t('task:hall.reward')} ($)`} name="rewardAmount"
+              rules={[{ required: true, message: t('task:hall.reward') }]}>
               <InputNumber min={1} step={0.01} placeholder="5.00" />
             </Form.Item>
           </Space>
-          <Form.Item label="任务描述" name="description" style={{ marginTop: 4 }}>
-            <Input.TextArea rows={2} placeholder="补充说明（可选）" />
+          <Form.Item label={t('task:hall.description')} name="description" style={{ marginTop: 4 }}>
+            <Input.TextArea rows={2} placeholder={t('task:hall.descPlaceholder')} />
           </Form.Item>
-          <Button type="primary" htmlType="submit" loading={pubSubmitting}>发布到客运任务大厅</Button>
+          <Button type="primary" htmlType="submit" loading={pubSubmitting}>{t('task:hall.publish')}</Button>
         </Form>
       </Card>
-      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>我发布的用车任务</h4>
+      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>{t('task:hall.published')}</h4>
       {pubLoading ? <Spin /> : pubTasks.length === 0 ? (
-        <Empty description="暂无已发布的用车任务" />
+        <Empty description={t('task:hall.emptyPublished')} />
       ) : (
         <Table rowKey="id" pagination={false} dataSource={pubTasks} size="small"
           columns={[
-            { title: '标题', dataIndex: 'title', render: (v) => v || '—' },
-            { title: '类型', dataIndex: 'taskType', render: (v) => <Tag color={v === 'TAXI' ? 'volcano' : 'geekblue'}>{v === 'TAXI' ? '打的' : '招手即停'}</Tag> },
-            { title: '报酬', dataIndex: 'rewardAmount', render: (v, r) => `$${(v ?? 0).toFixed(2)} ${r.currency || 'USD'}` },
-            { title: '状态', dataIndex: 'status', render: (s) => <TaskStatusTag status={s} /> },
-            { title: '路线', key: 'route', render: (_, r) => <span>{(r.ride && r.ride.originAddr) || '—'} → {(r.ride && r.ride.destAddr) || '—'}</span> },
-            { title: '预估距离', dataIndex: ['ride', 'estDistanceKm'], render: (v, r) => { const d = v ?? (r.ride && r.ride.estDistanceKm); return d != null ? `${d} km` : '—'; } },
-            { title: '计价方式', dataIndex: ['ride', 'fareModel'], render: (v, r) => { const f = v || (r.ride && r.ride.fareModel); return FARE_MODEL_LABEL[f] || f || '—'; } },
+            { title: t('task:hall.title_'), dataIndex: 'title', render: (v) => v || '—' },
+            {
+              title: t('task:ride.rideType'),
+              dataIndex: 'taskType',
+              render: (v) => {
+                const key = RIDE_TYPE_LABEL[v === 'TAXI' ? 'TAXI' : 'HAIL'];
+                return <Tag color={v === 'TAXI' ? 'volcano' : 'geekblue'}>{t(`task:${key}`)}</Tag>;
+              },
+            },
+            { title: t('task:hall.reward'), dataIndex: 'rewardAmount', render: (v, r) => `$${(v ?? 0).toFixed(2)} ${r.currency || 'USD'}` },
+            { title: t('task:hall.status'), dataIndex: 'status', render: (s) => <TaskStatusTag status={s} /> },
+            { title: t('task:ride.route'), key: 'route', render: (_, r) => <span>{(r.ride && r.ride.originAddr) || '—'} → {(r.ride && r.ride.destAddr) || '—'}</span> },
+            {
+              title: t('task:ride.estDistance'),
+              dataIndex: ['ride', 'estDistanceKm'],
+              render: (v, r) => {
+                const d = v ?? (r.ride && r.ride.estDistanceKm);
+                return d != null ? `${d} ${t('task:ride.kmUnit')}` : '—';
+              },
+            },
+            {
+              title: t('task:ride.fareModel'),
+              dataIndex: ['ride', 'fareModel'],
+              render: (v, r) => {
+                const f = v || (r.ride && r.ride.fareModel);
+                return FARE_MODEL_LABEL[f] ? t(`task:${FARE_MODEL_LABEL[f]}`) : (f || '—');
+              },
+            },
           ]} />
       )}
     </>
@@ -991,32 +1077,62 @@ function RidePanel({ assets }) {
 
   const providerView = (
     <>
-      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>可接单用车任务</h4>
+      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>{t('task:hall.available')}</h4>
       {provLoading ? <Spin /> : provTasks.length === 0 ? (
-        <Empty description="暂无匹配我方车辆能力的可接单任务" />
+        <Empty description={t('task:hall.emptyAvailable')} />
       ) : (
         <Table rowKey="id" pagination={false} dataSource={provTasks} size="small"
           columns={[
-            { title: '标题', dataIndex: 'title', render: (v) => v || '—' },
-            { title: '类型', dataIndex: ['ride', 'rideType'], render: (v, r) => { const rt = v || (r.ride && r.ride.rideType); return <Tag color={rt === 'TAXI' ? 'volcano' : 'geekblue'}>{RIDE_TYPE_LABEL[rt] || rt || '—'}</Tag>; } },
-            { title: '报酬', dataIndex: 'rewardAmount', render: (v, r) => `$${(v ?? 0).toFixed(2)} ${r.currency || 'USD'}` },
-            { title: '路线', key: 'route', render: (_, r) => <span>{(r.ride && r.ride.originAddr) || '—'} → {(r.ride && r.ride.destAddr) || '—'}</span> },
-            { title: '预估距离', dataIndex: ['ride', 'estDistanceKm'], render: (v, r) => { const d = v ?? (r.ride && r.ride.estDistanceKm); return d != null ? `${d} km` : '—'; } },
-            { title: '预估时长', dataIndex: ['ride', 'estDurationMin'], render: (v, r) => { const d = v ?? (r.ride && r.ride.estDurationMin); return d != null ? `${d} 分` : '—'; } },
-            { title: '计价方式', dataIndex: ['ride', 'fareModel'], render: (v, r) => { const f = v || (r.ride && r.ride.fareModel); return FARE_MODEL_LABEL[f] || f || '—'; } },
-            { title: '接单', key: 'act', render: (_, task) => <AcceptCell task={task} loop={loop} /> },
+            { title: t('task:hall.title_'), dataIndex: 'title', render: (v) => v || '—' },
+            {
+              title: t('task:ride.rideType'),
+              dataIndex: ['ride', 'rideType'],
+              render: (v, r) => {
+                const rt = v || (r.ride && r.ride.rideType);
+                return <Tag color={rt === 'TAXI' ? 'volcano' : 'geekblue'}>{RIDE_TYPE_LABEL[rt] ? t(`task:${RIDE_TYPE_LABEL[rt]}`) : (rt || '—')}</Tag>;
+              },
+            },
+            { title: t('task:hall.reward'), dataIndex: 'rewardAmount', render: (v, r) => `$${(v ?? 0).toFixed(2)} ${r.currency || 'USD'}` },
+            { title: t('task:ride.route'), key: 'route', render: (_, r) => <span>{(r.ride && r.ride.originAddr) || '—'} → {(r.ride && r.ride.destAddr) || '—'}</span> },
+            {
+              title: t('task:ride.estDistance'),
+              dataIndex: ['ride', 'estDistanceKm'],
+              render: (v, r) => {
+                const d = v ?? (r.ride && r.ride.estDistanceKm);
+                return d != null ? `${d} ${t('task:ride.kmUnit')}` : '—';
+              },
+            },
+            {
+              title: t('task:ride.estDuration'),
+              dataIndex: ['ride', 'estDurationMin'],
+              render: (v, r) => {
+                const d = v ?? (r.ride && r.ride.estDurationMin);
+                return d != null ? `${d} ${t('task:ride.minUnit')}` : '—';
+              },
+            },
+            {
+              title: t('task:ride.fareModel'),
+              dataIndex: ['ride', 'fareModel'],
+              render: (v, r) => {
+                const f = v || (r.ride && r.ride.fareModel);
+                return FARE_MODEL_LABEL[f] ? t(`task:${FARE_MODEL_LABEL[f]}`) : (f || '—');
+              },
+            },
+            { title: t('task:hall.accept'), key: 'act', render: (_, task) => <AcceptCell task={task} loop={loop} /> },
           ]} />
       )}
 
       <Divider />
-      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>我的接单</h4>
+      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>{t('task:hall.myAccepted')}</h4>
       <MyAcceptedList loop={loop} />
     </>
   );
 
   return (
     <>
-      <Divider orientation="left" style={{ marginTop: 4 }}>客运 / 打的 · 任务大厅</Divider>
+      <Divider orientation="left" style={{ marginTop: 4 }}>
+        {t('task:type.HAIL_RIDE')} / {t('task:type.TAXI')} · {t('task:hall.title')}
+      </Divider>
       <HallViewSwitch value={view} onChange={setView} />
       {view === 'publisher' ? publisherView : providerView}
     </>
