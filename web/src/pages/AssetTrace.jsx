@@ -4,8 +4,9 @@ import { useSearchParams } from 'react-router-dom';
 import api from '../api';
 import { LIFECYCLE_LABEL, OP_LABEL, ASSET_STATUS_LABEL, ASSET_TYPE, enumLabel } from '../enums';
 import { useTranslation } from 'react-i18next';
+import AssetTaskEarnings from '../components/AssetTaskEarnings';
 
-export default function AssetTrace() {  const { t } = useTranslation('common');
+export default function AssetTrace() {  const { t } = useTranslation(['common', 'task']);
 
   const [params] = useSearchParams();
   const [assetId, setAssetId] = useState(params.get('id') ? Number(params.get('id')) : null);
@@ -118,6 +119,8 @@ export default function AssetTrace() {  const { t } = useTranslation('common');
               <p style={{ color: 'var(--muted)' }}>{t('common:m500')}</p>
               <Input.TextArea value={trace.asset?.qrCode || ''} rows={3} readOnly />
             </div> },
+            // P3：资产「任务收益」Tab —— 读 GET /api/v1/tasks/assets/{assetId}/task-earnings。
+            { key: 'taskEarnings', label: t('task:trace.tab'), children: <AssetTaskEarnings assetId={assetId} /> },
           ]} />
         )}
       </Spin>
