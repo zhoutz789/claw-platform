@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, Fragment } from 'react';
 import {
-  Card, Form, Input, InputNumber, Select, Button, Table, Tag, Segmented, Space, message, Alert, Typography, Spin, Empty,
+  Card, Form, Input, InputNumber, Select, Button, Table, Tag, Segmented, Space, message, Alert, Typography, Spin, Empty, List, Descriptions, Progress, Divider,
 } from 'antd';
 import { SwapOutlined, RocketOutlined, CarOutlined, SoundOutlined, VideoCameraOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
@@ -104,24 +104,7 @@ export default function TaskPublish({ mode }) {
   const TAB_MAP = {
     logi: {
       label: '发布物流任务',
-      children: (
-        <>
-          <Card style={{ marginBottom: 14 }}>
-            <Form layout="vertical" onFinish={() => message.info('任务大厅发布后端待接入（物流/广告/录像）')}>
-              <Space size="large" wrap>
-                <Form.Item label="取货地" required style={{ minWidth: 200 }}><Input placeholder="俄罗斯市场站" /></Form.Item>
-                <Form.Item label="收货地" required style={{ minWidth: 200 }}><Input placeholder="金边机场" /></Form.Item>
-                <Form.Item label="货物类型"><Select defaultValue="小件包裹" options={['小件包裹', '生鲜', '大件'].map((v) => ({ label: v, value: v }))} /></Form.Item>
-                <Form.Item label="报酬 ($)" required><InputNumber min={1} placeholder="5.00" /></Form.Item>
-                <Form.Item label="截止时间"><Input placeholder="30 分钟内" /></Form.Item>
-              </Space>
-              <Button type="primary" htmlType="submit">发布到任务大厅</Button>
-            </Form>
-          </Card>
-          <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>任务大厅 · 待接单</h4>
-          <Empty description="暂无真实任务数据（后端待接入）" />
-        </>
-      ),
+      children: <LogiPanel assets={assets} />,
     },
     near: {
       label: '查看附近车辆',
@@ -270,6 +253,315 @@ export default function TaskPublish({ mode }) {
       )}
       {tab.children}
     </PageCard>
+  );
+}
+
+// 物流配送闭环面板：发布方 / 接单方 双视图，覆盖 发布 → 可接单 → 接单 → 进度 → 完成 → 收益 完整链路。
+function LogiPanel({ assets }) {
+  const [view, setView] = useState('publisher');
+  const [pubForm] = Form.useForm();
+  const [pubSubmitting, setPubSubmitting] = useState(false);
+  const [pubTasks, setPubTasks] = useState([]);
+  const [pubLoading, setPubLoading] = useState(false);
+  const [provTasks, setProvTasks] = useState([]);
+  const [provLoading, setProvLoading] = useState(false);
+  const [myAccepted, setMyAccepted] = useState([]);
+  const [myLoading, setMyLoading] = useState(false);
+  const [acceptSel, setAcceptSel] = useState({});
+  const [progressInp, setProgressInp] = useState({});
+  const [earnings, setEarnings] = useState({});
+
+  // 候选接单资产：仅 VEHICLE / EV；若资产已声明 capabilities 则进一步过滤含 LOGISTICS 者。
+  const candidateAssets = useMemo(
+    () => (assets || []).filter((a) => {
+      if (!['VEHICLE', 'EV'].includes(a.assetType)) return false;
+      if (Array.isArray(a.capabilities)) return a.capabilities.includes('LOGISTICS');
+      return true;
+    }),
+    [assets]
+  );
+
+  const loadPublished = useCallback(
+    () => {
+      setPubLoading(true);
+      return api.get('/v1/tasks?role=publisher')
+        .then((d) => setPubTasks(Array.isArray(d) ? d : (d && d.list) || []))
+        .catch((e) => { message.error('加载我发布的任务失败：' + e.message); setPubTasks([]); })
+        .finally(() => setPubLoading(false));
+    },
+    []
+  );
+
+  const loadAvailable = useCallback(
+    () => {
+      setProvLoading(true);
+      return api.get('/v1/tasks?role=provider')
+        .then((d) => setProvTasks(Array.isArray(d) ? d : (d && d.list) || []))
+        .catch((e) => { message.error('加载可接单任务失败：' + e.message); setProvTasks([]); })
+        .finally(() => setProvLoading(false));
+    },
+    []
+  );
+
+  // /v1/me/my-tasks 返回 { published:[...], accepted:[...] }；accepted 为接单（AssignmentView）列表。
+  const loadMy = useCallback(
+    () => {
+      setMyLoading(true);
+      return api.get('/v1/me/my-tasks')
+        .then((d) => {
+          const acc = (d && d.accepted) || [];
+          setMyAccepted(acc.map((a, i) => ({
+            key: a.id ?? a.assignmentId ?? `acc-${i}`,
+            assignmentId: a.id ?? a.assignmentId,
+            taskId: a.taskId ?? (a.task && a.task.id),
+            taskTitle: a.taskTitle ?? a.title ?? (a.task && a.task.title) ?? `(任务#${a.taskId ?? (a.task && a.task.id)})`,
+            status: a.status,
+            progressPct: a.progressPct ?? 0,
+            assetId: a.assetId,
+          })));
+        })
+        .catch((e) => { message.error('加载我的接单失败：' + e.message); setMyAccepted([]); })
+        .finally(() => setMyLoading(false));
+    },
+    []
+  );
+
+  useEffect(() => {
+    loadPublished();
+    loadAvailable();
+    loadMy();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 发布物流任务 → POST /v1/tasks
+  const onPublish = async () => {
+    let v;
+    try { v = await pubForm.validateFields(); } catch { return; }
+    setPubSubmitting(true);
+    try {
+      await api.post('/v1/tasks', {
+        taskType: 'LOGISTICS',
+        title: v.title,
+        description: v.description || '',
+        rewardAmount: Number(v.rewardAmount),
+        currency: 'USD',
+        capabilityRequired: 'LOGISTICS',
+        geoLat: null,
+        geoLng: null,
+        serviceRadiusM: null,
+        pickupAddr: v.pickupAddr,
+        dropoffAddr: v.dropoffAddr,
+        cargoType: v.cargoType,
+        weightKg: Number(v.weightKg),
+      });
+      message.success('物流任务已发布到任务大厅');
+      pubForm.resetFields();
+      loadPublished();
+    } catch (e) {
+      message.error('发布失败：' + e.message);
+    } finally {
+      setPubSubmitting(false);
+    }
+  };
+
+  // 接单 → POST /v1/tasks/{id}/accept { assetId }
+  const onAccept = async (task) => {
+    const assetId = acceptSel[task.id];
+    if (!assetId) { message.warning('请先选择接单资产'); return; }
+    try {
+      await api.post(`/v1/tasks/${task.id}/accept`, { assetId: Number(assetId) });
+      message.success('接单成功，已绑定资产 #' + assetId);
+      setAcceptSel((p) => ({ ...p, [task.id]: undefined }));
+      loadAvailable();
+      loadMy();
+    } catch (e) {
+      message.error('接单失败：' + e.message);
+    }
+  };
+
+  // 更新进度 → POST /v1/tasks/{id}/progress { progressPct, note }
+  const onProgress = async (item) => {
+    const inp = progressInp[item.key] || {};
+    const pct = inp.progressPct;
+    if (pct == null || pct < 0 || pct > 100) { message.warning('请输入 0-100 之间的进度'); return; }
+    try {
+      await api.post(`/v1/tasks/${item.taskId}/progress`, { progressPct: Number(pct), note: inp.note || '' });
+      message.success('进度已更新');
+      loadMy();
+    } catch (e) {
+      message.error('更新进度失败：' + e.message);
+    }
+  };
+
+  // 完成任务 → POST /v1/tasks/{id}/complete，随后拉取收益明细。
+  const onComplete = async (item) => {
+    try {
+      await api.post(`/v1/tasks/${item.taskId}/complete`, {});
+      message.success('任务已完成，已触发结算');
+      loadMy();
+      const aid = item.assetId;
+      if (aid != null) {
+        try {
+          const earns = await api.get(`/v1/assets/${aid}/task-earnings`);
+          setEarnings((p) => ({ ...p, [item.key]: Array.isArray(earns) ? earns : [] }));
+        } catch (e) {
+          message.warning('收益查询失败：' + e.message);
+        }
+      }
+    } catch (e) {
+      message.error('完成任务失败：' + e.message);
+    }
+  };
+
+  const normStatus = (s) => (s ? String(s).toUpperCase() : s);
+  const STATUS_LABEL = { PENDING: '待审核', OPEN: '待接单', ASSIGNED: '已接单', IN_PROGRESS: '进行中', COMPLETED: '已完成', CANCELLED: '已取消' };
+  const STATUS_COLOR = { PENDING: 'default', OPEN: 'blue', ASSIGNED: 'gold', IN_PROGRESS: 'processing', COMPLETED: 'green', CANCELLED: 'red' };
+  const StatusTag = ({ status }) => {
+    const s = normStatus(status);
+    return <Tag color={STATUS_COLOR[s] || 'default'}>{STATUS_LABEL[s] || status || '—'}</Tag>;
+  };
+  const canComplete = (status) => ['ASSIGNED', 'IN_PROGRESS'].includes(normStatus(status));
+
+  const publisherView = (
+    <>
+      <Card style={{ marginBottom: 14 }}>
+        <Form layout="vertical" form={pubForm} onFinish={onPublish}>
+          <Form.Item label="任务标题" name="title" rules={[{ required: true, message: '请输入任务标题' }]}>
+            <Input placeholder="如：柬埔寨跨境生鲜配送" />
+          </Form.Item>
+          <Space size="large" wrap align="end">
+            <Form.Item label="取货地" name="pickupAddr" rules={[{ required: true, message: '请输入取货地' }]} style={{ minWidth: 200 }}>
+              <Input placeholder="俄罗斯市场站" />
+            </Form.Item>
+            <Form.Item label="收货地" name="dropoffAddr" rules={[{ required: true, message: '请输入收货地' }]} style={{ minWidth: 200 }}>
+              <Input placeholder="金边机场" />
+            </Form.Item>
+            <Form.Item label="货物类型" name="cargoType" rules={[{ required: true, message: '请选择货物类型' }]}>
+              <Select placeholder="选择货物类型" options={['小件包裹', '生鲜', '大件'].map((v) => ({ label: v, value: v }))} />
+            </Form.Item>
+            <Form.Item label="重量 (kg)" name="weightKg" rules={[{ required: true, message: '请输入重量' }]}>
+              <InputNumber min={0} step={0.1} placeholder="12.5" />
+            </Form.Item>
+            <Form.Item label="报酬 ($)" name="rewardAmount" rules={[{ required: true, message: '请输入报酬' }]}>
+              <InputNumber min={1} step={0.01} placeholder="5.00" />
+            </Form.Item>
+            <Form.Item label="截止时间"><Input placeholder="30 分钟内（可选）" disabled /></Form.Item>
+          </Space>
+          <Form.Item label="任务描述" name="description" style={{ marginTop: 4 }}>
+            <Input.TextArea rows={2} placeholder="补充说明（可选）" />
+          </Form.Item>
+          <Button type="primary" htmlType="submit" loading={pubSubmitting}>发布到任务大厅</Button>
+        </Form>
+      </Card>
+      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>我发布的物流任务</h4>
+      {pubLoading ? <Spin /> : pubTasks.length === 0 ? (
+        <Empty description="暂无已发布的任务" />
+      ) : (
+        <Table rowKey="id" pagination={false} dataSource={pubTasks} size="small"
+          columns={[
+            { title: '标题', dataIndex: 'title', render: (v) => v || '—' },
+            { title: '报酬', dataIndex: 'rewardAmount', render: (v, r) => `$${(v ?? 0).toFixed(2)} ${r.currency || 'USD'}` },
+            { title: '状态', dataIndex: 'status', render: (s) => <StatusTag status={s} /> },
+            { title: '路线', key: 'route', render: (_, r) => <span>{r.pickupAddr || '—'} → {r.dropoffAddr || '—'}</span> },
+            { title: '货物', dataIndex: 'cargoType', render: (v) => v || '—' },
+            { title: '重量', dataIndex: 'weightKg', render: (v) => (v != null ? `${v} kg` : '—') },
+          ]} />
+      )}
+    </>
+  );
+
+  const providerView = (
+    <>
+      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>可接单任务</h4>
+      {provLoading ? <Spin /> : provTasks.length === 0 ? (
+        <Empty description="暂无匹配我方资产能力的可接单任务" />
+      ) : (
+        <Table rowKey="id" pagination={false} dataSource={provTasks} size="small"
+          columns={[
+            { title: '标题', dataIndex: 'title', render: (v) => v || '—' },
+            { title: '报酬', dataIndex: 'rewardAmount', render: (v, r) => `$${(v ?? 0).toFixed(2)} ${r.currency || 'USD'}` },
+            { title: '路线', key: 'route', render: (_, r) => <span>{r.pickupAddr || '—'} → {r.dropoffAddr || '—'}</span> },
+            { title: '货物', dataIndex: 'cargoType', render: (v) => v || '—' },
+            { title: '重量', dataIndex: 'weightKg', render: (v) => (v != null ? `${v} kg` : '—') },
+            {
+              title: '接单',
+              key: 'act',
+              render: (_, task) => (
+                <Space>
+                  <Select
+                    placeholder={candidateAssets.length ? '选择资产' : '无可用车辆/电车'}
+                    style={{ width: 200 }}
+                    value={acceptSel[task.id]}
+                    onChange={(val) => setAcceptSel((p) => ({ ...p, [task.id]: val }))}
+                    options={candidateAssets.map((a) => ({ label: `${a.assetNo || a.assetType} · #${a.id}`, value: a.id }))}
+                    disabled={candidateAssets.length === 0}
+                  />
+                  <Button type="primary" size="small" disabled={candidateAssets.length === 0} onClick={() => onAccept(task)}>接单</Button>
+                </Space>
+              ),
+            },
+          ]} />
+      )}
+
+      <Divider />
+      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>我的接单</h4>
+      {myLoading ? <Spin /> : myAccepted.length === 0 ? (
+        <Empty description="暂无接单记录" />
+      ) : (
+        <List
+          itemLayout="vertical"
+          dataSource={myAccepted}
+          renderItem={(item) => {
+            const earns = earnings[item.key];
+            const inp = progressInp[item.key] || {};
+            return (
+              <List.Item key={item.key}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 600 }}>{item.taskTitle}</span>
+                  <StatusTag status={item.status} />
+                </div>
+                <div style={{ margin: '6px 0' }}>
+                  <Progress percent={Number(item.progressPct) || 0} size="small" />
+                </div>
+                <Space wrap align="end">
+                  <InputNumber min={0} max={100} placeholder="进度%" value={inp.progressPct}
+                    onChange={(val) => setProgressInp((p) => ({ ...p, [item.key]: { ...inp, progressPct: val } }))} />
+                  <Input placeholder="进度备注" style={{ width: 180 }} value={inp.note}
+                    onChange={(e) => setProgressInp((p) => ({ ...p, [item.key]: { ...inp, note: e.target.value } }))} />
+                  <Button size="small" onClick={() => onProgress(item)}>更新进度</Button>
+                  <Button size="small" type="primary" disabled={!canComplete(item.status)} onClick={() => onComplete(item)}>完成</Button>
+                </Space>
+                {earns && earns.length > 0 && (
+                  <Alert type="success" showIcon style={{ marginTop: 10 }}
+                    message={`资产 #${item.assetId} 任务收益（共 ${earns.length} 笔）`}
+                    description={
+                      <Descriptions size="small" column={2} bordered>
+                        {earns.map((e, i) => (
+                          <Fragment key={i}>
+                            <Descriptions.Item label="任务">{e.taskId ?? '—'}</Descriptions.Item>
+                            <Descriptions.Item label="金额">{`$${(e.amount ?? 0).toFixed(2)}`}</Descriptions.Item>
+                            <Descriptions.Item label="业务单号">{e.bizRef ?? '—'}</Descriptions.Item>
+                            <Descriptions.Item label="备注">{e.memo ?? '—'}</Descriptions.Item>
+                          </Fragment>
+                        ))}
+                      </Descriptions>
+                    } />
+                )}
+              </List.Item>
+            );
+          }}
+        />
+      )}
+    </>
+  );
+
+  return (
+    <>
+      <Segmented value={view} onChange={setView}
+        options={[{ label: '发布方', value: 'publisher' }, { label: '接单方', value: 'provider' }]}
+        style={{ marginBottom: 14 }} />
+      {view === 'publisher' ? publisherView : providerView}
+    </>
   );
 }
 
