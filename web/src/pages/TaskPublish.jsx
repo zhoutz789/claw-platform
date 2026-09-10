@@ -8,21 +8,35 @@ import api from '../api';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDroneOptions } from '../components/droneShared';
-import { listMissions } from '../api/drone';
-import { EarningsBlock, fetchAssetTaskEarnings } from '../components/AssetTaskEarnings';
+// 收益明细区块统一由 components/AssetTaskEarnings.jsx 导出（任务大厅「完成」后回填 +
+// 资产详情「任务收益」Tab 共用），本文件不再重复声明，避免同名定义导致构建 / 运行冲突。
+import { EarningsBlock } from '../components/AssetTaskEarnings';
 
 const { Text } = Typography;
 
-// 无人机作业类型（后端 DroneMissionType 枚举合法值；展示文案走 i18n task:drone.missionTypes.*）
-const MISSION_TYPES = ['SPRAY', 'CARGO', 'INSPECTION', 'RESCUE'];
+// 无人机作业类型（后端 DroneMissionType 枚举合法值）。
+// 保持 [{value,label}] 形态：Select options 与列表标签共用同一份数据，改成字符串数组会同时破坏两处。
+const MISSION_TYPES = [
+  { value: 'SPRAY', label: '植保喷洒' },
+  { value: 'CARGO', label: '物流配送' },
+  { value: 'INSPECTION', label: '测绘巡检' },
+  { value: 'RESCUE', label: '应急救援' },
+];
+const missionLabel = (v) => MISSION_TYPES.find((m) => m.value === v)?.label || v;
 
 const ASSET_TYPE_ICON = { VEHICLE: '🚗', BATTERY: '🔋', CHARGER: '🔌', DRONE: '🚁' };
 
-// 任务大厅 P2：可作为「接单方」承接任务的资产类型（车 / 电车）。
-const TASK_CANDIDATE_ASSET_TYPES = ['VEHICLE', 'EV'];
-// P3：DRONE_OP 任务只能由 DRONE 资产承接（与车 / 电车互斥，避免串进广告 / 客运候选池）。
-const DRONE_ASSET_TYPES = ['DRONE'];
-// 状态文案统一走 i18n（task:statusLabels.*），此处只保留颜色映射。
+// 默认可承接任务的资产类型（车 / 电车）：能力 → 资产类型无命中时兜底，也用于「附近车辆」筛选。
+const DEFAULT_ASSET_TYPES = ['VEHICLE', 'EV'];
+// 能力 → 可承接该能力的资产类型。DRONE_OP 只能由 DRONE 资产承接，其余能力走车 / 电车。
+const CAPABILITY_ASSET_TYPES = {
+  DRONE_OP: ['DRONE'],
+  AD_DISPLAY: ['VEHICLE', 'EV'],
+  RIDE_HAIL: ['VEHICLE', 'EV'],
+  TAXI: ['VEHICLE', 'EV'],
+  LOGISTICS: ['VEHICLE', 'EV'],
+};
+// 任务状态色。状态文案统一走 i18n（task:status.*），此处只保留颜色映射。
 const TASK_STATUS_COLOR = { PENDING: 'default', OPEN: 'blue', ASSIGNED: 'gold', IN_PROGRESS: 'processing', COMPLETED: 'green', SETTLED: 'cyan', CANCELLED: 'red' };
 const SCREEN_TYPE_LABEL = { BODY: '车身', SCREEN: '屏显' };
 const RIDE_TYPE_LABEL = { HAIL: '招手即停', TAXI: '打的' };
@@ -31,48 +45,15 @@ const FARE_MODEL_LABEL = { PER_KM: '按公里', PER_TIME: '按时长', FLAT: '�
 // 任务发布：按子菜单 mode 渲染单个功能（无人机/物流/广告/录像/出租/附近车辆）。
 // 原 TaskPublish 的 Tabs 入口已拆为 6 个独立子页，本组件为共享实现，真实接口逻辑全部保留。
 export default function TaskPublish({ mode }) {
-  const { t } = useTranslation(['common', 'drone', 'task']);
+  const { t } = useTranslation(['common', 'drone']);
   const { pilotOptions } = useDroneOptions();
   // 真实数据
-  const [missions, setMissions] = useState([]);
-  const [missionsLoading, setMissionsLoading] = useState(false);
   const [assets, setAssets] = useState([]);
   const [assetsLoading, setAssetsLoading] = useState(false);
-  const [missionsError, setMissionsError] = useState(null);
   const [assetsError, setAssetsError] = useState(null);
 
   // 附近车辆筛选（按真实 assetType）
   const [nearFilter, setNearFilter] = useState('__all');
-
-  /**
-   * 重新拉取无人机作业记录（GET /v1/drone-missions）。
-   * P3 起 drone_missions 由服务端在 POST /v1/tasks（DRONE_OP）时创建，
-   * 因此这里只作为「作业记录」展示，发布成功后由 DronePanel 回调本函数刷新。
-   * @returns {Promise<void>}
-   */
-  const reloadMissions = useCallback(() => {
-    setMissionsLoading(true);
-    setMissionsError(null);
-    return listMissions({})
-      .then((d) => { setMissions(d || []); })
-      .catch((e) => {
-        const m = '加载无人机作业失败：' + e.message;
-        message.error(m);
-        setMissions([]);
-        setMissionsError(m);
-      })
-      .finally(() => setMissionsLoading(false));
-  }, []);
-
-  useEffect(() => {
-    let alive = true;
-    setMissionsLoading(true);
-    setMissionsError(null);
-    listMissions({}).then((d) => { if (alive) setMissions(d || []); })
-      .catch((e) => { if (alive) { const m = '加载无人机作业失败：' + e.message; message.error(m); setMissions([]); setMissionsError(m); } })
-      .finally(() => { if (alive) setMissionsLoading(false); });
-    return () => { alive = false; };
-  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -86,7 +67,7 @@ export default function TaskPublish({ mode }) {
 
   // 附近可服务车辆：客运 / 打的场景仅参考 VEHICLE / EV 资产。
   const nearAssets = useMemo(
-    () => assets.filter((a) => TASK_CANDIDATE_ASSET_TYPES.includes(a.assetType)),
+    () => assets.filter((a) => DEFAULT_ASSET_TYPES.includes(a.assetType)),
     [assets]
   );
   const nearTypes = useMemo(
@@ -111,7 +92,7 @@ export default function TaskPublish({ mode }) {
           <Space style={{ marginBottom: 12 }}>
             <Text>筛选：</Text>
             <Segmented value={nearFilter} onChange={setNearFilter}
-              options={[{ label: '全部', value: '__all' }, ...nearTypes.map((t) => ({ label: t, value: t }))]} />
+              options={[{ label: '全部', value: '__all' }, ...nearTypes.map((x) => ({ label: x, value: x }))]} />
           </Space>
           {assetsLoading ? <Spin /> : nearList.length === 0 ? (
             <Empty description="暂无真实资产（后端待接入）" />
@@ -183,16 +164,7 @@ export default function TaskPublish({ mode }) {
     },
     drone: {
       label: '无人机任务',
-      children: (
-        <DronePanel
-          assets={assets}
-          assetsLoading={assetsLoading}
-          pilotOptions={pilotOptions}
-          missions={missions}
-          missionsLoading={missionsLoading}
-          onReloadMissions={reloadMissions}
-        />
-      ),
+      children: <DronePanel assets={assets} pilotOptions={pilotOptions} />,
     },
   };
 
@@ -202,10 +174,6 @@ export default function TaskPublish({ mode }) {
     <PageCard title={`任务发布 · ${tab.label}`}>
       <Alert type="info" showIcon style={{ marginBottom: 14 }}
         message="各功能模块均设「任务大厅」：需求方发布任务，附近车辆 / 设备按能力标签 + 地理位置匹配并自主接单。涵盖物流、客运（公交 / 打的 / 顺风车，货运归入物流）、广告自媒体、录像数据、资产出租、无人机低空作业。" />
-      {missionsError && (
-        <Alert type="error" showIcon closable style={{ marginBottom: 12 }}
-          message={missionsError} onClose={() => setMissionsError(null)} />
-      )}
       {assetsError && (
         <Alert type="error" showIcon closable style={{ marginBottom: 12 }}
           message={assetsError} onClose={() => setAssetsError(null)} />
@@ -361,7 +329,7 @@ function LogiPanel({ assets }) {
       const aid = item.assetId;
       if (aid != null) {
         try {
-          // 后端端点：GET /api/v1/tasks/assets/{assetId}/task-earnings（挂在 TaskController 下）。
+          // 后端唯一端点：GET /api/v1/tasks/assets/{assetId}/task-earnings（挂在 TaskController 下）。
           const earns = await api.get(`/v1/tasks/assets/${aid}/task-earnings`);
           setEarnings((p) => ({ ...p, [item.key]: Array.isArray(earns) ? earns : [] }));
         } catch (e) {
@@ -372,15 +340,6 @@ function LogiPanel({ assets }) {
       message.error('完成任务失败：' + e.message);
     }
   };
-
-  const normStatus = (s) => (s ? String(s).toUpperCase() : s);
-  const STATUS_LABEL = { PENDING: '待审核', OPEN: '待接单', ASSIGNED: '已接单', IN_PROGRESS: '进行中', COMPLETED: '已完成', CANCELLED: '已取消' };
-  const STATUS_COLOR = { PENDING: 'default', OPEN: 'blue', ASSIGNED: 'gold', IN_PROGRESS: 'processing', COMPLETED: 'green', CANCELLED: 'red' };
-  const StatusTag = ({ status }) => {
-    const s = normStatus(status);
-    return <Tag color={STATUS_COLOR[s] || 'default'}>{STATUS_LABEL[s] || status || '—'}</Tag>;
-  };
-  const canComplete = (status) => ['ASSIGNED', 'IN_PROGRESS'].includes(normStatus(status));
 
   const publisherView = (
     <>
@@ -421,7 +380,7 @@ function LogiPanel({ assets }) {
           columns={[
             { title: '标题', dataIndex: 'title', render: (v) => v || '—' },
             { title: '报酬', dataIndex: 'rewardAmount', render: (v, r) => `$${(v ?? 0).toFixed(2)} ${r.currency || 'USD'}` },
-            { title: '状态', dataIndex: 'status', render: (s) => <StatusTag status={s} /> },
+            { title: '状态', dataIndex: 'status', render: (s) => <TaskStatusTag status={s} /> },
             { title: '路线', key: 'route', render: (_, r) => <span>{r.pickupAddr || '—'} → {r.dropoffAddr || '—'}</span> },
             { title: '货物', dataIndex: 'cargoType', render: (v) => v || '—' },
             { title: '重量', dataIndex: 'weightKg', render: (v) => (v != null ? `${v} kg` : '—') },
@@ -478,7 +437,7 @@ function LogiPanel({ assets }) {
               <List.Item key={item.key}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontWeight: 600 }}>{item.taskTitle}</span>
-                  <StatusTag status={item.status} />
+                  <TaskStatusTag status={item.status} />
                 </div>
                 <div style={{ margin: '6px 0' }}>
                   <Progress percent={Number(item.progressPct) || 0} size="small" />
@@ -489,7 +448,7 @@ function LogiPanel({ assets }) {
                   <Input placeholder="进度备注" style={{ width: 180 }} value={inp.note}
                     onChange={(e) => setProgressInp((p) => ({ ...p, [item.key]: { ...inp, note: e.target.value } }))} />
                   <Button size="small" onClick={() => onProgress(item)}>更新进度</Button>
-                  <Button size="small" type="primary" disabled={!canComplete(item.status)} onClick={() => onComplete(item)}>完成</Button>
+                  <Button size="small" type="primary" disabled={!canCompleteTask(item.status)} onClick={() => onComplete(item)}>完成</Button>
                 </Space>
                 <EarningsBlock earnings={earns} assetId={item.assetId} />
               </List.Item>
@@ -510,7 +469,7 @@ function LogiPanel({ assets }) {
 
 // ---------- P2：任务大厅通用闭环（发布 → 可接单 → 接单 → 进度 → 完成 → 收益） ----------
 
-/** 任务状态标签（归一化大小写后按 task:statusLabels.* 取三语文案，缺失时回落原始状态值）。 */
+/** 任务状态标签（归一化大小写后按 task:status.* 取三语文案，缺失时回落原始状态值）。 */
 function TaskStatusTag({ status }) {
   const { t } = useTranslation(['task']);
   const s = status ? String(status).toUpperCase() : status;
@@ -518,7 +477,7 @@ function TaskStatusTag({ status }) {
   return <Tag color={TASK_STATUS_COLOR[s] || 'default'}>{label || status || '—'}</Tag>;
 }
 
-/** 任务类型标签（task:typeLabels.*）。 */
+/** 任务类型标签（task:type.*）。 */
 function TaskTypeTag({ taskType }) {
   const { t } = useTranslation(['task']);
   const v = taskType ? String(taskType).toUpperCase() : taskType;
@@ -526,7 +485,7 @@ function TaskTypeTag({ taskType }) {
   return <Tag color={v === 'DRONE_OP' ? 'purple' : 'geekblue'}>{label || taskType || '—'}</Tag>;
 }
 
-/** 发布方 / 接单方 双视图切换器（三语）。 */
+/** 发布方 / 接单方 双视图切换器（三语，task:hall.*）。 */
 function HallViewSwitch({ value, onChange }) {
   const { t } = useTranslation(['task']);
   return (
@@ -549,19 +508,55 @@ const canCompleteTask = (status) => ['ASSIGNED', 'IN_PROGRESS'].includes(status 
 // （任务大厅「完成」后回填 + 资产详情「任务收益」Tab 共用同一份渲染逻辑）。
 
 /**
- * 接单方通用筛选：仅允许指定 assetType 的资产承接；若资产已声明 capabilities 则进一步命中所需能力。
+ * 归一化资产的 capabilities 字段。
+ *
+ * 后端 /v1/assets 目前不返回该字段（undefined）；将来可能返回数组，也可能返回 CSV 字符串，
+ * 三种形态统一归一为字符串数组，避免筛选逻辑散落 if-else。
+ *
+ * @param {Array<string>|string|null|undefined} raw 原始 capabilities
+ * @returns {string[]} 归一化后的能力列表（无信息时为空数组）
+ */
+function normalizeCapabilities(raw) {
+  if (Array.isArray(raw)) return raw.map((x) => String(x).trim()).filter(Boolean);
+  if (typeof raw === 'string') return raw.split(',').map((x) => x.trim()).filter(Boolean);
+  return [];
+}
+
+/**
+ * 由能力列表推导可承接的资产类型（各能力映射结果取并集）。
+ * 无命中时兜底为车 / 电车，保证未登记新能力的老逻辑不退化。
+ *
+ * @param {string[]} capabilities 任务所需能力
+ * @returns {string[]} 允许的 assetType 列表
+ */
+function assetTypesFor(capabilities) {
+  const set = new Set();
+  (capabilities || []).forEach((c) => {
+    (CAPABILITY_ASSET_TYPES[c] || []).forEach((x) => set.add(x));
+  });
+  const merged = Array.from(set);
+  return merged.length > 0 ? merged : DEFAULT_ASSET_TYPES;
+}
+
+/**
+ * 接单方通用筛选：按能力推导允许的 assetType；若资产已声明 capabilities 再按能力命中过滤。
+ * 资产未携带任何能力信息（后端当前行为）时放行，避免接单下拉恒为空。
+ *
  * @param {Array} assets 资产列表
  * @param {string[]} capabilities 任务所需能力（如 ['AD_DISPLAY'] 或 ['DRONE_OP']）
- * @param {string[]} [assetTypes] 允许的资产类型，默认车 / 电车（DRONE_OP 传 ['DRONE']）
+ * @param {string[]} [assetTypes] 显式指定允许的资产类型；省略时由 capabilities 推导
  * @returns {Array} 候选资产
  */
-function filterCandidateAssets(assets, capabilities, assetTypes = TASK_CANDIDATE_ASSET_TYPES) {
+function filterCandidateAssets(assets, capabilities, assetTypes) {
+  const types = (Array.isArray(assetTypes) && assetTypes.length > 0)
+    ? assetTypes
+    : assetTypesFor(capabilities);
+  const required = capabilities || [];
   return (assets || []).filter((a) => {
-    if (!assetTypes.includes(a.assetType)) return false;
-    if (Array.isArray(a.capabilities) && a.capabilities.length > 0) {
-      return capabilities.some((c) => a.capabilities.includes(c));
-    }
-    return true;
+    if (!types.includes(a.assetType)) return false;
+    const owned = normalizeCapabilities(a.capabilities);
+    if (owned.length === 0) return true;
+    return required.some((c) => owned.includes(c));
   });
 }
 
@@ -569,7 +564,7 @@ function filterCandidateAssets(assets, capabilities, assetTypes = TASK_CANDIDATE
  * 任务闭环通用逻辑 Hook：复用 logi 面板的请求 / 刷新 / 接单 / 进度 / 完成 / 收益 全链路。
  * @param {{assets: Array, capabilities: string[], taskTypes: string[], assetTypes?: string[]}} cfg
  */
-function useTaskLoop({ assets, capabilities, taskTypes, assetTypes = TASK_CANDIDATE_ASSET_TYPES }) {
+function useTaskLoop({ assets, capabilities, taskTypes, assetTypes }) {
   const { t } = useTranslation(['task']);
   const [pubForm] = Form.useForm();
   const [pubSubmitting, setPubSubmitting] = useState(false);
@@ -583,14 +578,21 @@ function useTaskLoop({ assets, capabilities, taskTypes, assetTypes = TASK_CANDID
   const [progressInp, setProgressInp] = useState({});
   const [earnings, setEarnings] = useState({});
 
-  // taskTypes / assetTypes 为字面量数组，按内容做 key 稳定 inScope / candidateAssets 引用。
+  // taskTypes 为字面量数组，按内容做 key 稳定 inScope 引用。
   const typesKey = taskTypes.join(',');
-  const assetTypesKey = assetTypes.join(',');
   const inScope = useCallback((taskType) => typesKey.split(',').includes(taskType), [typesKey]);
 
+  // capabilities / assetTypes 同为字面量数组（assetTypes 可省略 → 由 capabilities 推导），
+  // 一律按内容做 key，避免每次渲染重建候选资产列表导致 Select 抖动。
+  const capsKey = (capabilities || []).join(',');
+  const assetTypesKey = Array.isArray(assetTypes) ? assetTypes.join(',') : '';
   const candidateAssets = useMemo(
-    () => filterCandidateAssets(assets, capabilities, assetTypesKey.split(',')),
-    [assets, typesKey, assetTypesKey] // eslint-disable-line react-hooks/exhaustive-deps
+    () => filterCandidateAssets(
+      assets,
+      capsKey ? capsKey.split(',') : [],
+      assetTypesKey ? assetTypesKey.split(',') : undefined
+    ),
+    [assets, capsKey, assetTypesKey]
   );
 
   const loadPublished = useCallback(
@@ -601,10 +603,10 @@ function useTaskLoop({ assets, capabilities, taskTypes, assetTypes = TASK_CANDID
           const list = Array.isArray(d) ? d : (d && d.list) || [];
           setPubTasks(list.filter((x) => inScope(x && x.taskType)));
         })
-        .catch((e) => { message.error(t('task:loadPublishedFailed', { message: e.message })); setPubTasks([]); })
+        .catch((e) => { message.error('加载我发布的任务失败：' + e.message); setPubTasks([]); })
         .finally(() => setPubLoading(false));
     },
-    [inScope, t]
+    [inScope]
   );
 
   const loadAvailable = useCallback(
@@ -615,10 +617,10 @@ function useTaskLoop({ assets, capabilities, taskTypes, assetTypes = TASK_CANDID
           const list = Array.isArray(d) ? d : (d && d.list) || [];
           setProvTasks(list.filter((x) => inScope(x && x.taskType)));
         })
-        .catch((e) => { message.error(t('task:loadAvailableFailed', { message: e.message })); setProvTasks([]); })
+        .catch((e) => { message.error('加载可接单任务失败：' + e.message); setProvTasks([]); })
         .finally(() => setProvLoading(false));
     },
-    [inScope, t]
+    [inScope]
   );
 
   // /v1/me/my-tasks 返回 { published:[...], accepted:[...] }；accepted 为接单（AssignmentView）列表。
@@ -644,10 +646,10 @@ function useTaskLoop({ assets, capabilities, taskTypes, assetTypes = TASK_CANDID
               assetId: a.assetId,
             })));
         })
-        .catch((e) => { message.error(t('task:loadAcceptedFailed', { message: e.message })); setMyAccepted([]); })
+        .catch((e) => { message.error('加载我的接单失败：' + e.message); setMyAccepted([]); })
         .finally(() => setMyLoading(false));
     },
-    [inScope, t]
+    [inScope]
   );
 
   useEffect(() => {
@@ -666,7 +668,7 @@ function useTaskLoop({ assets, capabilities, taskTypes, assetTypes = TASK_CANDID
       pubForm.resetFields();
       loadPublished();
     } catch (e) {
-      message.error(t('task:publishFailed', { message: e.message }));
+      message.error('发布失败：' + e.message);
     } finally {
       setPubSubmitting(false);
     }
@@ -678,12 +680,12 @@ function useTaskLoop({ assets, capabilities, taskTypes, assetTypes = TASK_CANDID
     if (!assetId) { message.warning(t('task:hall.needAsset')); return; }
     try {
       await api.post(`/v1/tasks/${task.id}/accept`, { assetId: Number(assetId) });
-      message.success(t('task:hall.acceptSuccess', { assetId }));
+      message.success(t('task:hall.acceptSuccess') + ' #' + assetId);
       setAcceptSel((p) => ({ ...p, [task.id]: undefined }));
       loadAvailable();
       loadMy();
     } catch (e) {
-      message.error(t('task:acceptFailed', { message: e.message }));
+      message.error('接单失败：' + e.message);
     }
   };
 
@@ -697,7 +699,7 @@ function useTaskLoop({ assets, capabilities, taskTypes, assetTypes = TASK_CANDID
       message.success(t('task:hall.progressSuccess'));
       loadMy();
     } catch (e) {
-      message.error(t('task:progressFailed', { message: e.message }));
+      message.error('更新进度失败：' + e.message);
     }
   };
 
@@ -710,15 +712,15 @@ function useTaskLoop({ assets, capabilities, taskTypes, assetTypes = TASK_CANDID
       const aid = item.assetId;
       if (aid != null) {
         try {
-          // 后端端点：GET /api/v1/tasks/assets/{assetId}/task-earnings（挂在 TaskController 下）。
-          const earns = await fetchAssetTaskEarnings(aid);
+          // 后端唯一端点：GET /api/v1/tasks/assets/{assetId}/task-earnings（挂在 TaskController 下）。
+          const earns = await api.get(`/v1/tasks/assets/${aid}/task-earnings`);
           setEarnings((p) => ({ ...p, [item.key]: Array.isArray(earns) ? earns : [] }));
         } catch (e) {
-          message.warning(t('task:earningsFailed', { message: e.message }));
+          message.warning(t('task:earn.loadFailed') + '：' + e.message);
         }
       }
     } catch (e) {
-      message.error(t('task:completeFailed', { message: e.message }));
+      message.error('完成任务失败：' + e.message);
     }
   };
 
@@ -996,7 +998,7 @@ function RidePanel({ assets }) {
         <Table rowKey="id" pagination={false} dataSource={provTasks} size="small"
           columns={[
             { title: '标题', dataIndex: 'title', render: (v) => v || '—' },
-            { title: '类型', dataIndex: ['ride', 'rideType'], render: (v, r) => { const t2 = v || (r.ride && r.ride.rideType); return <Tag color={t2 === 'TAXI' ? 'volcano' : 'geekblue'}>{RIDE_TYPE_LABEL[t2] || t2 || '—'}</Tag>; } },
+            { title: '类型', dataIndex: ['ride', 'rideType'], render: (v, r) => { const rt = v || (r.ride && r.ride.rideType); return <Tag color={rt === 'TAXI' ? 'volcano' : 'geekblue'}>{RIDE_TYPE_LABEL[rt] || rt || '—'}</Tag>; } },
             { title: '报酬', dataIndex: 'rewardAmount', render: (v, r) => `$${(v ?? 0).toFixed(2)} ${r.currency || 'USD'}` },
             { title: '路线', key: 'route', render: (_, r) => <span>{(r.ride && r.ride.originAddr) || '—'} → {(r.ride && r.ride.destAddr) || '—'}</span> },
             { title: '预估距离', dataIndex: ['ride', 'estDistanceKm'], render: (v, r) => { const d = v ?? (r.ride && r.ride.estDistanceKm); return d != null ? `${d} km` : '—'; } },
@@ -1021,43 +1023,32 @@ function RidePanel({ assets }) {
   );
 }
 
-// ---------- P3：无人机低空作业闭环（taskType=DRONE_OP / capability=DRONE_OP） ----------
+// ---------- P3：无人机低空作业接入任务大厅（taskType=DRONE_OP / capability=DRONE_OP） ----------
 
-/** 取 TaskView.drone 明细（P3 后端回传的作业标量 map），缺省返回空对象。 */
+/** 取 TaskView.drone 明细（后端回传的作业标量 map），缺省返回空对象避免层层判空。 */
 const droneOf = (r) => ((r && r.drone) || {});
 
 /**
- * 无人机面板：发布方 / 接单方 双视图。
+ * 无人机作业闭环面板：与 AdPanel / RidePanel 同构的发布方 / 接单方双视图。
  *
  * P3 起「发布」改为 POST /v1/tasks（taskType=DRONE_OP，capabilityRequired=DRONE_OP），
- * 由服务端创建关联的 drone_missions 行；本面板下方的「作业记录」仍读 /v1/drone-missions 展示。
+ * 由服务端创建关联的 drone_missions 行并回写 task.droneMissionId；TaskView 同时返回 drone 明细 map。
+ * 因此不再直连 POST /v1/drone-missions，作业才具备接单 / 进度 / 完成 / 结算全链路。
  *
- * @param {{assets: Array, assetsLoading?: boolean, pilotOptions?: Array,
- *          missions?: Array, missionsLoading?: boolean, onReloadMissions?: Function}} props
+ * @param {{assets: Array, pilotOptions: Array}} props 资产列表与飞手下拉选项
+ * @returns {JSX.Element} 面板
  */
-function DronePanel({ assets, assetsLoading = false, pilotOptions = [], missions = [], missionsLoading = false, onReloadMissions }) {
+function DronePanel({ assets, pilotOptions = [] }) {
   const { t } = useTranslation(['common', 'drone', 'task']);
   const [view, setView] = useState('publisher');
-  const loop = useTaskLoop({
-    assets,
-    capabilities: ['DRONE_OP'],
-    taskTypes: ['DRONE_OP'],
-    assetTypes: DRONE_ASSET_TYPES,
-  });
+  const loop = useTaskLoop({ assets, capabilities: ['DRONE_OP'], taskTypes: ['DRONE_OP'] });
   const { pubForm, pubSubmitting, pubTasks, pubLoading, provTasks, provLoading } = loop;
 
-  const missionOptions = useMemo(
-    () => MISSION_TYPES.map((v) => ({ label: t(`task:drone.missionTypes.${v}`), value: v })),
-    [t]
+  // 无人机作业只能绑定 DRONE 资产（前端先拦一层，后端亦按 capability 校验）。
+  const droneAssets = useMemo(
+    () => (assets || []).filter((a) => a.assetType === 'DRONE'),
+    [assets]
   );
-  /** 作业类型展示文案（i18n，缺失时回落原始枚举值）。 */
-  const missionTypeLabel = useCallback(
-    (v) => (v ? t(`task:drone.missionTypes.${v}`, { defaultValue: v }) : '—'),
-    [t]
-  );
-
-  // 仅 DRONE 资产可承接 / 绑定无人机作业。
-  const droneAssets = useMemo(() => (assets || []).filter((a) => a.assetType === 'DRONE'), [assets]);
   const droneAssetOptions = useMemo(
     () => droneAssets.map((x) => ({ label: `${x.assetNo || 'DRONE'} · #${x.id}`, value: x.id })),
     [droneAssets]
@@ -1067,7 +1058,6 @@ function DronePanel({ assets, assetsLoading = false, pilotOptions = [], missions
   const onPublish = async () => {
     let v;
     try { v = await pubForm.validateFields(); } catch { return; }
-    const before = missions.length;
     await loop.publish({
       taskType: 'DRONE_OP',
       title: v.title,
@@ -1084,36 +1074,7 @@ function DronePanel({ assets, assetsLoading = false, pilotOptions = [], missions
       assetId: Number(v.assetId),
       executedAt: new Date().toISOString(),
     }, t('task:hall.publishSuccess'));
-    // 服务端已创建关联 drone_missions，刷新作业记录列表（失败静默，作业已在任务大厅落库）。
-    if (typeof onReloadMissions === 'function') {
-      try { await onReloadMissions(); } catch (e) { /* 作业记录刷新失败不影响发布结果 */ }
-    }
-    return before;
   };
-
-  /** 任务列表通用列：报酬 / 状态 + drone 作业明细（作业类型 / 作业描述 / 面积 / 趟数 / 飞行时长）。 */
-  const droneCols = useMemo(
-    () => [
-      {
-        title: t('task:drone.missionType'),
-        key: 'droneMissionType',
-        render: (_, r) => <Tag color="purple">{missionTypeLabel(droneOf(r).missionType)}</Tag>,
-      },
-      { title: t('task:drone.payloadDesc'), key: 'dronePayloadDesc', render: (_, r) => droneOf(r).payloadDesc || '—' },
-      {
-        title: t('task:drone.areaHa'),
-        key: 'droneAreaHa',
-        render: (_, r) => { const v = droneOf(r).areaHa; return v != null ? `${v} ha` : '—'; },
-      },
-      { title: t('task:drone.trips'), key: 'droneTrips', render: (_, r) => { const v = droneOf(r).trips; return v != null ? v : '—'; } },
-      {
-        title: t('task:drone.flightMinutes'),
-        key: 'droneFlightMinutes',
-        render: (_, r) => { const v = droneOf(r).flightMinutes; return v != null ? `${v} ${t('task:drone.minutesUnit')}` : '—'; },
-      },
-    ],
-    [t, missionTypeLabel]
-  );
 
   const publisherView = (
     <>
@@ -1125,26 +1086,19 @@ function DronePanel({ assets, assetsLoading = false, pilotOptions = [], missions
           message={<span>{t('task:drone.hint')} <Link to="/drone-ops">{t('drone:common.gotoOps')}</Link></span>}
         />
         <Form layout="vertical" form={pubForm} onFinish={onPublish}>
-          <Form.Item label={t('task:hall.title_')} name="title" rules={[{ required: true, message: t('form.required', { label: t('task:hall.title_') }) }]}>
+          <Form.Item label={t('task:hall.title_')} name="title"
+            rules={[{ required: true, message: t('task:hall.titlePlaceholder') }]}>
             <Input placeholder={t('task:hall.titlePlaceholder')} />
           </Form.Item>
           <Space size="large" wrap align="end">
-            <Form.Item
-              label={t('task:drone.missionType')}
-              name="missionType"
-              rules={[{ required: true, message: t('form.required', { label: t('task:drone.missionType') }) }]}
-              style={{ minWidth: 160 }}
-            >
-              <Select options={missionOptions} placeholder={t('task:drone.missionTypePlaceholder')} />
+            <Form.Item label={t('task:drone.missionType')} name="missionType"
+              rules={[{ required: true, message: t('task:drone.missionTypePlaceholder') }]} style={{ minWidth: 160 }}>
+              <Select options={MISSION_TYPES} placeholder={t('task:drone.missionTypePlaceholder')} />
             </Form.Item>
-            <Form.Item
-              label={t('task:drone.asset')}
-              name="assetId"
-              rules={[{ required: true, message: t('form.required', { label: t('task:drone.asset') }) }]}
-              style={{ minWidth: 220 }}
-            >
+            <Form.Item label={t('task:drone.asset')} name="assetId"
+              rules={[{ required: true, message: t('task:hall.selectAsset') }]} style={{ minWidth: 220 }}>
               <Select
-                placeholder={assetsLoading ? '加载资产中…' : (droneAssetOptions.length ? t('task:drone.asset') : t('task:hall.noAsset'))}
+                placeholder={droneAssetOptions.length ? t('task:hall.selectAsset') : t('task:hall.noAsset')}
                 options={droneAssetOptions}
                 disabled={droneAssetOptions.length === 0}
               />
@@ -1161,14 +1115,13 @@ function DronePanel({ assets, assetsLoading = false, pilotOptions = [], missions
             <Form.Item label={t('task:drone.flightMinutes')} name="flightMinutes">
               <InputNumber min={0} step={1} placeholder="96" />
             </Form.Item>
-            <Form.Item
-              label={t('drone:mission.form.pilot')}
-              name="pilotId"
-              rules={[{ required: true, message: t('form.required', { label: t('drone:mission.form.pilot') }) }]}
-            >
-              <Select showSearch optionFilterProp="label" placeholder={t('drone:common.selectPlaceholder')} options={pilotOptions} />
+            <Form.Item label={t('task:drone.pilot')} name="pilotId"
+              rules={[{ required: true, message: t('drone:mission.form.pilot') }]}>
+              <Select showSearch optionFilterProp="label"
+                placeholder={t('drone:common.selectPlaceholder')} options={pilotOptions} />
             </Form.Item>
-            <Form.Item label={t('task:hall.reward') + ' ($)'} name="rewardAmount" rules={[{ required: true, message: t('form.required', { label: t('task:hall.reward') }) }]}>
+            <Form.Item label={`${t('task:hall.reward')} ($)`} name="rewardAmount"
+              rules={[{ required: true, message: t('task:hall.reward') }]}>
               <InputNumber min={1} step={0.01} placeholder="20.00" />
             </Form.Item>
           </Space>
@@ -1187,7 +1140,21 @@ function DronePanel({ assets, assetsLoading = false, pilotOptions = [], missions
             { title: t('task:hall.title_'), dataIndex: 'title', render: (v) => v || '—' },
             { title: t('task:hall.reward'), dataIndex: 'rewardAmount', render: (v, r) => `$${(v ?? 0).toFixed(2)} ${r.currency || 'USD'}` },
             { title: t('task:hall.status'), dataIndex: 'status', render: (s) => <TaskStatusTag status={s} /> },
-            ...droneCols,
+            {
+              title: t('task:drone.missionType'),
+              key: 'droneMissionType',
+              render: (_, r) => <Tag color="purple">{missionLabel(droneOf(r).missionType) || '—'}</Tag>,
+            },
+            {
+              title: t('task:drone.droneMissionId'),
+              key: 'droneMissionId',
+              render: (_, r) => {
+                const id = r.droneMissionId != null ? r.droneMissionId : droneOf(r).id;
+                return id != null ? `#${id}` : '—';
+              },
+            },
+            { title: t('task:drone.areaHa'), key: 'droneAreaHa', render: (_, r) => droneOf(r).areaHa ?? '—' },
+            { title: t('task:drone.flightMinutes'), key: 'droneFlightMinutes', render: (_, r) => droneOf(r).flightMinutes ?? '—' },
           ]} />
       )}
     </>
@@ -1203,35 +1170,19 @@ function DronePanel({ assets, assetsLoading = false, pilotOptions = [], missions
           columns={[
             { title: t('task:hall.title_'), dataIndex: 'title', render: (v) => v || '—' },
             { title: t('task:hall.reward'), dataIndex: 'rewardAmount', render: (v, r) => `$${(v ?? 0).toFixed(2)} ${r.currency || 'USD'}` },
-            ...droneCols,
+            {
+              title: t('task:drone.missionType'),
+              key: 'droneMissionType',
+              render: (_, r) => <Tag color="purple">{missionLabel(droneOf(r).missionType) || '—'}</Tag>,
+            },
+            { title: t('task:drone.payloadDesc'), key: 'dronePayloadDesc', render: (_, r) => droneOf(r).payloadDesc || '—' },
             { title: t('task:hall.accept'), key: 'act', render: (_, task) => <AcceptCell task={task} loop={loop} /> },
           ]} />
       )}
 
       <Divider />
-      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>{t('task:myAccepted')}</h4>
+      <h4 style={{ fontSize: 14, fontWeight: 800, margin: '4px 0 8px' }}>{t('task:hall.myAccepted')}</h4>
       <MyAcceptedList loop={loop} />
-    </>
-  );
-
-  // 作业记录：P3 起由服务端在发布 DRONE_OP 任务时创建，展示 drone_missions 明细。
-  const recordsView = (
-    <>
-      <Divider orientation="left" style={{ marginTop: 18 }}>{t('task:drone.recordsTitle')}</Divider>
-      {missionsLoading ? <Spin /> : (missions || []).length === 0 ? (
-        <Empty description={t('task:drone.recordsEmpty')} />
-      ) : (
-        <Table rowKey="id" pagination={false} dataSource={missions} size="small"
-          columns={[
-            { title: t('task:drone.missionType'), dataIndex: 'missionType', render: (v) => <Tag color="purple">{missionTypeLabel(v)}</Tag> },
-            { title: t('task:drone.payloadDesc'), dataIndex: 'payloadDesc', render: (v) => v || '—' },
-            { title: t('task:drone.asset'), dataIndex: 'assetId', render: (v) => (v != null ? `#${v}` : '—') },
-            { title: t('task:drone.areaHa'), dataIndex: 'areaHa', render: (v) => (v != null ? `${v} ha` : '—') },
-            { title: t('task:drone.trips'), dataIndex: 'trips', render: (v) => v ?? '—' },
-            { title: t('task:drone.flightMinutes'), dataIndex: 'flightMinutes', render: (v) => (v != null ? `${v} ${t('task:drone.minutesUnit')}` : '—') },
-            { title: t('drone:mission.form.pilot'), dataIndex: 'pilotId', render: (v) => (v != null ? `#${v}` : '—') },
-          ]} />
-      )}
     </>
   );
 
@@ -1239,7 +1190,6 @@ function DronePanel({ assets, assetsLoading = false, pilotOptions = [], missions
     <>
       <HallViewSwitch value={view} onChange={setView} />
       {view === 'publisher' ? publisherView : providerView}
-      {recordsView}
     </>
   );
 }
