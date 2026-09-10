@@ -89,6 +89,7 @@ import AirspaceZones from './pages/AirspaceZones';
 import FlightPlans from './pages/FlightPlans';
 import PilotLicenses from './pages/PilotLicenses';
 import DroneOps from './pages/DroneOps';
+import CameraPlayback from './pages/CameraPlayback';
 import ErrorBoundary from './ErrorBoundary';
 
 // 登录态下启动权限内核：拉取「我的权限」并下发后端权威菜单。
@@ -205,6 +206,8 @@ export default function App() {
           <Route path="flight-plans" element={<RequirePermRoute menuKey="flight-plans"><FlightPlans /></RequirePermRoute>} />
           <Route path="pilot-licenses" element={<RequirePermRoute menuKey="pilot-licenses"><PilotLicenses /></RequirePermRoute>} />
           <Route path="drone-ops" element={<RequirePermRoute menuKey="drone-ops"><DroneOps /></RequirePermRoute>} />
+          {/* 摄像头 / 录像域（数据回放）：按资产编号检索其下摄像头，实时/历史回放，menu:camera-playback 权限码见 V91 */}
+          <Route path="camera-playback" element={<RequirePermRoute menuKey="camera-playback"><CameraPlayback /></RequirePermRoute>} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

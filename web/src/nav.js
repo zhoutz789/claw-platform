@@ -122,6 +122,8 @@ export const NAV = [
       { key: 'stations', label: 'nav:item.stations', path: '/stations' },
       { key: 'assets', label: 'nav:item.assets', path: '/assets' },
       { key: 'asset-trace', label: 'nav:item.asset-trace', path: '/asset-trace' },
+      // 数据回放（摄像头域）：按资产编号检索其下摄像头，实时/历史回放（menu:camera-playback 权限码见 V91）
+      { key: 'camera-playback', label: 'nav:item.camera-playback', path: '/camera-playback' },
       { key: 'custody', label: 'nav:item.custody', path: '/custody' },
       { key: 'product-iot', label: 'nav:item.product-iot', path: '/product-iot' },
       { key: 'shared-pool', label: 'nav:item.shared-pool', path: '/shared-pool' },
@@ -266,6 +268,8 @@ export const ROUTES = [
   '/onboarding-deposit-confirm', '/org-manage', '/sub-accounts',
   // 增量 D · 无人机 / 低空经济域（menu:* 权限码见 V66 迁移）
   '/airspace-zones', '/flight-plans', '/pilot-licenses', '/drone-ops',
+  // 摄像头 / 录像域（数据回放，menu:camera-playback 权限码见 V91 迁移）
+  '/camera-playback',
 ];
 
 // 拍平为「带父级标签」的搜索索引：[{ key,label,path,group,groupKey }]，递归展开所有叶子。

@@ -38,6 +38,29 @@ bash deploy/phase1/teardown.sh             # 保留数据
 bash deploy/phase1/teardown.sh --purge     # 删除全部数据（含归档 WAL）
 ```
 
+## 摄像头域（增量）验证
+
+P0 起，本原型额外带了「边缘媒体 + 模拟摄像头 + 边缘 recorder」三件套，用于演示
+资产摄像头「推流 → 转码 → HLS 回放 → 段索引落库」整链（详见 `docs/摄像头数据子系统技术方案-v1.md`）。
+
+```bash
+# 启动后，模拟摄像头会自动循环向 edge-media 推测试流（RTMP）。验证推流转码：
+open http://localhost:18080/live/cam1.m3u8          # 浏览器（Safari 原生 HLS，Chrome 需 hls.js）
+
+# 边缘 recorder 模拟器：向后端周期上报段索引（写 V91 索引表，验证 V92 种子相机 id=1）
+# 先拿带 camera:manage 的 token（dev 短信码回显登录后取 Authorization）
+export CLAW_TOKEN="<Bearer token>"
+docker compose -f deploy/phase1/docker-compose.yml up -d camera-recorder
+# 然后在前端「数据回放」页输入资产编号（种子相机挂在 asset_id=1），即可看到回放与历史分段。
+
+# 仅起摄像头组件（不动 PG/MinIO）：
+docker compose -f deploy/phase1/docker-compose.yml up -d edge-media mock-camera
+```
+
+> 说明：P0 用 SRS 作边缘媒体节点，HLS 地址即 `http://localhost:18080/live/cam1.m3u8`；
+> 后端 `CameraService.live()` 返回 `base + ".m3u8"`（base 见 V92 种子 `stream_url`）。
+> P1 会前置自建 edge-media 网关，统一暴露 `/hls`、`/rtc` 低延迟端点，届时仅改拼接约定、前端不变。
+
 ## 端口（刻意避开 5432/8080/5173）
 
 | 服务 | 端口 | 说明 |
@@ -45,6 +68,9 @@ bash deploy/phase1/teardown.sh --purge     # 删除全部数据（含归档 WAL�
 | pg-primary | 6432 | 主库（读写） |
 | pg-replica | 6433 | 副本（热备只读；提升后可写） |
 | minio | 9000 / 9001 | 异地归档目标模拟（console） |
+| edge-media | 1935 / 11985 / 18080 / 8000(udp) | 边缘媒体节点（RTMP 接入 / API / HLS·WebRTC / WebRTC UDP） |
+| mock-camera | — | 模拟摄像头（ffmpeg 推流，无暴露端口） |
+| camera-recorder | — | 边缘 recorder 模拟器（周期上报段索引，无暴露端口） |
 
 ## 与《分布式部署详细设计》的映射
 

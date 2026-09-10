@@ -62,6 +62,52 @@ services:
     volumes:
       - minio_data:/data
 
+  # —— 摄像头域（增量）：边缘媒体节点 ——
+  # SRS 作 P0 边缘媒体网关：接收 RTMP 推流，产出 HLS(浏览器原生) / 预留 WebRTC。
+  # 生产由自建 edge-media 网关前置 SRS，统一暴露 /hls、/rtc（见技术方案 v1）。
+  edge-media:
+    image: ossrs/srs:5
+    container_name: phase1-edge-media
+    ports:
+      - "1935:1935"       # RTMP 接入
+      - "11985:1985"      # SRS API
+      - "18080:8080"      # HTTP / HLS / WebRTC
+      - "8000:8000/udp"   # WebRTC UDP
+    command: ["/usr/local/srs/objs/srs", "-c", "/usr/local/srs/conf/srs.conf"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/rtc/v1/version || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # 模拟摄像头：ffmpeg 生成测试画面 + 音轨，循环推 RTMP 到 edge-media/live/cam1。
+  # 无需真实摄像头即可验证「推流 → 转码 → HLS」整链。
+  mock-camera:
+    image: linuxserver/ffmpeg:latest
+    container_name: phase1-mock-camera
+    command: ["sh", "-c", "while true; do ffmpeg -re -f lavfi -i testsrc=size=640x360:rate=25 -f lavfi -i sine=frequency=440:sample_rate=44100 -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -f flv rtmp://edge-media:1935/live/cam1; sleep 2; done"]
+    depends_on:
+      - edge-media
+
+  # 边缘 recorder 模拟器：周期向后端上报「视频段索引」（写 V91 索引表 + 验证 V92 种子相机 id=1）。
+  # 对象存储落盘为 P1；此处仅 POST 合成 objectKey + size 证明写路径端到端打通。
+  # 需先拿带 camera:manage 的 token 写入 CLAW_TOKEN（见 README）。
+  camera-recorder:
+    image: python:3.11-slim
+    container_name: phase1-camera-recorder
+    working_dir: /app
+    volumes:
+      - ./camera-recorder.py:/app/camera-recorder.py:ro
+    command: ["python3", "/app/camera-recorder.py"]
+    environment:
+      CLAW_BACKEND: http://host.docker.internal:8080
+      CLAW_TOKEN: ${CLAW_TOKEN:-}
+      CAMERA_ID: "1"
+      INTERVAL_SEC: "30"
+    depends_on:
+      - edge-media
+    restart: unless-stopped
+
 volumes:
   pg_primary:
   pg_replica:

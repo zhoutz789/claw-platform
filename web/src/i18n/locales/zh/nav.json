@@ -94,6 +94,7 @@
     "sub-accounts": "子账号管理",
     "capacity-booking": "我的容量预订",
     "station-contracts": "服务站合约管理",
-    "categories": "类别管理"
+    "categories": "类别管理",
+    "camera-playback": "数据回放"
   }
 }

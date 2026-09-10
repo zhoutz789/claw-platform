@@ -37,6 +37,10 @@ export default function Assets() {
       render: (_, r) => <Button size="small" type="link" onClick={() => navigate(`/asset-trace?id=${r.id}`)}>全生命周期溯源</Button>,
     },
     {
+      title: '回放',
+      render: (_, r) => <Button size="small" type="link" onClick={() => navigate(`/camera-playback?assetNo=${r.assetNo}`)}>历史回放</Button>,
+    },
+    {
       title: '创建时间',
       dataIndex: 'createdAt',
       render: (v) => (v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-'),
