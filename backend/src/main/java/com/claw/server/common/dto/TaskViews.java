@@ -21,7 +21,7 @@ public final class TaskViews {
     private TaskViews() {
     }
 
-    /** 任务视图。LOGISTICS 任务附带 logistics 明细 map（其余为 null）。 */
+    /** 任务视图。LOGISTICS 附带 logistics、出行附带 ride、AD 附带 ad、DRONE_OP 附带 drone（其余为 null）。 */
     public record TaskView(
             Long id,
             Long publisherId,
@@ -39,10 +39,12 @@ public final class TaskViews {
             Instant deadlineAt,
             Instant assignedAt,
             Instant completedAt,
-            Instant settledAt,
-            Map<String, Object> logistics,
-            Map<String, Object> ride,
-            Map<String, Object> ad) {
+                Instant settledAt,
+                Long droneMissionId,         // P3：DRONE_OP 关联的 drone_missions.id
+                Map<String, Object> logistics,
+                Map<String, Object> ride,
+                Map<String, Object> ad,
+                Map<String, Object> drone) { // P3：DRONE_OP 作业明细（纯标量，不引用实体）
     }
 
     /** 接单视图。 */

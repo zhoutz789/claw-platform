@@ -38,7 +38,16 @@ public final class TaskRequests {
             String advertiser,
             String mediaUrl,
             String displayDuration,
-            String screenType) {
+            String screenType,
+            // ---- P3：DRONE_OP 扩展（可选，仅 taskType=DRONE_OP 时生效）----
+            String missionType,      // SPRAY / CARGO / INSPECTION / RESCUE
+            String payloadDesc,
+            BigDecimal areaHa,
+            Integer trips,
+            Integer flightMinutes,
+            Long pilotId,
+            Long assetId,
+            String executedAt) {     // ISO-8601，如 2025-01-01T10:00:00Z；空则取 now()
     }
 
     /** 进度上报。 */

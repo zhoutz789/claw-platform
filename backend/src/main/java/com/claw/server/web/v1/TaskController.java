@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -37,9 +38,11 @@ public class TaskController {
     @GetMapping
     public ApiResult<List<TaskViews.TaskView>> list(@RequestParam(required = false) String role,
                                                     @RequestParam(required = false) String type,
-                                                    @RequestParam(required = false) String status) {
+                                                    @RequestParam(required = false) String status,
+                                                    @RequestParam(required = false) BigDecimal lat,
+                                                    @RequestParam(required = false) BigDecimal lng) {
         if ("provider".equals(role)) {
-            return ApiResult.ok(taskService.listAvailableForProvider(uid()));
+            return ApiResult.ok(taskService.listAvailableForProvider(uid(), lat, lng));
         }
         return ApiResult.ok(taskService.listForPublisher(uid()));
     }

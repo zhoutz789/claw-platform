@@ -4,16 +4,21 @@ import com.claw.server.common.api.BizException;
 import com.claw.server.common.dto.TaskRequests;
 import com.claw.server.common.dto.TaskViews;
 import com.claw.server.common.enums.AssetCapability;
+import com.claw.server.common.enums.DroneMissionType;
 import com.claw.server.common.enums.TaskStatus;
 import com.claw.server.common.enums.TaskType;
 import com.claw.server.domain.asset.Asset;
 import com.claw.server.domain.asset.AssetRepository;
+import com.claw.server.domain.payload.DroneMission;
+import com.claw.server.domain.payload.DroneMissionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +44,7 @@ public class TaskService {
     private final TaskAdRepository taskAdRepository;
     private final AssetRepository assetRepository;
     private final TaskSettlementService taskSettlementService;
+    private final DroneMissionRepository droneMissionRepository;
 
     /** taskType → 预期 capability_required 的强制映射（发布校验用）。 */
     private static final Map<TaskType, AssetCapability> CAPABILITY_FOR_TYPE = Map.of(
@@ -110,6 +116,10 @@ public class TaskService {
                     .screenType(req.screenType())
                     .build();
             taskAdRepository.save(ad);
+        } else if (req.taskType() == TaskType.DRONE_OP) {
+            DroneMission saved = droneMissionRepository.save(buildDroneMission(req));
+            task.setDroneMissionId(saved.getId());
+            task = taskRepository.save(task);
         }
         return toViewWithExtension(task);
     }
@@ -133,6 +143,17 @@ public class TaskService {
      */
     @Transactional(readOnly = true)
     public List<TaskViews.TaskView> listAvailableForProvider(Long providerId) {
+        return listAvailableForProvider(providerId, null, null);
+    }
+
+    /**
+     * provider 可接任务（带地理过滤）：汇总其名下所有资产能力 → 反查 OPEN 任务 → 去重 → 排除已接。
+     *
+     * <p>当 lat / lng 均提供时，仅保留「任务无坐标」或「未设服务半径」或「距离 ≤ 服务半径」的候选，
+     * 避免 provider 看到自身服务范围外无法履约的任务。坐标缺省时行为与 {@link #listAvailableForProvider(Long)} 一致。
+     */
+    @Transactional(readOnly = true)
+    public List<TaskViews.TaskView> listAvailableForProvider(Long providerId, BigDecimal lat, BigDecimal lng) {
         List<Asset> assets = assetRepository.findByUserIdAndDeletedFalse(providerId);
         Set<AssetCapability> caps = assets.stream()
                 .flatMap(a -> parseCapabilities(a.getCapabilities()).stream())
@@ -151,6 +172,7 @@ public class TaskService {
 
         return candidates.values().stream()
                 .filter(t -> !taken.contains(t.getId()))
+                .filter(t -> withinServiceRadius(t, lat, lng))
                 .map(this::toViewWithExtension)
                 .toList();
     }
@@ -242,6 +264,7 @@ public class TaskService {
         Map<String, Object> logistics = null;
         Map<String, Object> ride = null;
         Map<String, Object> ad = null;
+        Map<String, Object> drone = null;
 
         switch (t.getTaskType()) {
             case LOGISTICS -> {
@@ -279,6 +302,22 @@ public class TaskService {
                     ad = m;
                 }
             }
+            case DRONE_OP -> {
+                if (t.getDroneMissionId() != null) {
+                    DroneMission d = droneMissionRepository.findById(t.getDroneMissionId()).orElse(null);
+                    if (d != null) {
+                        Map<String, Object> m = new LinkedHashMap<>();
+                        m.put("missionType", d.getMissionType() == null ? null : d.getMissionType().name());
+                        m.put("payloadDesc", d.getPayloadDesc());
+                        m.put("areaHa", d.getAreaHa());
+                        m.put("trips", d.getTrips());
+                        m.put("flightMinutes", d.getFlightMinutes());
+                        m.put("pilotId", d.getPilotId());
+                        m.put("assetId", d.getAssetId());
+                        drone = m;
+                    }
+                }
+            }
             default -> { }
         }
 
@@ -287,13 +326,98 @@ public class TaskService {
                 t.getRewardAmount(), t.getCurrency(), t.getCapabilityRequired(), t.getStatus(),
                 t.getGeoLat(), t.getGeoLng(), t.getServiceRadiusM(),
                 t.getCreatedAt(), t.getDeadlineAt(), t.getAssignedAt(), t.getCompletedAt(), t.getSettledAt(),
-                logistics, ride, ad);
+                t.getDroneMissionId(),
+                logistics, ride, ad, drone);
     }
 
     /** TaskAssignment → AssignmentView。 */
     private TaskViews.AssignmentView toAssignmentView(TaskAssignment a) {
         return new TaskViews.AssignmentView(a.getId(), a.getTaskId(), a.getProviderId(), a.getAssetId(),
                 a.getStatus(), a.getProgressPct(), a.getLastProgressNote(), a.getStartedAt(), a.getFinishedAt());
+    }
+
+    /**
+     * 构建 DRONE_OP 任务关联的无人机作业计量记录。
+     *
+     * @throws BizException missionType 非法、pilotId / assetId 缺失或 executedAt 非 ISO-8601 时
+     */
+    private static DroneMission buildDroneMission(TaskRequests.Publish req) {
+        DroneMissionType missionType = parseMissionType(req.missionType());
+        if (req.pilotId() == null) {
+            throw BizException.invalidParam("error.task.drone.pilot.required");
+        }
+        if (req.assetId() == null) {
+            throw BizException.invalidParam("error.task.drone.asset.required");
+        }
+        return DroneMission.builder()
+                .assetId(req.assetId())
+                .missionType(missionType)
+                .payloadDesc(req.payloadDesc())
+                .areaHa(req.areaHa())
+                .trips(req.trips())
+                .flightMinutes(req.flightMinutes())
+                .pilotId(req.pilotId())
+                .executedAt(parseExecutedAt(req.executedAt()))
+                .createdAt(Instant.now())
+                .build();
+    }
+
+    /** 解析作业类型；空值或不在枚举内一律拒绝（防脏数据落库）。 */
+    private static DroneMissionType parseMissionType(String raw) {
+        if (raw == null || raw.isBlank()) {
+            throw BizException.invalidParam("error.task.drone.mission.type");
+        }
+        try {
+            return DroneMissionType.valueOf(raw.trim());
+        } catch (IllegalArgumentException ex) {
+            throw BizException.invalidParam("error.task.drone.mission.type");
+        }
+    }
+
+    /** 解析 ISO-8601 执行时间；缺省取当前时刻，格式非法则拒绝。 */
+    private static Instant parseExecutedAt(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return Instant.now();
+        }
+        String text = raw.trim();
+        try {
+            return Instant.parse(text);
+        } catch (DateTimeParseException ignored) {
+            // 兼容带偏移量的写法（如 2025-01-01T10:00:00+08:00）
+        }
+        try {
+            return OffsetDateTime.parse(text).toInstant();
+        } catch (DateTimeParseException ex) {
+            throw BizException.invalidParam("error.task.drone.executed.at");
+        }
+    }
+
+    /**
+     * 地理可接判定：坐标未传入、任务无坐标、任务未设服务半径，或距离在服务半径内均视为可接。
+     */
+    private static boolean withinServiceRadius(Task t, BigDecimal lat, BigDecimal lng) {
+        if (lat == null || lng == null) {
+            return true;
+        }
+        if (t.getGeoLat() == null || t.getGeoLng() == null) {
+            return true;
+        }
+        if (t.getServiceRadiusM() == null) {
+            return true;
+        }
+        return haversineMeters(lat, lng, t.getGeoLat(), t.getGeoLng()) <= t.getServiceRadiusM().doubleValue();
+    }
+
+    /** 两点球面距离（米），地球平均半径 6371000 m。 */
+    private static double haversineMeters(BigDecimal lat1, BigDecimal lng1, BigDecimal lat2, BigDecimal lng2) {
+        double radLat1 = Math.toRadians(lat1.doubleValue());
+        double radLat2 = Math.toRadians(lat2.doubleValue());
+        double dLat = Math.toRadians(lat2.doubleValue() - lat1.doubleValue());
+        double dLng = Math.toRadians(lng2.doubleValue() - lng1.doubleValue());
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(radLat1) * Math.cos(radLat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return 6371000 * c;
     }
 
     /** 解析 "LOGISTICS,RIDE_HAIL" 形式的能力 CSV 为枚举集合（忽略未知/空项）。 */

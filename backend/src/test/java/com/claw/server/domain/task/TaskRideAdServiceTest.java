@@ -66,7 +66,8 @@ class TaskRideAdServiceTest {
                 null, null, null, null,                       // pickup/dropoff/cargo/weight
                 "Main St", "5th Ave", "HAIL",                  // origin/dest/rideType
                 new BigDecimal("2.40"), 12, "PER_KM",          // estDistance/estDuration/fareModel
-                null, null, null, null);                       // advertiser/media/display/screen
+                null, null, null, null,                       // advertiser/media/display/screen
+                null, null, null, null, null, null, null, null); // P3 drone 扩展
 
         when(taskRepository.save(any(Task.class))).thenAnswer(inv -> {
             Task t = inv.getArgument(0);
@@ -108,7 +109,8 @@ class TaskRideAdServiceTest {
                 null, null, null,
                 null, null, null, null,
                 null, null, null, null, null, null,
-                "Acme Co", "http://cdn/media.png", "30s", "BODY");
+                "Acme Co", "http://cdn/media.png", "30s", "BODY",
+                null, null, null, null, null, null, null, null);
 
         when(taskRepository.save(any(Task.class))).thenAnswer(inv -> {
             Task t = inv.getArgument(0);
@@ -149,7 +151,8 @@ class TaskRideAdServiceTest {
                 null, null, null,
                 null, null, null, null,
                 null, null, null, null, null, null,
-                "Acme Co", "http://cdn/media.png", "30s", "BODY");
+                "Acme Co", "http://cdn/media.png", "30s", "BODY",
+                null, null, null, null, null, null, null, null);
 
         BizException ex = assertThrows(BizException.class, () -> taskService.publish(req, 1L));
         assertEquals("error.task.capability.mismatch", ex.getMessageCode());

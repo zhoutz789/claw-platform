@@ -64,6 +64,10 @@ public class Task {
     @Column(name = "service_radius_m")
     private Integer serviceRadiusM;
 
+    /** 关联的无人机作业计量（V96，仅 DRONE_OP 任务；drone_missions.id）。 */
+    @Column(name = "drone_mission_id")
+    private Long droneMissionId;
+
     @Column(name = "created_at", nullable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();
