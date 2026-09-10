@@ -51,6 +51,10 @@ public class Asset {
     private Long ownerId;   // 管理人
     private Long userId;    // 当前使用人
 
+    /** 资产能力标签（CSV：LOGISTICS,RIDE_HAIL,TAXI,AD_DISPLAY,DRONE_OP,SWAP）。V94 引入，接单校验用。 */
+    @Column(name = "capabilities")
+    private String capabilities;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default

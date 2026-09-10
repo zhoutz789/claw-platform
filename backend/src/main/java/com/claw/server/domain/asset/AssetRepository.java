@@ -18,6 +18,9 @@ public interface AssetRepository extends JpaRepository<Asset, Long>, JpaSpecific
 
     List<Asset> findByUserId(Long userId);
 
+    /** 取用户（使用人）名下未删除资产，供 provider 接单前能力匹配（P0 任务大厅）。 */
+    List<Asset> findByUserIdAndDeletedFalse(Long userId);
+
     @Query("SELECT a.status, COUNT(a) FROM Asset a WHERE a.deleted = false GROUP BY a.status")
     List<Object[]> countGroupByStatus();
 

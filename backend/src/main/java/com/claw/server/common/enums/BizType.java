@@ -38,5 +38,7 @@ public enum BizType {
     /** 容量回佣（V71：从厂家 owner_share 计提，按定购单位比例自动分成）。 */
     CAPACITY_REBATE,
     /** 履约异步结算（取货扫码触发：释放冻结 + 服务站提成 + 厂家货款，复用 ledger 双记账）。 */
-    FULFILLMENT_SETTLEMENT
+    FULFILLMENT_SETTLEMENT,
+    /** 任务大厅结算（任务报酬 publisher 出账 / provider 入账，复用 ledger 双记账，P0）。 */
+    TASK_SETTLEMENT
 }

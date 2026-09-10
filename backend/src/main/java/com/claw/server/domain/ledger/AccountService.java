@@ -19,6 +19,7 @@ import java.util.Optional;
 public class AccountService {
 
     private final AccountRepository accountRepository;
+    private final AccountEntryRepository accountEntryRepository;
 
     /**
      * 平台内部户（MASTER / RESIDUAL_RESERVE / BATTERY_FUND / VEHICLE_RISK），不存在则创建。
@@ -89,6 +90,25 @@ public class AccountService {
     public LedgerViews.AccountView getAccount(Long id) {
         return toView(accountRepository.findById(id)
                 .orElseThrow(() -> BizException.notFound("error.account.not.found")));
+    }
+
+    /**
+     * 按业务单号（幂等键）反查所有账本分录（跨域只读出口）。
+     *
+     * <p>任务大厅收益对账等外部域经此读取，避免直持 {@code AccountEntryRepository}
+     * （ArchUnit 守护 ledger 域封闭性：资金域仓储只允许本域访问）。返回的是 common 层
+     * {@link LedgerViews.EntryView}，不向外泄漏 ledger 实体。
+     *
+     * @param bizRef 业务单号（如 TASK-&lt;taskId&gt;-&lt;assignmentId&gt;）
+     * @return 该 bizRef 下的全部分录视图（含借贷方向、金额、memo、时间）
+     */
+    @Transactional(readOnly = true)
+    public List<LedgerViews.EntryView> findEntriesByBizRef(String bizRef) {
+        return accountEntryRepository.findByBizRef(bizRef).stream()
+                .map(e -> new LedgerViews.EntryView(e.getId(), e.getTxnId(), e.getAccountId(),
+                        e.getDirection(), e.getAmount(), e.getBizType(), e.getBizRef(), e.getMemo(),
+                        e.getCreatedAt()))
+                .toList();
     }
 
     private LedgerViews.AccountView toView(Account a) {
