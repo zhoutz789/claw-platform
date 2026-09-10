@@ -28,7 +28,17 @@ public final class TaskRequests {
             String pickupAddr,
             String dropoffAddr,
             String cargoType,
-            BigDecimal weightKg) {
+            BigDecimal weightKg,
+            String originAddr,
+            String destAddr,
+            String rideType,
+            BigDecimal estDistanceKm,
+            Integer estDurationMin,
+            String fareModel,
+            String advertiser,
+            String mediaUrl,
+            String displayDuration,
+            String screenType) {
     }
 
     /** 进度上报。 */

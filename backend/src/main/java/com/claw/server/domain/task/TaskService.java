@@ -22,10 +22,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 任务大厅领域服务（P0：LOGISTICS 完整闭环）。
+ * 任务大厅领域服务（P0：LOGISTICS 完整闭环；P2：HAIL_RIDE / TAXI / AD 扩展打通）。
  *
  * <p>发布 → 接单（绑资产）→ 进度 → 完成 → 结算（走 {@link TaskSettlementService} 复用 ledger 双记账）。
- * 仅 LOGISTICS 创建 task_logistics 扩展；其余 taskType 仅落库。不触碰权限/RBAC 体系。
+ * LOGISTICS 落 task_logistics；HAIL_RIDE / TAXI 落 task_ride；AD 落 task_ad。结算对全类型通用，P2 不改动。
+ * 仅依赖 common 层 DTO 与枚举，不触碰权限/RBAC 体系。
  */
 @Service
 @RequiredArgsConstructor
@@ -34,6 +35,8 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final TaskAssignmentRepository taskAssignmentRepository;
     private final TaskLogisticsRepository taskLogisticsRepository;
+    private final TaskRideRepository taskRideRepository;
+    private final TaskAdRepository taskAdRepository;
     private final AssetRepository assetRepository;
     private final TaskSettlementService taskSettlementService;
 
@@ -71,31 +74,57 @@ public class TaskService {
                 .build();
         task = taskRepository.save(task);
 
-        TaskLogistics logistics = null;
         if (req.taskType() == TaskType.LOGISTICS) {
-            logistics = TaskLogistics.builder()
+            TaskLogistics logistics = TaskLogistics.builder()
                     .taskId(task.getId())
                     .pickupAddr(req.pickupAddr())
                     .dropoffAddr(req.dropoffAddr())
                     .cargoType(req.cargoType())
                     .weightKg(req.weightKg())
                     .build();
-            logistics = taskLogisticsRepository.save(logistics);
+            taskLogisticsRepository.save(logistics);
+        } else if (req.taskType() == TaskType.HAIL_RIDE || req.taskType() == TaskType.TAXI) {
+            String expectedRideType = (req.taskType() == TaskType.HAIL_RIDE) ? "HAIL" : "TAXI";
+            if (req.rideType() == null || !expectedRideType.equals(req.rideType())) {
+                throw BizException.invalidParam("error.task.ride.type");
+            }
+            TaskRide ride = TaskRide.builder()
+                    .taskId(task.getId())
+                    .originAddr(req.originAddr())
+                    .destAddr(req.destAddr())
+                    .rideType(req.rideType())
+                    .estDistanceKm(req.estDistanceKm())
+                    .estDurationMin(req.estDurationMin())
+                    .fareModel(req.fareModel())
+                    .build();
+            taskRideRepository.save(ride);
+        } else if (req.taskType() == TaskType.AD) {
+            if (req.screenType() == null || (!"BODY".equals(req.screenType()) && !"SCREEN".equals(req.screenType()))) {
+                throw BizException.invalidParam("error.task.ad.screen.type");
+            }
+            TaskAd ad = TaskAd.builder()
+                    .taskId(task.getId())
+                    .advertiser(req.advertiser())
+                    .mediaUrl(req.mediaUrl())
+                    .displayDuration(req.displayDuration())
+                    .screenType(req.screenType())
+                    .build();
+            taskAdRepository.save(ad);
         }
-        return toTaskView(task, logistics);
+        return toViewWithExtension(task);
     }
 
     @Transactional(readOnly = true)
     public TaskViews.TaskView detail(Long taskId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> BizException.notFound("error.task.not.found"));
-        return toViewWithLogistics(task);
+        return toViewWithExtension(task);
     }
 
     @Transactional(readOnly = true)
     public List<TaskViews.TaskView> listForPublisher(Long publisherId) {
         return taskRepository.findByPublisherIdAndDeletedFalse(publisherId).stream()
-                .map(this::toViewWithLogistics)
+                .map(this::toViewWithExtension)
                 .toList();
     }
 
@@ -122,7 +151,7 @@ public class TaskService {
 
         return candidates.values().stream()
                 .filter(t -> !taken.contains(t.getId()))
-                .map(this::toViewWithLogistics)
+                .map(this::toViewWithExtension)
                 .toList();
     }
 
@@ -208,36 +237,57 @@ public class TaskService {
         return toAssignmentView(assignment);
     }
 
-    /** 任务视图（LOGISTICS 附带 logistics 明细）。 */
-    private TaskViews.TaskView toViewWithLogistics(Task t) {
-        if (t.getTaskType() == TaskType.LOGISTICS) {
-            return toTaskView(t, taskLogisticsRepository.findById(t.getId()).orElse(null));
-        }
-        return toTaskView(t);
-    }
-
-    /** Task → TaskView（无 logistics 明细）。 */
-    private TaskViews.TaskView toTaskView(Task t) {
-        return toTaskView(t, null);
-    }
-
-    /** Task → TaskView（含可选 logistics 明细 map）。 */
-    private TaskViews.TaskView toTaskView(Task t, TaskLogistics l) {
+    /** 任务视图：按 task_type 附带对应扩展明细 map（LOGISTICS→logistics / 出行→ride / AD→ad）。 */
+    private TaskViews.TaskView toViewWithExtension(Task t) {
         Map<String, Object> logistics = null;
-        if (t.getTaskType() == TaskType.LOGISTICS && l != null) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("pickupAddr", l.getPickupAddr());
-            m.put("dropoffAddr", l.getDropoffAddr());
-            m.put("cargoType", l.getCargoType());
-            m.put("weightKg", l.getWeightKg());
-            logistics = m;
+        Map<String, Object> ride = null;
+        Map<String, Object> ad = null;
+
+        switch (t.getTaskType()) {
+            case LOGISTICS -> {
+                TaskLogistics l = taskLogisticsRepository.findById(t.getId()).orElse(null);
+                if (l != null) {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("pickupAddr", l.getPickupAddr());
+                    m.put("dropoffAddr", l.getDropoffAddr());
+                    m.put("cargoType", l.getCargoType());
+                    m.put("weightKg", l.getWeightKg());
+                    logistics = m;
+                }
+            }
+            case HAIL_RIDE, TAXI -> {
+                TaskRide r = taskRideRepository.findById(t.getId()).orElse(null);
+                if (r != null) {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("originAddr", r.getOriginAddr());
+                    m.put("destAddr", r.getDestAddr());
+                    m.put("rideType", r.getRideType());
+                    m.put("estDistanceKm", r.getEstDistanceKm());
+                    m.put("estDurationMin", r.getEstDurationMin());
+                    m.put("fareModel", r.getFareModel());
+                    ride = m;
+                }
+            }
+            case AD -> {
+                TaskAd a = taskAdRepository.findById(t.getId()).orElse(null);
+                if (a != null) {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("advertiser", a.getAdvertiser());
+                    m.put("mediaUrl", a.getMediaUrl());
+                    m.put("displayDuration", a.getDisplayDuration());
+                    m.put("screenType", a.getScreenType());
+                    ad = m;
+                }
+            }
+            default -> { }
         }
+
         return new TaskViews.TaskView(
                 t.getId(), t.getPublisherId(), t.getTaskType(), t.getTitle(), t.getDescription(),
                 t.getRewardAmount(), t.getCurrency(), t.getCapabilityRequired(), t.getStatus(),
                 t.getGeoLat(), t.getGeoLng(), t.getServiceRadiusM(),
                 t.getCreatedAt(), t.getDeadlineAt(), t.getAssignedAt(), t.getCompletedAt(), t.getSettledAt(),
-                logistics);
+                logistics, ride, ad);
     }
 
     /** TaskAssignment → AssignmentView。 */

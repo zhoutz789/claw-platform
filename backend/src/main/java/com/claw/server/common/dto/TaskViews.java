@@ -40,7 +40,9 @@ public final class TaskViews {
             Instant assignedAt,
             Instant completedAt,
             Instant settledAt,
-            Map<String, Object> logistics) {
+            Map<String, Object> logistics,
+            Map<String, Object> ride,
+            Map<String, Object> ad) {
     }
 
     /** 接单视图。 */
