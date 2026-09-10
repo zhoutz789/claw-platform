@@ -1,0 +1,69 @@
+# Phase 1 本地可运行原型：PostgreSQL 主库 + 流复制副本 + WAL 归档到对象存储(MinIO 模拟异地)
+# 端口：主库 6432 / 副本 6433 / MinIO 9000(console 9001) —— 不与现有 5432/8080/5173 冲突。
+# 运行：deploy/phase1/setup.sh   清理：deploy/phase1/teardown.sh   演练：scripts/phase1-dr-drill.sh
+
+services:
+  pg-primary:
+    image: postgres:16
+    container_name: phase1-pg-primary
+    environment:
+      POSTGRES_DB: claw
+      POSTGRES_USER: claw
+      POSTGRES_PASSWORD: claw_dev_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "6432:5432"
+    volumes:
+      - pg_primary:/var/lib/postgresql/data
+      - ./docker-entrypoint-primary.sh:/entrypoint-primary.sh:ro
+      - ./postgresql-primary.conf:/etc/postgresql/postgresql.conf:ro
+      - ./pg_hba_primary.conf:/etc/postgresql/pg_hba.conf:ro
+      - pg_archive:/mnt/archive
+    command: ["sh", "/entrypoint-primary.sh"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U claw -d claw"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # 副本：首次启动若数据目录为空，自动用 pg_basebackup -R 引导为 standby（自举）。
+  pg-replica:
+    image: postgres:16
+    container_name: phase1-pg-replica
+    environment:
+      POSTGRES_DB: claw
+      POSTGRES_USER: claw
+      POSTGRES_PASSWORD: claw_dev_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+      PRIMARY_HOST: pg-primary
+    ports:
+      - "6433:5432"
+    volumes:
+      - pg_replica:/var/lib/postgresql/data
+      - ./docker-entrypoint-replica.sh:/entrypoint-replica.sh:ro
+      - ./postgresql-replica.conf:/etc/postgresql/postgresql.conf:ro
+      - ./pg_hba_replica.conf:/etc/postgresql/pg_hba.conf:ro
+      - pg_archive:/mnt/archive
+    command: ["sh", "/entrypoint-replica.sh"]
+    depends_on:
+      - pg-primary
+
+  # 对象存储（模拟异地备份目标；生产替换为 OSS/S3 并开启跨区复制）
+  minio:
+    image: minio/minio:latest
+    container_name: phase1-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+volumes:
+  pg_primary:
+  pg_replica:
+  pg_archive:
+  minio_data:
