@@ -1,6 +1,7 @@
 package com.claw.server.web.v1;
 
 import com.claw.server.common.api.ApiResult;
+import com.claw.server.common.api.BizException;
 import com.claw.server.common.security.AuthContext;
 import com.claw.server.common.security.RequirePermission;
 import com.claw.server.domain.certificate.Certificate;
@@ -11,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 /** 生产任务 + 合格证管理（增量 B · R3/B1/R4/Q8）。 */
 @RestController
@@ -53,9 +53,12 @@ public class AdminProductionController {
     @GetMapping("/certificates/device/{deviceId}")
     @RequirePermission("mfg:certificate:view")
     public ApiResult<Certificate> getCertificate(@PathVariable Long deviceId) {
-        Optional<Certificate> c = certificateService.getByDevice(deviceId);
-        return c.<ApiResult<Certificate>>map(ApiResult::ok)
-                .orElseGet(() -> ApiResult.error(40401, "certificate.not.found"));
+        // 与其他端点保持同一口径：查不到走 BizException，由全局异常处理出口映射为 HTTP 404 + code 40401。
+        // 原先直接 return ApiResult.error(...) 会以 HTTP 200 带错误码返回，与同语义的
+        // AdminCertificateController#getCertificate（GET /admin/certificates/device/{id}）行为分叉。
+        Certificate c = certificateService.getByDevice(deviceId)
+                .orElseThrow(() -> BizException.of(40401, "certificate.not.found"));
+        return ApiResult.ok(c);
     }
 
     /** 补打（Q8：仅重新输出已存在的合格证，不生成新 cert_no）。 */
