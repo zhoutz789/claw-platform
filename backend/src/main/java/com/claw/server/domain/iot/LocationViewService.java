@@ -39,7 +39,9 @@ public class LocationViewService {
         List<Asset> assets = assetRepository.findByProductId(productId);
         TelemetryLatest best = null;
         for (Asset asset : assets) {
-            TelemetryLatest t = telemetryLatestRepository.findByAssetId(asset.getId()).orElse(null);
+            // 每个资产取其多设备中上报时间最新的一条，再在资产之间比较取最"新上报"的那台。
+            TelemetryLatest t = telemetryLatestRepository
+                    .findTopByAssetIdOrderByReportedAtDescIdDesc(asset.getId()).orElse(null);
             if (t != null && (best == null || t.getReportedAt().isAfter(best.getReportedAt()))) {
                 best = t;
             }

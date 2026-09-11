@@ -45,8 +45,8 @@ class LocationViewServiceTest {
                 .lat(BigDecimal.valueOf(10)).lng(BigDecimal.valueOf(20)).reportedAt(t1).build();
         TelemetryLatest newer = TelemetryLatest.builder().id(12L).assetId(2L)
                 .lat(BigDecimal.valueOf(30)).lng(BigDecimal.valueOf(40)).reportedAt(t2).build();
-        when(telemetryLatestRepository.findByAssetId(1L)).thenReturn(Optional.of(older));
-        when(telemetryLatestRepository.findByAssetId(2L)).thenReturn(Optional.of(newer));
+        when(telemetryLatestRepository.findTopByAssetIdOrderByReportedAtDescIdDesc(1L)).thenReturn(Optional.of(older));
+        when(telemetryLatestRepository.findTopByAssetIdOrderByReportedAtDescIdDesc(2L)).thenReturn(Optional.of(newer));
 
         ProductLocationView view = service.getProductLocation(1L);
 
@@ -61,7 +61,7 @@ class LocationViewServiceTest {
     void getProductLocation_noTelemetry_returnsNullView() {
         Asset a1 = Asset.builder().id(1L).assetNo("A1").productId(1L).build();
         when(assetRepository.findByProductId(1L)).thenReturn(List.of(a1));
-        when(telemetryLatestRepository.findByAssetId(1L)).thenReturn(Optional.empty());
+        when(telemetryLatestRepository.findTopByAssetIdOrderByReportedAtDescIdDesc(1L)).thenReturn(Optional.empty());
 
         ProductLocationView view = service.getProductLocation(1L);
 

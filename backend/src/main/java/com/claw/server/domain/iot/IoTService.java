@@ -133,10 +133,10 @@ public class IoTService {
                 .orElse(null);
     }
 
-    /** 查询资产最新遥测（老链路）。 */
+    /** 查询资产最新遥测（老链路）：资产可挂多台设备，取上报时间最新的一条。 */
     @Transactional(readOnly = true)
     public IoTViews.TelemetryView latest(Long assetId) {
-        return telemetryLatestRepository.findByAssetId(assetId)
+        return telemetryLatestRepository.findTopByAssetIdOrderByReportedAtDescIdDesc(assetId)
                 .map(this::toView).orElse(null);
     }
 

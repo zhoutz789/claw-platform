@@ -89,4 +89,43 @@ class IoTServiceTest {
 
         assertEquals(2, tracks.size());
     }
+
+    /**
+     * 回归：同一资产挂多台设备（每台各一条 telemetry_latest），latest() 必须取"上报时间最新"的那条，
+     * 且必须走 findTopByAssetIdOrderByReportedAtDescIdDesc（不得再用会抛 NonUniqueResultException 的单结果方法）。
+     */
+    @Test
+    void latest_returnsMostRecentAcrossAssetDevices() {
+        long assetId = 1L;
+        Instant newestAt = Instant.parse("2024-01-03T12:00:00Z");
+        TelemetryLatest newest = TelemetryLatest.builder()
+                .id(7L).deviceId(7L).assetId(assetId)
+                .soc(new BigDecimal("66.00")).soh(new BigDecimal("90.00"))
+                .lat(new BigDecimal("11.11")).lng(new BigDecimal("22.22"))
+                .reportedAt(newestAt).build();
+        when(telemetryLatestRepository.findTopByAssetIdOrderByReportedAtDescIdDesc(assetId))
+                .thenReturn(Optional.of(newest));
+
+        IoTViews.TelemetryView v = service.latest(assetId);
+
+        assertNotNull(v);
+        assertEquals(assetId, v.assetId());
+        assertEquals(7L, v.deviceId());
+        assertEquals(0, new BigDecimal("66.00").compareTo(v.soc()));
+        assertEquals(0, new BigDecimal("90.00").compareTo(v.soh()));
+        assertEquals(0, new BigDecimal("11.11").compareTo(v.lat()));
+        assertEquals(0, new BigDecimal("22.22").compareTo(v.lng()));
+        assertEquals(newestAt, v.reportedAt());
+        verify(telemetryLatestRepository).findTopByAssetIdOrderByReportedAtDescIdDesc(assetId);
+        verify(telemetryLatestRepository, never()).findByDeviceId(any());
+    }
+
+    @Test
+    void latest_returnsNullWhenNoTelemetry() {
+        when(telemetryLatestRepository.findTopByAssetIdOrderByReportedAtDescIdDesc(999L))
+                .thenReturn(Optional.empty());
+
+        assertNull(service.latest(999L));
+        verify(telemetryLatestRepository).findTopByAssetIdOrderByReportedAtDescIdDesc(999L);
+    }
 }
