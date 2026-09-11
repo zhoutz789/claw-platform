@@ -33,9 +33,20 @@ public class DeviceCommandService {
     private final ObjectProvider<EmqxMqttCommandGateway> mqttGateway;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    /** 下发指令：签名 → 落库 → 发布。 */
+    /** 下发指令（车辆契约）：签名 → 落库 → 发布。 */
     @Transactional
     public IoTViews.CommandView issue(String deviceNo, IoTRequests.IssueCommand req) {
+        return doIssue(deviceNo, req.action(), req.params());
+    }
+
+    /** 下发指令（泛型参数，供 BMS 等场景传任意参数对象）：签名 → 落库 → 发布。 */
+    @Transactional
+    public IoTViews.CommandView issue(String deviceNo, String action, Object params) {
+        return doIssue(deviceNo, action, params);
+    }
+
+    /** 下行指令核心：构造带签名 + 防重放 + 安全条件的下行报文，落库待回执（PENDING），经 EMQX 下发。 */
+    private IoTViews.CommandView doIssue(String deviceNo, String action, Object params) {
         Device device = deviceRepository.findByDeviceNo(deviceNo)
                 .orElseThrow(() -> BizException.notFound("error.iot.device.not.found"));
 
@@ -47,8 +58,8 @@ public class DeviceCommandService {
         // 固定顺序 cmdId/action/params/ts/nonce，便于设备端剔除 sign 后按同一顺序复算比对。
         Map<String, Object> base = new LinkedHashMap<>();
         base.put("cmdId", cmdId);
-        base.put("action", req.action());
-        base.put("params", req.params());
+        base.put("action", action);
+        base.put("params", params);
         base.put("ts", ts);
         base.put("nonce", nonce);
         String payloadJson;
@@ -65,8 +76,8 @@ public class DeviceCommandService {
         DeviceCommand cmd = DeviceCommand.builder()
                 .deviceId(device.getId())
                 .deviceNo(deviceNo)
-                .action(req.action())
-                .paramsJson(toJson(req.params()))
+                .action(action)
+                .paramsJson(toJson(params))
                 .cmdId(cmdId)
                 .nonce(nonce)
                 .sign(sign)
