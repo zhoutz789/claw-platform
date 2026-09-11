@@ -7,5 +7,7 @@ public enum AssetType {
     BATTERY,
     CHARGER,
     PV_STATION,
-    DRONE
+    DRONE,
+    /** 储能（ESS）：独立权限/菜单、单独管理、不流入换电市场；与 BATTERY 互斥。 */
+    ENERGY_STORAGE
 }

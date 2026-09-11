@@ -29,6 +29,16 @@ public class Asset {
     @Column(nullable = false)
     private AssetType assetType;
 
+    /**
+     * 使用模式（Phase D）：SWAP=参与换电市场（默认）；STORAGE=被能源调度临时借调为储能。
+     * 仅对 BATTERY 有意义；ENERGY_STORAGE 资产恒为 STORAGE。与资产类型解耦，切换不触发类型变更。
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "usage_mode", length = 16)
+    @Builder.Default
+    private com.claw.server.common.enums.AssetUsageMode usageMode =
+            com.claw.server.common.enums.AssetUsageMode.SWAP;
+
     @Column(nullable = false, unique = true)
     private String assetNo;
 
