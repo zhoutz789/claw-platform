@@ -42,8 +42,12 @@ public class TaskSettlementService {
     /**
      * 结算单笔任务：publisher 出账 reward，provider 入账 reward（平台佣金 P1 预留）。
      *
+     * <p>过账成功后，task 与 assignment 在同一事务内双双置 SETTLED 并落库：
+     * {@link #assetEarnings(Long, Long)} 以 {@code assignment.status == SETTLED} 为对账口径，
+     * 若只置 task 不置 assignment，资金虽已正确过账，资产收益查询却恒返回空（账对了、对账查不到）。
+     *
      * @param task       已完成任务（结算后置 SETTLED）
-     * @param assignment 接单记录（bizRef 组分的一部分）
+     * @param assignment 接单记录（bizRef 组分的一部分，结算后同步置 SETTLED）
      */
     @Transactional
     public void settle(Task task, TaskAssignment assignment) {
@@ -73,8 +77,14 @@ public class TaskSettlementService {
         task.setSettledAt(Instant.now());
         taskRepository.save(task);
 
-        log.info("任务结算完成 bizRef={} task={} assignment={} amount={}", bizRef, task.getId(),
-                assignment.getId(), reward);
+        // 过账成功后才置已结算：避免「未过账却显示已结算」。
+        // assignment 必须与 task 一同置 SETTLED，否则 assetEarnings() 对账口径（status == SETTLED）永远命中不了。
+        assignment.setStatus(TaskStatus.SETTLED);
+        assignment.setUpdatedAt(Instant.now());
+        taskAssignmentRepository.save(assignment);
+
+        log.info("任务结算完成 bizRef={} task={} taskStatus={} assignment={} assignmentStatus={} amount={}",
+                bizRef, task.getId(), task.getStatus(), assignment.getId(), assignment.getStatus(), reward);
     }
 
     /**
