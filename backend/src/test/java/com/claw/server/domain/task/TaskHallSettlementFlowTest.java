@@ -133,10 +133,9 @@ class TaskHallSettlementFlowTest {
         assertEquals(Long.valueOf(77L), published.droneMissionId());
 
         // ---------- 2. accept：assignment 落库，双方转 ASSIGNED ----------
-        // accept 已改走 findByIdForUpdate（悲观锁）；updateProgress / complete 仍走 findById，
-        // 两者都指向同一个被 accept 就地改写为 ASSIGNED/SETTLED 的 task 对象，故两者都要 stub。
+        // accept / updateProgress / complete 统一走 findByIdForUpdate（悲观锁串行化），
+        // 指向同一个被就地改写为 ASSIGNED → IN_PROGRESS → SETTLED 的 task 对象。
         when(taskRepository.findByIdForUpdate(TASK_ID)).thenReturn(Optional.of(task));
-        when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
         when(assetRepository.findById(ASSET_ID)).thenReturn(asset());
         when(taskAssignmentRepository.save(any(TaskAssignment.class))).thenAnswer(inv -> {
             TaskAssignment a = inv.getArgument(0);
@@ -235,7 +234,7 @@ class TaskHallSettlementFlowTest {
         when(taskAssignmentRepository.findByTaskIdAndProviderId(TASK_ID, PROVIDER_ID))
                 .thenReturn(Optional.of(assignment));
         when(taskAssignmentRepository.save(any(TaskAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
+        when(taskRepository.findByIdForUpdate(TASK_ID)).thenReturn(Optional.of(task));
         when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
         when(accountService.getOrCreateUserAccount(PUBLISHER_ID))
                 .thenReturn(Account.builder().id(10L).userId(PUBLISHER_ID).build());
@@ -357,7 +356,7 @@ class TaskHallSettlementFlowTest {
         TaskAssignment assignment = assignment(TaskStatus.IN_PROGRESS);
         when(taskAssignmentRepository.findByTaskIdAndProviderId(TASK_ID, PROVIDER_ID))
                 .thenReturn(Optional.of(assignment));
-        when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
+        when(taskRepository.findByIdForUpdate(TASK_ID)).thenReturn(Optional.of(task));
         when(taskAssignmentRepository.save(any(TaskAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
 
         TaskViews.AssignmentView view =
@@ -406,7 +405,7 @@ class TaskHallSettlementFlowTest {
         TaskAssignment assignment = assignment(TaskStatus.SETTLED);
         when(taskAssignmentRepository.findByTaskIdAndProviderId(TASK_ID, PROVIDER_ID))
                 .thenReturn(Optional.of(assignment));
-        when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
+        when(taskRepository.findByIdForUpdate(TASK_ID)).thenReturn(Optional.of(task));
 
         BizException ex = assertThrows(BizException.class,
                 () -> taskService.updateProgress(TASK_ID, PROVIDER_ID, new TaskRequests.Progress(60, "replay")));
@@ -426,7 +425,7 @@ class TaskHallSettlementFlowTest {
         TaskAssignment assignment = assignment(TaskStatus.COMPLETED);
         when(taskAssignmentRepository.findByTaskIdAndProviderId(TASK_ID, PROVIDER_ID))
                 .thenReturn(Optional.of(assignment));
-        when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
+        when(taskRepository.findByIdForUpdate(TASK_ID)).thenReturn(Optional.of(task));
 
         BizException ex = assertThrows(BizException.class, () -> taskService.complete(TASK_ID, PROVIDER_ID));
 
@@ -443,7 +442,7 @@ class TaskHallSettlementFlowTest {
         TaskAssignment assignment = assignment(TaskStatus.ASSIGNED);
         when(taskAssignmentRepository.findByTaskIdAndProviderId(TASK_ID, PROVIDER_ID))
                 .thenReturn(Optional.of(assignment));
-        when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
+        when(taskRepository.findByIdForUpdate(TASK_ID)).thenReturn(Optional.of(task));
 
         BizException ex = assertThrows(BizException.class,
                 () -> taskService.updateProgress(TASK_ID, PROVIDER_ID, new TaskRequests.Progress(10, "replay")));
@@ -464,7 +463,7 @@ class TaskHallSettlementFlowTest {
         TaskAssignment assignment = assignment(TaskStatus.SETTLED);
         when(taskAssignmentRepository.findByTaskIdAndProviderId(TASK_ID, PROVIDER_ID))
                 .thenReturn(Optional.of(assignment));
-        when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
+        when(taskRepository.findByIdForUpdate(TASK_ID)).thenReturn(Optional.of(task));
 
         BizException ex = assertThrows(BizException.class, () -> taskService.complete(TASK_ID, PROVIDER_ID));
 
@@ -604,7 +603,7 @@ class TaskHallSettlementFlowTest {
     private void stubLookup(Task task, TaskAssignment assignment) {
         when(taskAssignmentRepository.findByTaskIdAndProviderId(TASK_ID, PROVIDER_ID))
                 .thenReturn(Optional.of(assignment));
-        when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
+        when(taskRepository.findByIdForUpdate(TASK_ID)).thenReturn(Optional.of(task));
         when(taskAssignmentRepository.save(any(TaskAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
         when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
     }

@@ -249,7 +249,8 @@ public class TaskService {
     public TaskViews.AssignmentView updateProgress(Long taskId, Long providerId, TaskRequests.Progress req) {
         TaskAssignment assignment = taskAssignmentRepository.findByTaskIdAndProviderId(taskId, providerId)
                 .orElseThrow(() -> BizException.notFound("error.task.assignment.not.found"));
-        Task task = taskRepository.findById(taskId)
+        // 悲观锁串行化：与 accept 同一把行锁，避免并发改状态导致终态护栏被绕过。
+        Task task = taskRepository.findByIdForUpdate(taskId)
                 .orElseThrow(() -> BizException.notFound("error.task.not.found"));
         assertNotTerminal(task, assignment);
 
@@ -284,7 +285,9 @@ public class TaskService {
     public TaskViews.AssignmentView complete(Long taskId, Long providerId) {
         TaskAssignment assignment = taskAssignmentRepository.findByTaskIdAndProviderId(taskId, providerId)
                 .orElseThrow(() -> BizException.notFound("error.task.assignment.not.found"));
-        Task task = taskRepository.findById(taskId)
+        // 悲观锁串行化：complete 会触发真实资金过账，必须与 accept 用同一把行锁，
+        // 否则并发 complete 可双双绕过终态护栏，撞 ledger 幂等键（40950）而非干净的 40902。
+        Task task = taskRepository.findByIdForUpdate(taskId)
                 .orElseThrow(() -> BizException.notFound("error.task.not.found"));
         assertNotTerminal(task, assignment);
 
