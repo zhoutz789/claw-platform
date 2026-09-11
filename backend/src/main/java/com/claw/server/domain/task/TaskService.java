@@ -187,9 +187,25 @@ public class TaskService {
                 .toList();
     }
 
+    /**
+     * provider 接单（绑资产）：悲观锁串行化，防止并发接单产生重复 assignment 导致一任务双结。
+     *
+     * <p>取任务改用 {@link TaskRepository#findByIdForUpdate(Long)}（SELECT ... FOR UPDATE）而非无锁的
+     * {@code findById}。两条接单请求并发打到同一 OPEN 任务时，先获得任务行排他锁者完成
+     * 「状态检查 → 建接单 → 置 ASSIGNED」并提交、释放锁；后到者在锁释放后读到已 committed 的 ASSIGNED，
+     * 命中 40901（{@code error.task.not.open}），从而全程只会产生一条 assignment。
+     *
+     * <p>任务大厅当前模型为一任务一接单——{@code TaskSettlementService.settle(task, assignment)} 与
+     * {@code bizRef = "TASK-{taskId}-{assignmentId}"} 均按单接单设计。无锁的 check-then-act 会让两个请求
+     * 都通过 {@code status != OPEN} 检查 → 同一任务两条 assignment → 各走一次 complete/settle →
+     * 发布方被扣两次报酬（一任务双结），故此处以行锁在事务内串行化根因。
+     *
+     * @throws BizException 40901 error.task.not.open（任务非 OPEN，含并发下已被他人接走）
+     * @throws BizException error.asset.not.found / error.task.asset.not.owned / error.task.asset.capability
+     */
     @Transactional
     public TaskViews.AssignmentView accept(Long taskId, Long providerId, Long assetId) {
-        Task task = taskRepository.findById(taskId)
+        Task task = taskRepository.findByIdForUpdate(taskId)
                 .orElseThrow(() -> BizException.notFound("error.task.not.found"));
         if (task.getStatus() != TaskStatus.OPEN) {
             throw BizException.of(40901, "error.task.not.open");

@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
@@ -132,6 +133,9 @@ class TaskHallSettlementFlowTest {
         assertEquals(Long.valueOf(77L), published.droneMissionId());
 
         // ---------- 2. accept：assignment 落库，双方转 ASSIGNED ----------
+        // accept 已改走 findByIdForUpdate（悲观锁）；updateProgress / complete 仍走 findById，
+        // 两者都指向同一个被 accept 就地改写为 ASSIGNED/SETTLED 的 task 对象，故两者都要 stub。
+        when(taskRepository.findByIdForUpdate(TASK_ID)).thenReturn(Optional.of(task));
         when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
         when(assetRepository.findById(ASSET_ID)).thenReturn(asset());
         when(taskAssignmentRepository.save(any(TaskAssignment.class))).thenAnswer(inv -> {
@@ -477,7 +481,7 @@ class TaskHallSettlementFlowTest {
     @Test
     void accept_onSettledTask_throwsNotOpenAndCreatesNoAssignment() {
         Task task = task(TaskStatus.SETTLED);
-        when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
+        when(taskRepository.findByIdForUpdate(TASK_ID)).thenReturn(Optional.of(task));
 
         BizException ex = assertThrows(BizException.class,
                 () -> taskService.accept(TASK_ID, PROVIDER_ID, ASSET_ID));
@@ -485,6 +489,95 @@ class TaskHallSettlementFlowTest {
         assertEquals(40901, ex.getCode(), "accept 的非 OPEN 拦截沿用既有 error.task.not.open");
         assertEquals("error.task.not.open", ex.getMessageCode());
         assertEquals(TaskStatus.SETTLED, task.getStatus());
+        verify(taskAssignmentRepository, never()).save(any(TaskAssignment.class));
+    }
+
+    /**
+     * 回归断言 ①：{@link TaskService#accept(Long, Long, Long)} 必须走 {@code findByIdForUpdate}
+     * （悲观锁）而不是无锁的 {@code findById}。
+     *
+     * <p>这是本次并发修复的关键取数路径——不走 for-update 查询方法就等于没加锁，并发下仍可双结。
+     * 本用例自身不 stub {@code findById}，故可用 {@code never()} 钉死「绝不走无锁读」。
+     */
+    @Test
+    void accept_usesFindByIdForUpdate_notFindById() {
+        Task task = task(TaskStatus.OPEN);
+        when(taskRepository.findByIdForUpdate(TASK_ID)).thenReturn(Optional.of(task));
+        when(assetRepository.findById(ASSET_ID)).thenReturn(asset());
+        when(taskAssignmentRepository.save(any(TaskAssignment.class))).thenAnswer(inv -> {
+            TaskAssignment a = inv.getArgument(0);
+            if (a.getId() == null) {
+                a.setId(ASSIGNMENT_ID);
+            }
+            return a;
+        });
+        when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        TaskViews.AssignmentView view = taskService.accept(TASK_ID, PROVIDER_ID, ASSET_ID);
+
+        verify(taskRepository, times(1)).findByIdForUpdate(TASK_ID);
+        verify(taskRepository, never()).findById(anyLong());
+        assertEquals(TaskStatus.ASSIGNED, view.status(), "正常 OPEN 接单须返回 ASSIGNED 视图");
+        assertEquals(TaskStatus.ASSIGNED, task.getStatus(), "正常 OPEN 接单后 task 须置 ASSIGNED");
+    }
+
+    /**
+     * 回归断言 ②（本 bug 核心）：并发接单只产生一条 assignment。
+     *
+     * <p>mock「第一次 accept 读到 OPEN 任务，第二次 accept 读到已被置为 ASSIGNED 的任务」，
+     * 模拟先到者提交释放锁后、后到者读到已 committed 的 ASSIGNED 这一真实并发时序。
+     * 断言：第二次 accept 抛 40901（error.task.not.open），且
+     * {@code taskAssignmentRepository.save} 仅被调用 1 次——不允许出现第二条 assignment（否则会双结）。
+     */
+    @Test
+    void accept_concurrentSecondCall_rejectedAndCreatesOnlyOneAssignment() {
+        Task openTask = task(TaskStatus.OPEN);
+        Task assignedTask = task(TaskStatus.ASSIGNED);
+        // 第一次返回 OPEN，第二次返回已被接走的 ASSIGNED（模拟锁释放后读到 committed 状态）
+        when(taskRepository.findByIdForUpdate(TASK_ID))
+                .thenReturn(Optional.of(openTask), Optional.of(assignedTask));
+        when(assetRepository.findById(ASSET_ID)).thenReturn(asset());
+        when(taskAssignmentRepository.save(any(TaskAssignment.class))).thenAnswer(inv -> {
+            TaskAssignment a = inv.getArgument(0);
+            if (a.getId() == null) {
+                a.setId(ASSIGNMENT_ID);
+            }
+            return a;
+        });
+        when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // 第一次：成功接单
+        TaskViews.AssignmentView first = taskService.accept(TASK_ID, PROVIDER_ID, ASSET_ID);
+        assertEquals(TaskStatus.ASSIGNED, first.status());
+
+        // 第二次：读到 ASSIGNED，被 40901 拦死
+        BizException ex = assertThrows(BizException.class,
+                () -> taskService.accept(TASK_ID, PROVIDER_ID, ASSET_ID));
+        assertEquals(40901, ex.getCode(), "并发第二个接单须被 error.task.not.open 拦住");
+        assertEquals("error.task.not.open", ex.getMessageCode());
+
+        // 核心资金断言：绝不允许第二条 assignment（否则同一任务双结，发布方被扣两次报酬）
+        verify(taskAssignmentRepository, times(1)).save(any(TaskAssignment.class));
+        assertEquals(TaskStatus.ASSIGNED, openTask.getStatus(), "先到者已把任务置 ASSIGNED");
+    }
+
+    /**
+     * 资产归属校验顺序与行为不变：非本人（且非 owner）资产 → 40301 forbidden（error.task.asset.not.owned）。
+     * 该断言发生在「状态检查通过、建接单之前」，故不得产生任何 assignment。
+     */
+    @Test
+    void accept_nonOwnedAsset_throwsForbiddenAndCreatesNoAssignment() {
+        Task task = task(TaskStatus.OPEN);
+        when(taskRepository.findByIdForUpdate(TASK_ID)).thenReturn(Optional.of(task));
+        Asset otherAsset = Asset.builder().id(ASSET_ID).userId(999L).capabilities("DRONE_OP").build();
+        when(assetRepository.findById(ASSET_ID)).thenReturn(Optional.of(otherAsset));
+
+        BizException ex = assertThrows(BizException.class,
+                () -> taskService.accept(TASK_ID, PROVIDER_ID, ASSET_ID));
+
+        assertEquals(40301, ex.getCode(), "非本人资产须 forbidden");
+        assertEquals("error.task.asset.not.owned", ex.getMessageCode());
+        assertEquals(TaskStatus.OPEN, task.getStatus(), "校验失败不得改写任务状态");
         verify(taskAssignmentRepository, never()).save(any(TaskAssignment.class));
     }
 
