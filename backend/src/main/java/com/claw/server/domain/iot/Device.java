@@ -25,7 +25,7 @@ public class Device {
     @Column(nullable = false)
     private Long assetId;
 
-    /** VEHICLE_TCU | BATTERY_BMS | CHARGER | CABINET | AD_SCREEN | CAMERA。 */
+    /** VEHICLE_TCU | BATTERY_BMS | CHARGER | CABINET | AD_SCREEN | CAMERA | DRONE_FCU。 */
     @Column(nullable = false, length = 16)
     private String deviceType;
 

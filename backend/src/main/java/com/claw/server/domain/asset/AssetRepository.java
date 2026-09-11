@@ -34,4 +34,10 @@ public interface AssetRepository extends JpaRepository<Asset, Long>, JpaSpecific
 
     /** 按订单项溯源资产（V38：资产→订单项反向查询）。 */
     List<Asset> findByOrderItemId(Long orderItemId);
+
+    /**
+     * 按使用模式取资产（Phase D 能源调度）：ENERGY_STORAGE 恒为 STORAGE，
+     * 换电 BATTERY 被调度临时借调时也置为 STORAGE，一次查询即得全部可调度储能容量。
+     */
+    List<Asset> findByUsageMode(com.claw.server.common.enums.AssetUsageMode usageMode);
 }
