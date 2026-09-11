@@ -124,7 +124,13 @@
     "availableTitle": "可接单无人机作业",
     "hint": "无人机任务须绑定 OPERATIONAL 空域与有效飞手资质；NFZ 禁飞、RESTRICTED 限飞。发布后由服务端生成 drone_missions 作业单并回写任务。",
     "payloadPlaceholder": "如 农药 40L / 货箱 20kg",
-    "missionTypePlaceholder": "植保/物流/巡检/救援"
+    "missionTypePlaceholder": "植保/物流/巡检/救援",
+    "missionTypes": {
+      "SPRAY": "植保喷洒",
+      "CARGO": "物流配送",
+      "INSPECTION": "测绘巡检",
+      "RESCUE": "应急救援"
+    }
   },
   "trace": {
     "tab": "任务收益",

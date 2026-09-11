@@ -17,12 +17,23 @@ const { Text } = Typography;
 // 无人机作业类型（后端 DroneMissionType 枚举合法值）。
 // 保持 [{value,label}] 形态：Select options 与列表标签共用同一份数据，改成字符串数组会同时破坏两处。
 const MISSION_TYPES = [
-  { value: 'SPRAY', label: '植保喷洒' },
-  { value: 'CARGO', label: '物流配送' },
-  { value: 'INSPECTION', label: '测绘巡检' },
-  { value: 'RESCUE', label: '应急救援' },
+  { value: 'SPRAY', label: '植保喷洒', key: 'task:drone.missionTypes.SPRAY' },
+  { value: 'CARGO', label: '物流配送', key: 'task:drone.missionTypes.CARGO' },
+  { value: 'INSPECTION', label: '测绘巡检', key: 'task:drone.missionTypes.INSPECTION' },
+  { value: 'RESCUE', label: '应急救援', key: 'task:drone.missionTypes.RESCUE' },
 ];
-const missionLabel = (v) => MISSION_TYPES.find((m) => m.value === v)?.label || v;
+/**
+ * 作业类型标签：优先走 task 命名空间三语，未命中回落中文 label，再回落原始枚举值。
+ * @param {(key: string) => string} t i18next 翻译函数（无 i18n 上下文时可省略）
+ * @param {string} v 后端 DroneMissionType 枚举值
+ * @returns {string} 展示文案
+ */
+const missionLabel = (t, v) => {
+  const hit = MISSION_TYPES.find((m) => m.value === v);
+  if (!hit) return v || '—';
+  const translated = typeof t === 'function' ? t(hit.key) : null;
+  return translated || hit.label;
+};
 
 const ASSET_TYPE_ICON = { VEHICLE: '🚗', BATTERY: '🔋', CHARGER: '🔌', DRONE: '🚁' };
 
@@ -1259,7 +1270,7 @@ function DronePanel({ assets, pilotOptions = [] }) {
             {
               title: t('task:drone.missionType'),
               key: 'droneMissionType',
-              render: (_, r) => <Tag color="purple">{missionLabel(droneOf(r).missionType) || '—'}</Tag>,
+              render: (_, r) => <Tag color="purple">{missionLabel(t, droneOf(r).missionType) || '—'}</Tag>,
             },
             {
               title: t('task:drone.droneMissionId'),
@@ -1289,7 +1300,7 @@ function DronePanel({ assets, pilotOptions = [] }) {
             {
               title: t('task:drone.missionType'),
               key: 'droneMissionType',
-              render: (_, r) => <Tag color="purple">{missionLabel(droneOf(r).missionType) || '—'}</Tag>,
+              render: (_, r) => <Tag color="purple">{missionLabel(t, droneOf(r).missionType) || '—'}</Tag>,
             },
             { title: t('task:drone.payloadDesc'), key: 'dronePayloadDesc', render: (_, r) => droneOf(r).payloadDesc || '—' },
             { title: t('task:hall.accept'), key: 'act', render: (_, task) => <AcceptCell task={task} loop={loop} /> },
