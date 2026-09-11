@@ -58,6 +58,7 @@ public class ChargeSession {
     private BigDecimal energyDeliveredWh;
 
     /** 会话内峰值功率 W。 */
+    @Column(name = "peak_power_w")
     private BigDecimal peakPowerW;
 
     /** 电价快照 USD/Wh（来自 ElecPriceSnapshot，含电网/光伏与 TOU 时段）。 */

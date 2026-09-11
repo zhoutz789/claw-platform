@@ -54,12 +54,15 @@ public class Battery {
     private String cellConfig;
 
     /** 额定功率 W。 */
+    @Column(name = "rated_power_w")
     private BigDecimal ratedPowerW;
 
     /** 设计最大充电电流 A（CCL，实时值走遥测）。 */
+    @Column(name = "max_charge_current_a")
     private BigDecimal maxChargeCurrentA;
 
     /** 设计最大放电电流 A（DCL，实时值走遥测）。 */
+    @Column(name = "max_discharge_current_a")
     private BigDecimal maxDischargeCurrentA;
 
     /** 充电电压上限 V（CVL）。 */
