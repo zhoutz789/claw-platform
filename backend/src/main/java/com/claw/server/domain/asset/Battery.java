@@ -32,6 +32,45 @@ public class Battery {
 
     private String protocolVer;
 
+    // —— 锂电池 BMS 对接方案 Phase A：组级规格字段（V100__battery_specs）——
+    /** 化学体系：LFP / NMC / LTO。 */
+    @Column(length = 16)
+    private String chemistry;
+
+    /** 标称电压 V。 */
+    private BigDecimal nominalVoltage;
+
+    /** 标称容量 Ah。 */
+    private BigDecimal capacityAh;
+
+    /** 串联电芯数。 */
+    private Integer cellSeries;
+
+    /** 并联电芯数。 */
+    private Integer cellParallel;
+
+    /** 串并联配置描述，如 "16S1P"。 */
+    @Column(length = 32)
+    private String cellConfig;
+
+    /** 额定功率 W。 */
+    private BigDecimal ratedPowerW;
+
+    /** 设计最大充电电流 A（CCL，实时值走遥测）。 */
+    private BigDecimal maxChargeCurrentA;
+
+    /** 设计最大放电电流 A（DCL，实时值走遥测）。 */
+    private BigDecimal maxDischargeCurrentA;
+
+    /** 充电电压上限 V（CVL）。 */
+    private BigDecimal chargeVoltageLimit;
+
+    /** 放电电压下限 V。 */
+    private BigDecimal dischargeVoltageLimit;
+
+    /** 温度探头数量（决定遥测温度数组长度）。 */
+    private Integer tempProbeCount;
+
     @Column(nullable = false)
     @Builder.Default
     private BigDecimal soh = BigDecimal.valueOf(100.00);   // 健康度 %（用于残值评估，不再驱动押金）

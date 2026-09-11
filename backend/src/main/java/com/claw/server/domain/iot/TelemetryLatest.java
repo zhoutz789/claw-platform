@@ -49,6 +49,39 @@ public class TelemetryLatest {
 
     private BigDecimal lng;
 
+    // —— 锂电池 BMS 实时遥测（V101__telemetry_bms，Phase A）——
+    private BigDecimal packVoltage;       // 组电压 V
+    private BigDecimal currentA;          // 电流 A（放电正/充电负，按规范统一）
+    private BigDecimal powerW;            // 功率 W
+    private BigDecimal ccl;               // 实时充电电流限值 A
+    private BigDecimal dcl;               // 实时放电电流限值 A
+    private BigDecimal cvl;               // 实时充电电压限值 V
+    private BigDecimal remainingCapacityAh;
+    private BigDecimal fullChargeCapacityAh;
+    private BigDecimal tempMax;
+    private BigDecimal tempMin;
+    private Integer tempMaxId;
+    private Integer tempMinId;
+    /** 各温度探头数组（JSON）。 */
+    @JdbcTypeCode(SqlTypes.JSON)
+    private String temperaturesJson;
+    /** 各电芯电压数组（JSON）。 */
+    @JdbcTypeCode(SqlTypes.JSON)
+    private String cellVoltagesJson;
+    private String balanceStatus;         // passive/active/none
+    private BigDecimal balanceCurrent;
+    private BigDecimal cellVoltageSpread; // ΔV mV
+    private Boolean chargeEnable;
+    private Boolean dischargeEnable;
+    private Boolean heaterEnable;
+    private Boolean waterCoolingEnable;
+    private Integer fanSpeed;             // 0-100%
+    private BigDecimal coolantTempIn;
+    private BigDecimal coolantTempOut;
+    private Integer satelliteCount;
+    private java.time.Instant lastFixTime;
+    private String bmsState;              // idle/charging/discharging/fault/protect
+
     // —— 车辆终端契约扩展字段（兼容老 BMS 字段 soc/soh/humid/faults）——
     private Integer acc;               // 点火状态 0=熄火 1=点火
     private BigDecimal batteryVoltage; // 电瓶电压 V

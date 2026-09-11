@@ -41,6 +41,8 @@ public class EmqxMqttInboundAdapter implements MqttCallbackExtended {
 
     private final IoTService iotService;
     private final DeviceCommandService deviceCommandService;
+    private final BmsTelemetryService bmsTelemetryService;
+    private final BmsAdapter bmsAdapter;
     private final ObjectMapper objectMapper = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
@@ -80,9 +82,12 @@ public class EmqxMqttInboundAdapter implements MqttCallbackExtended {
                 return t;
             });
 
-    public EmqxMqttInboundAdapter(IoTService iotService, DeviceCommandService deviceCommandService) {
+    public EmqxMqttInboundAdapter(IoTService iotService, DeviceCommandService deviceCommandService,
+                                 BmsTelemetryService bmsTelemetryService, BmsAdapter bmsAdapter) {
         this.iotService = iotService;
         this.deviceCommandService = deviceCommandService;
+        this.bmsTelemetryService = bmsTelemetryService;
+        this.bmsAdapter = bmsAdapter;
     }
 
     @PostConstruct
@@ -154,6 +159,11 @@ public class EmqxMqttInboundAdapter implements MqttCallbackExtended {
                             deviceCommandService.handleAck(objectMapper.treeToValue(node, IoTRequests.CommandAck.class));
                     default -> log.warn("[EMQX] 未知 msgType={} topic={}", msgType, topic);
                 }
+            } else if (topic.startsWith("claw/iot/") && topic.endsWith("/telemetry")) {
+                // 锂电池 BMS 规范遥测上行（Phase A：GENERIC_MQTT 归一化报文）。
+                com.claw.server.common.dto.BmsTelemetryReport report =
+                        bmsAdapter.normalize(node, BmsAdapter.Profile.GENERIC_MQTT);
+                bmsTelemetryService.handleReport(report, extractDeviceNo(topic));
             } else {
                 // 老 BMS 链路：imei 帧（保持兼容）
                 IoTRequests.TelemetryReport req = new IoTRequests.TelemetryReport(
@@ -199,5 +209,12 @@ public class EmqxMqttInboundAdapter implements MqttCallbackExtended {
 
     private BigDecimal big(JsonNode node, String field) {
         return node.hasNonNull(field) ? node.get(field).decimalValue() : null;
+    }
+
+    /** 从 {@code claw/iot/{deviceNo}/telemetry} 主题提取设备编号（报文缺失时的兜底）。 */
+    private String extractDeviceNo(String topic) {
+        String[] parts = topic.split("/");
+        // ["claw", "iot", "{deviceNo}", "telemetry"]
+        return parts.length >= 3 ? parts[2] : null;
     }
 }
