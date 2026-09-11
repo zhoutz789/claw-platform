@@ -31,6 +31,12 @@ public class Telemetry {
     /** 健康度（%），电池/整机通用。 */
     private BigDecimal soh;
 
+    /** SOC（%），与 telemetry_latest 对齐（一致性修复；V101 已加 claw.telemetry.soc 列）。 */
+    private BigDecimal soc;
+
+    /** 温度（℃），与 telemetry_latest 对齐（一致性修复；V101 已加 claw.telemetry.temp 列）。 */
+    private BigDecimal temp;
+
     @Column(precision = 10, scale = 7)
     private BigDecimal lat;
 
