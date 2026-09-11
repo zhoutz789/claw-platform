@@ -529,7 +529,10 @@ public class AssetService {
                 .map(com.claw.server.domain.asset.Battery::getCycleCount).orElse(null);
     }
 
-    /** 按资产类型推导默认设备类型（用于补建 IoT 设备行）。PV_STATION 无车载终端，返回 null。 */
+    /**
+     * 按资产类型推导默认设备类型（用于补建 IoT 设备行）。
+     * PV_STATION 建 PV_GATEWAY（光伏数采网关/逆变器采集器），其余无车载终端的类型返回 null。
+     */
     private String deriveDeviceType(AssetType type, String override) {
         if (override != null && !override.isBlank()) {
             return override;
@@ -539,6 +542,7 @@ public class AssetService {
             case BATTERY -> "BATTERY_BMS";
             case CHARGER -> "CHARGER";
             case DRONE -> "DRONE_FCU";
+            case PV_STATION -> "PV_GATEWAY";
             default -> null;
         };
     }

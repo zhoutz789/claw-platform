@@ -25,7 +25,12 @@ public class Device {
     @Column(nullable = false)
     private Long assetId;
 
-    /** VEHICLE_TCU | BATTERY_BMS | CHARGER | CABINET | AD_SCREEN | CAMERA | DRONE_FCU。 */
+    /**
+     * VEHICLE_TCU | BATTERY_BMS | CHARGER | CABINET | AD_SCREEN | CAMERA | DRONE_FCU
+     * | PV_GATEWAY | INVERTER | PV_METER | WEATHER_STATION。
+     *
+     * <p>列宽 VARCHAR(16)：WEATHER_STATION 为最长取值（15 字符），新增类型前须先核对长度。
+     */
     @Column(nullable = false, length = 16)
     private String deviceType;
 
