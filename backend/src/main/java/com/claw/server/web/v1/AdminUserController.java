@@ -108,7 +108,7 @@ public class AdminUserController {
     @DeleteMapping("/users/{id}/roles/{code}")
     @RequirePermission("user:delete")
     public ApiResult<List<String>> removeUserRole(@PathVariable Long id, @PathVariable String code) {
-        Role role = roleRepository.findByCode(code).orElseThrow(() -> new BizException(40401, "role.not.found"));
+        Role role = roleRepository.findByCode(code).orElseThrow(() -> new BizException(40401, "error.role.not.found"));
         packageRepository.findByUserIdAndRoleId(id, role.getId()).ifPresent(p -> {
             p.setRevokedAt(Instant.now());
             packageRepository.save(p);

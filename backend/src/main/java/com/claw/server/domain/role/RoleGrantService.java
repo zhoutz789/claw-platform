@@ -49,7 +49,7 @@ public class RoleGrantService {
     @Transactional
     public RoleView apply(Long userId, String roleCode) {
         Role role = roleRepository.findByCode(roleCode)
-                .orElseThrow(() -> BizException.of(40401, "role.not.found"));
+                .orElseThrow(() -> BizException.of(40401, "error.role.not.found"));
         // 已生效则幂等返回
         UserRolePackage pkg = packageRepository.findByUserIdAndRoleId(userId, role.getId())
                 .filter(UserRolePackage::isActive)
@@ -63,7 +63,7 @@ public class RoleGrantService {
     @Transactional
     public void grantByEvent(Long userId, String roleCode) {
         Role role = roleRepository.findByCode(roleCode)
-                .orElseThrow(() -> BizException.of(40401, "role.not.found"));
+                .orElseThrow(() -> BizException.of(40401, "error.role.not.found"));
         ensurePackage(userId, role, RoleSource.AUTO);
         permissionService.evictUser(userId);
     }
@@ -72,7 +72,7 @@ public class RoleGrantService {
     @Transactional
     public void revoke(Long userId, String roleCode) {
         Role role = roleRepository.findByCode(roleCode)
-                .orElseThrow(() -> BizException.of(40401, "role.not.found"));
+                .orElseThrow(() -> BizException.of(40401, "error.role.not.found"));
         packageRepository.findByUserIdAndRoleId(userId, role.getId()).ifPresent(pkg -> {
             pkg.setRevokedAt(Instant.now());
             packageRepository.save(pkg);

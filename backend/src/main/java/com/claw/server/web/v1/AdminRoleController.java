@@ -78,7 +78,7 @@ public class AdminRoleController {
     @RequirePermission("role:update")
     public ApiResult<RoleView> updateRole(@PathVariable Long id, @RequestBody RoleReq req) {
         Role r = roleRepository.findById(id)
-                .orElseThrow(() -> new BizException(40401, "role.not.found"));
+                .orElseThrow(() -> new BizException(40401, "error.role.not.found"));
         if (req.nameI18n() != null) r.setNameI18n(req.nameI18n());
         if (req.grants() != null) r.setGrants(req.grants());
         if (req.autoGrant() != null) r.setAutoGrant(req.autoGrant());
@@ -103,7 +103,7 @@ public class AdminRoleController {
     @RequirePermission("role:update")
     public ApiResult<RoleView> updateRoleDataScope(@PathVariable Long id, @RequestBody RoleDataScopeReq req) {
         Role r = roleRepository.findById(id)
-                .orElseThrow(() -> new BizException(40401, "role.not.found"));
+                .orElseThrow(() -> new BizException(40401, "error.role.not.found"));
         if (req.dataScope() != null) r.setDataScope(req.dataScope());
         if (req.dataScopeTypes() != null) r.setDataScopeTypes(req.dataScopeTypes());
         if (req.dataRuleIds() != null) r.setDataRuleIds(req.dataRuleIds());
@@ -117,7 +117,7 @@ public class AdminRoleController {
     @RequirePermission("role:delete")
     public ApiResult<Void> deleteRole(@PathVariable Long id) {
         Role r = roleRepository.findById(id)
-                .orElseThrow(() -> new BizException(40401, "role.not.found"));
+                .orElseThrow(() -> new BizException(40401, "error.role.not.found"));
         r.setStatus("INACTIVE");
         roleRepository.save(r);
         return ApiResult.ok();
@@ -145,7 +145,7 @@ public class AdminRoleController {
     @RequirePermission("role:create")
     public ApiResult<UserRoleAssignmentView> assignRole(@RequestBody UserRoleAssignReq req) {
         Role role = roleRepository.findByCode(req.roleCode())
-                .orElseThrow(() -> new BizException(40401, "role.not.found"));
+                .orElseThrow(() -> new BizException(40401, "error.role.not.found"));
         UserRolePackage pkg = packageRepository.findByUserIdAndRoleId(req.userId(), role.getId())
                 .map(p -> {
                     p.setRevokedAt(null);

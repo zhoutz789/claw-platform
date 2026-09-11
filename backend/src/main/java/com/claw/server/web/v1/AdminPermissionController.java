@@ -239,7 +239,7 @@ public class AdminPermissionController {
 
     @GetMapping("/role/{roleId}")
     public ApiResult<List<RolePermissionRow>> rolePermissions(@PathVariable Long roleId) {
-        if (!roleRepository.existsById(roleId)) throw new BizException(40401, "role.not.found");
+        if (!roleRepository.existsById(roleId)) throw new BizException(40401, "error.role.not.found");
         Map<String, Permission> permByCode = permissionRepository.findAll().stream()
                 .collect(Collectors.toMap(Permission::getCode, p -> p));
         return ApiResult.ok(rolePermissionRepository.findByRoleId(roleId).stream()
@@ -256,7 +256,7 @@ public class AdminPermissionController {
     @PutMapping("/role/{roleId}")
     @RequirePermission("permission:update")
     public ApiResult<Void> setRolePermissions(@PathVariable Long roleId, @RequestBody SetRolePermissionReq req) {
-        if (!roleRepository.existsById(roleId)) throw new BizException(40401, "role.not.found");
+        if (!roleRepository.existsById(roleId)) throw new BizException(40401, "error.role.not.found");
         // 幂等 upsert：先取出现有矩阵，按 permissionCode 更新或新建，避免 (role_id,permission_code) 唯一约束冲突。
         Map<String, RolePermission> existing = rolePermissionRepository.findByRoleId(roleId).stream()
                 .collect(Collectors.toMap(RolePermission::getPermissionCode, rp -> rp));

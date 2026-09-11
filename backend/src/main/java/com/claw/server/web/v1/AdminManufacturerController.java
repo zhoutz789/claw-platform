@@ -335,7 +335,7 @@ public class AdminManufacturerController {
     /* ===================== 资产溯源 + 全生命周期数据 ===================== */
     @GetMapping("/assets/{id}/trace")
     public ApiResult<AssetTraceView> trace(@PathVariable Long id) {
-        Asset asset = assetRepository.findById(id).orElseThrow(() -> new BizException(40401, "asset.not.found"));
+        Asset asset = assetRepository.findById(id).orElseThrow(() -> new BizException(40401, "error.asset.not.found"));
         AssetView av = new AssetView(asset.getId(), asset.getAssetType(), asset.getAssetNo(), asset.getQrCode(),
                 asset.getSerialNumber(), asset.getManufacturerId(), asset.getProductId(), asset.getSkuId(),
                 asset.getOwnerId(), asset.getUserId(), asset.getStatus(), asset.getCreatedAt());
@@ -359,7 +359,7 @@ public class AdminManufacturerController {
     @PostMapping("/assets/{id}/lifecycle")
     @RequirePermission("manufacturer:create")
     public ApiResult<LifecycleEventView> addLifecycle(@PathVariable Long id, @RequestBody LifecycleReq req) {
-        if (!assetRepository.existsById(id)) throw new BizException(40401, "asset.not.found");
+        if (!assetRepository.existsById(id)) throw new BizException(40401, "error.asset.not.found");
         AssetLifecycleEvent e = lifecycleRepository.save(AssetLifecycleEvent.builder()
                 .assetId(id).stage(req.stage()).location(req.location()).operatorId(AuthContext.currentUserId())
                 .note(req.note()).occurredAt(req.occurredAt() == null ? Instant.now() : req.occurredAt()).build());
@@ -370,7 +370,7 @@ public class AdminManufacturerController {
     @PostMapping("/assets/{id}/maintenance")
     @RequirePermission("manufacturer:create")
     public ApiResult<MaintenanceView> addMaintenance(@PathVariable Long id, @RequestBody MaintenanceReq req) {
-        if (!assetRepository.existsById(id)) throw new BizException(40401, "asset.not.found");
+        if (!assetRepository.existsById(id)) throw new BizException(40401, "error.asset.not.found");
         AssetMaintenanceRecord m = maintenanceRepository.save(AssetMaintenanceRecord.builder()
                 .assetId(id).servicedAt(req.servicedAt() == null ? Instant.now() : req.servicedAt())
                 .mtype(req.mtype()).vendor(req.vendor()).cost(req.cost()).note(req.note()).build());
@@ -381,7 +381,7 @@ public class AdminManufacturerController {
     @PostMapping("/assets/{id}/usage")
     @RequirePermission("manufacturer:create")
     public ApiResult<UsageView> addUsage(@PathVariable Long id, @RequestBody UsageReq req) {
-        if (!assetRepository.existsById(id)) throw new BizException(40401, "asset.not.found");
+        if (!assetRepository.existsById(id)) throw new BizException(40401, "error.asset.not.found");
         AssetUsageRecord u = usageRepository.save(AssetUsageRecord.builder()
                 .assetId(id).periodStart(req.periodStart()).periodEnd(req.periodEnd())
                 .mileageKm(req.mileageKm() == null ? BigDecimal.ZERO : req.mileageKm())
@@ -394,7 +394,7 @@ public class AdminManufacturerController {
     @PostMapping("/assets/{id}/vehicle-ops")
     @RequirePermission("manufacturer:create")
     public ApiResult<VehicleOpsView> addVehicleOps(@PathVariable Long id, @RequestBody VehicleOpsReq req) {
-        if (!assetRepository.existsById(id)) throw new BizException(40401, "asset.not.found");
+        if (!assetRepository.existsById(id)) throw new BizException(40401, "error.asset.not.found");
         AssetVehicleOps v = vehicleOpsRepository.save(AssetVehicleOps.builder()
                 .assetId(id).opType(req.opType()).startedAt(req.startedAt() == null ? Instant.now() : req.startedAt())
                 .endedAt(req.endedAt()).revenue(req.revenue() == null ? BigDecimal.ZERO : req.revenue())
