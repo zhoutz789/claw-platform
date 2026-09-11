@@ -5,6 +5,7 @@ import com.claw.server.common.enums.AssetType;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +21,10 @@ public interface AssetRepository extends JpaRepository<Asset, Long>, JpaSpecific
 
     /** 取用户（使用人）名下未删除资产，供 provider 接单前能力匹配（P0 任务大厅）。 */
     List<Asset> findByUserIdAndDeletedFalse(Long userId);
+
+    /** 取用户「管理人 或 当前使用人」名下未删除资产（与 TaskService.accept 的归属口径保持一致）。 */
+    @Query("SELECT a FROM Asset a WHERE a.deleted = false AND (a.ownerId = :userId OR a.userId = :userId)")
+    List<Asset> findOwnedOrUsedBy(@Param("userId") Long userId);
 
     @Query("SELECT a.status, COUNT(a) FROM Asset a WHERE a.deleted = false GROUP BY a.status")
     List<Object[]> countGroupByStatus();

@@ -157,7 +157,7 @@ public class TaskService {
      */
     @Transactional(readOnly = true)
     public List<TaskViews.TaskView> listAvailableForProvider(Long providerId, BigDecimal lat, BigDecimal lng) {
-        List<Asset> assets = assetRepository.findByUserIdAndDeletedFalse(providerId);
+        List<Asset> assets = assetRepository.findOwnedOrUsedBy(providerId);
         Set<AssetCapability> caps = assets.stream()
                 .flatMap(a -> parseCapabilities(a.getCapabilities()).stream())
                 .collect(Collectors.toSet());

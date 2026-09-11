@@ -152,7 +152,7 @@ class TaskDroneOpServiceTest {
                 .serviceRadiusM(1000)
                 .build();
 
-        when(assetRepository.findByUserIdAndDeletedFalse(9L))
+        when(assetRepository.findOwnedOrUsedBy(9L))
                 .thenReturn(List.of(Asset.builder().id(5L).capabilities("DRONE_OP").build()));
         when(taskRepository.findByStatusAndCapabilityRequired(TaskStatus.OPEN, AssetCapability.DRONE_OP))
                 .thenReturn(List.of(far, near));
@@ -163,6 +163,45 @@ class TaskDroneOpServiceTest {
         assertEquals(1, views.size());
         assertEquals(2L, views.get(0).id());
         assertEquals("Near spray job", views.get(0).title());
+    }
+
+    /**
+     * 回归用例：provider 名下资产「仅通过 owner_id 归属」（user_id 为 null）时，能力仍应被解析。
+     *
+     * <p>本次缺陷根因：{@code listAvailableForProvider} 曾用 {@code findByUserIdAndDeletedFalse} 口径，
+     * 而开发库 35 条资产的 {@code user_id} 全为 NULL、真实归属记在 {@code owner_id}，导致 provider
+     * 名下资产解析为空 → 能力集空 → 可接任务列表恒空。修复改用与 {@code accept} 一致的
+     * {@code findOwnedOrUsedBy}（owner_id 或 user_id）后，该 OPEN 任务应出现在列表中。
+     */
+    @Test
+    void listAvailableForProvider_resolvesAssetOwnedByProviderEvenWhenUserIdNull() {
+        Task openLogistics = Task.builder()
+                .id(1L)
+                .publisherId(2L)
+                .taskType(TaskType.LOGISTICS)
+                .title("Open logistics job")
+                .rewardAmount(new BigDecimal("80.00"))
+                .currency("USD")
+                .capabilityRequired(AssetCapability.LOGISTICS)
+                .status(TaskStatus.OPEN)
+                .build(); // geoLat/geoLng 均为 null，任何坐标下都应视为可接
+
+        when(assetRepository.findOwnedOrUsedBy(9L))
+                .thenReturn(List.of(Asset.builder()
+                        .id(12L)
+                        .ownerId(9L)
+                        .userId(null)
+                        .capabilities("LOGISTICS")
+                        .build()));
+        when(taskRepository.findByStatusAndCapabilityRequired(TaskStatus.OPEN, AssetCapability.LOGISTICS))
+                .thenReturn(List.of(openLogistics));
+        when(taskAssignmentRepository.findByProviderId(9L)).thenReturn(List.of());
+
+        List<TaskViews.TaskView> views = taskService.listAvailableForProvider(9L);
+
+        assertEquals(1, views.size());
+        assertEquals(1L, views.get(0).id());
+        assertEquals("Open logistics job", views.get(0).title());
     }
 
     /** DRONE_OP 发布请求（missionType 可变，其余固定）。 */
