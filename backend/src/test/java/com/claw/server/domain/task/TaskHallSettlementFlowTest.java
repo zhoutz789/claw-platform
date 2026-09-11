@@ -17,6 +17,7 @@ import com.claw.server.domain.ledger.AccountService;
 import com.claw.server.domain.ledger.LedgerService;
 import com.claw.server.domain.payload.DroneMission;
 import com.claw.server.domain.payload.DroneMissionRepository;
+import com.claw.server.domain.settings.SystemConfigRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -76,6 +77,10 @@ class TaskHallSettlementFlowTest {
     private TaskAssignmentRepository taskAssignmentRepository;
     @Mock
     private AssetRepository assetRepository;
+
+    /** TASK_HALL_PLATFORM_RATE 未配置（Optional.empty → 费率 0），故既有「2 条分录」断言保持不变。 */
+    @Mock
+    private SystemConfigRepository systemConfigRepository;
 
     @Mock
     private TaskLogisticsRepository taskLogisticsRepository;
@@ -193,6 +198,10 @@ class TaskHallSettlementFlowTest {
         // ---------- 5. assetEarnings：修复后应返回 1 条收益 ----------
         String expectedBizRef = "TASK-" + TASK_ID + "-" + ASSIGNMENT_ID;
         when(taskAssignmentRepository.findByAssetId(ASSET_ID)).thenReturn(List.of(assignment));
+        // 收益对账现按接单方账户过滤：stub 的 C 分录 accountId=20 必须等于接单方本人 MASTER 账户 id，
+        // 否则会被平台佣金过滤逻辑一并剔除，该断言随之失真。
+        when(accountService.findUserAccount(PROVIDER_ID))
+                .thenReturn(Optional.of(Account.builder().id(20L).userId(PROVIDER_ID).build()));
         when(accountService.findEntriesByBizRef(expectedBizRef)).thenReturn(List.of(
                 new LedgerViews.EntryView(901L, null, 20L, "C", REWARD, "TASK_SETTLEMENT",
                         expectedBizRef, "任务报酬收入 " + expectedBizRef, Instant.now())));

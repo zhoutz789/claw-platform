@@ -61,6 +61,23 @@ public class AccountService {
         return accountRepository.findByUserIdAndAccountType(userId, type).stream().findFirst();
     }
 
+    /**
+     * 查询用户主账户（MASTER / USD），只读、不自动创建。
+     *
+     * <p>供结算域对账（{@code TaskSettlementService#assetEarnings}）判定「该 C 分录是否入账到接单方本人」：
+     * 只读路径不得调用任何 {@code getOrCreate*} 方法，避免产生开户副作用。
+     *
+     * @param userId 用户 id
+     * @return 该用户的主账户；userId 为空或账户不存在时返回 {@link Optional#empty()}
+     */
+    @Transactional(readOnly = true)
+    public Optional<Account> findUserAccount(Long userId) {
+        if (userId == null) {
+            return Optional.empty();
+        }
+        return accountRepository.findByUserIdAndAccountTypeAndCurrency(userId, AccountType.MASTER, "USD");
+    }
+
     @Transactional(readOnly = true)
     public List<LedgerViews.AccountView> listAccounts(Long userId, AccountType accountType) {
         List<Account> list;
