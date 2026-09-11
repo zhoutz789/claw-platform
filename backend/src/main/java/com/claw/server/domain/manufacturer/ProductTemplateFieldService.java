@@ -4,6 +4,8 @@ import com.claw.server.common.api.BizException;
 import com.claw.server.common.dto.ProductDtos.CreateProductTemplateFieldReq;
 import com.claw.server.common.dto.ProductDtos.ProductTemplateFieldView;
 import com.claw.server.common.dto.ProductDtos.UpdateProductTemplateFieldReq;
+import com.claw.server.domain.category.CategoryFieldTemplate;
+import com.claw.server.domain.category.CategoryFieldTemplateRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +26,9 @@ public class ProductTemplateFieldService {
     private static final Set<String> ALLOWED_TYPES = Set.of("number", "text", "select", "date", "boolean");
 
     private final ProductTemplateFieldRepository fieldRepository;
+
+    /** 品类级字段模板仓储（domain.category；商品创建时按品类复制一份到本商品）。 */
+    private final CategoryFieldTemplateRepository categoryFieldTemplateRepository;
 
     @Transactional
     public ProductTemplateFieldView create(CreateProductTemplateFieldReq req) {
@@ -47,6 +52,50 @@ public class ProductTemplateFieldService {
                 .sortNo(req.sortNo() != null ? req.sortNo() : 0)
                 .build();
         return toView(fieldRepository.save(entity));
+    }
+
+    /**
+     * 把品类字段模板复制一份到指定商品（发布能源品类商品时免去手工重填专业参数字段）。
+     *
+     * <p>逐条按 sort_no 升序复制；目标商品已存在同 field_key 的字段时跳过（不覆盖、不抛重复键错），
+     * 保证本方法可以安全重入（例如商品创建后再次调用、或商品已手工补过部分字段）。
+     *
+     * @param productId  目标商品 id
+     * @param categoryId 品类 id（claw.categories.id）；为 null 时直接返回 0
+     * @return 实际插入的字段条数
+     */
+    @Transactional
+    public int copyFromCategory(Long productId, Long categoryId) {
+        if (productId == null || categoryId == null) {
+            return 0;
+        }
+        List<CategoryFieldTemplate> templates =
+                categoryFieldTemplateRepository.findByCategoryIdOrderBySortNoAsc(categoryId);
+        if (templates == null || templates.isEmpty()) {
+            return 0;
+        }
+        int copied = 0;
+        for (CategoryFieldTemplate template : templates) {
+            if (fieldRepository.existsByProductIdAndFieldKey(productId, template.getFieldKey())) {
+                continue;
+            }
+            fieldRepository.save(toProductField(productId, template));
+            copied++;
+        }
+        return copied;
+    }
+
+    private static ProductTemplateField toProductField(Long productId, CategoryFieldTemplate template) {
+        return ProductTemplateField.builder()
+                .productId(productId)
+                .fieldKey(template.getFieldKey())
+                .label(template.getLabel())
+                .type(template.getType())
+                .unit(template.getUnit())
+                .optionsJson(template.getOptionsJson())
+                .required(template.isRequired())
+                .sortNo(template.getSortNo())
+                .build();
     }
 
     @Transactional(readOnly = true)

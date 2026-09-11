@@ -10,7 +10,10 @@ import com.claw.server.common.dto.ProductDtos.UpdateProductReq;
 import com.claw.server.common.enums.AssetType;
 import com.claw.server.domain.asset.Asset;
 import com.claw.server.domain.asset.AssetRepository;
+import com.claw.server.domain.category.Category;
+import com.claw.server.domain.category.CategoryRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,11 +29,13 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ProductService {
 
     private final ProductRepository productRepository;
     private final ProductTemplateFieldService fieldService;
     private final AssetRepository assetRepository;
+    private final CategoryRepository categoryRepository;
 
     @Transactional
     public ProductView create(CreateProductReq req) {
@@ -49,7 +54,45 @@ public class ProductService {
                 .reportIntervalSeconds(req.reportIntervalSeconds())
                 .attrJson(req.attrJson())
                 .build();
-        return toView(productRepository.save(product));
+        Product saved = productRepository.save(product);
+        // 能源品类专业参数字段（充电桩/光伏/储能）由品类模板自动带入，无需逐个商品手工重填；
+        // 分类解析不到或复制失败一律静默跳过 —— 绝不能因为模板套用让商品发布失败。
+        applyCategoryTemplate(saved.getId(), req.category());
+        return toView(saved);
+    }
+
+    /**
+     * 按商品的分类名/分类码解析出品类 id 并复制其字段模板到该商品。
+     *
+     * <p>{@code Product.category} 存的是分类名称或层级码（String），没有 categoryId 字段，
+     * 因此这里用名称或 code 反查分类树；解析不到（分类不存在 / 未填分类 / 分类已删除）时静默返回。
+     * 分类树规模很小（百级），内存过滤即可，避免为此新增仓储方法。
+     */
+    private void applyCategoryTemplate(Long productId, String category) {
+        if (productId == null || category == null || category.isBlank()) {
+            return;
+        }
+        Long categoryId = resolveCategoryId(category.trim());
+        if (categoryId == null) {
+            log.debug("产品 {} 的分类 [{}] 未匹配到品类，跳过字段模板套用", productId, category);
+            return;
+        }
+        try {
+            int copied = fieldService.copyFromCategory(productId, categoryId);
+            log.debug("产品 {} 从品类 {} 复制模板字段 {} 条", productId, categoryId, copied);
+        } catch (RuntimeException e) {
+            // 模板套用属于发布流程的增强，失败不得回滚已创建的商品（现有发布流程不可破坏）。
+            log.warn("产品 {} 从品类 {} 复制模板字段失败，已跳过", productId, categoryId, e);
+        }
+    }
+
+    /** 按分类名称或层级码匹配未删除分类，返回其 id；匹配不到返回 null。 */
+    private Long resolveCategoryId(String categoryKey) {
+        return categoryRepository.findByTenantIdAndDeletedFalseOrderBySortNoAsc(1L).stream()
+                .filter(c -> categoryKey.equals(c.getCode()) || categoryKey.equals(c.getName()))
+                .map(Category::getId)
+                .findFirst()
+                .orElse(null);
     }
 
     @Transactional(readOnly = true)
