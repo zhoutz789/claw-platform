@@ -30,4 +30,6 @@ web/vite.config.js.timestamp-*.mjs
 
 # 环境变量（含密钥，不入库）
 .env
+deploy/.env.test
+deploy/.env.prod
 *.local.yml
