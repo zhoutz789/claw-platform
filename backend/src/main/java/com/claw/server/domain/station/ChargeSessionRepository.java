@@ -12,4 +12,7 @@ public interface ChargeSessionRepository extends JpaRepository<ChargeSession, Lo
     List<ChargeSession> findByStationIdOrderByStartedAtDesc(Long stationId);
 
     Optional<ChargeSession> findTopByAssetIdAndStatusOrderByStartedAtDesc(Long assetId, String status);
+
+    /** 按充电桩设备号查活跃会话（VPP 切片：充电桩可削减量按活跃会话功率统计）。 */
+    List<ChargeSession> findByDeviceNoAndStatus(String deviceNo, String status);
 }
