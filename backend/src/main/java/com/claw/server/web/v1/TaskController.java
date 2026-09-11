@@ -5,6 +5,7 @@ import com.claw.server.common.api.BizException;
 import com.claw.server.common.dto.TaskRequests;
 import com.claw.server.common.dto.TaskViews;
 import com.claw.server.common.security.AuthContext;
+import com.claw.server.common.security.RequirePermission;
 import com.claw.server.domain.task.TaskService;
 import com.claw.server.domain.task.TaskSettlementService;
 import jakarta.validation.Valid;
@@ -15,10 +16,15 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * 任务大厅控制器（P0：LOGISTICS 闭环）。
+ * 任务大厅控制器。
  *
- * <p>所有端点强制登录（uid()），不挂任何 {@code @RequirePermission}（P2 才注册 task:publish 等权限位，
- * 当前未 seed 会导致全员 403）。资金走 TaskSettlementService → LedgerService 双记账，本类不碰账本。
+ * <p>发布端点 {@code POST /api/v1/tasks} 挂 {@code @RequirePermission("task:publish")}：发布是
+ * 资金发起动作（报酬由发布方账户 D 出，余额不足返回 42251），必须收敛到权限位。该权限位由
+ * V97 种子下发给 DRIVER / PILOT / MERCHANT 三个角色模板（平台管理员走 "*" 通配符；
+ * REGULATOR 是监管只读视角，不参与发布）。
+ *
+ * <p>其余端点仅强制登录（uid()），不动权限位。资金走 TaskSettlementService → LedgerService
+ * 双记账，本类不碰账本。
  */
 @RestController
 @RequestMapping("/api/v1/tasks")
@@ -28,8 +34,9 @@ public class TaskController {
     private final TaskService taskService;
     private final TaskSettlementService taskSettlementService;
 
-    /** 发布任务。 */
+    /** 发布任务（需 task:publish 权限位，见 V97 种子）。 */
     @PostMapping
+    @RequirePermission("task:publish")
     public ApiResult<TaskViews.TaskView> publish(@Valid @RequestBody TaskRequests.Publish req) {
         return ApiResult.ok(taskService.publish(req, uid()));
     }
