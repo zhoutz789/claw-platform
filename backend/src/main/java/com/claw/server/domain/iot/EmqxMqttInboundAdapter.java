@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.math.BigDecimal;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -43,6 +44,9 @@ public class EmqxMqttInboundAdapter implements MqttCallbackExtended {
     private final DeviceCommandService deviceCommandService;
     private final BmsTelemetryService bmsTelemetryService;
     private final BmsAdapter bmsAdapter;
+    private final PvTelemetryService pvTelemetryService;
+    private final PvAdapter pvAdapter;
+    private final DeviceRepository deviceRepository;
     private final ObjectMapper objectMapper = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
@@ -83,11 +87,16 @@ public class EmqxMqttInboundAdapter implements MqttCallbackExtended {
             });
 
     public EmqxMqttInboundAdapter(IoTService iotService, DeviceCommandService deviceCommandService,
-                                 BmsTelemetryService bmsTelemetryService, BmsAdapter bmsAdapter) {
+                                 BmsTelemetryService bmsTelemetryService, BmsAdapter bmsAdapter,
+                                 PvTelemetryService pvTelemetryService, PvAdapter pvAdapter,
+                                 DeviceRepository deviceRepository) {
         this.iotService = iotService;
         this.deviceCommandService = deviceCommandService;
         this.bmsTelemetryService = bmsTelemetryService;
         this.bmsAdapter = bmsAdapter;
+        this.pvTelemetryService = pvTelemetryService;
+        this.pvAdapter = pvAdapter;
+        this.deviceRepository = deviceRepository;
     }
 
     @PostConstruct
@@ -160,10 +169,18 @@ public class EmqxMqttInboundAdapter implements MqttCallbackExtended {
                     default -> log.warn("[EMQX] 未知 msgType={} topic={}", msgType, topic);
                 }
             } else if (topic.startsWith("claw/iot/") && topic.endsWith("/telemetry")) {
-                // 锂电池 BMS 规范遥测上行（Phase A：GENERIC_MQTT 归一化报文）。
-                com.claw.server.common.dto.BmsTelemetryReport report =
-                        bmsAdapter.normalize(node, BmsAdapter.Profile.GENERIC_MQTT);
-                bmsTelemetryService.handleReport(report, extractDeviceNo(topic));
+                // 规范遥测上行：同一 topic 同时承载锂电池 BMS 与光伏两类设备，
+                // 必须按设备的 device_type 分流，否则光伏报文会被静默写进 BMS 列组。
+                String deviceNo = extractDeviceNo(topic);
+                if (resolveTelemetryHandler(node, deviceNo) == TelemetryKind.PV) {
+                    com.claw.server.common.dto.PvTelemetryReport report =
+                            pvAdapter.normalize(node, PvAdapter.Profile.GENERIC_MQTT);
+                    pvTelemetryService.handleReport(report, deviceNo);
+                } else {
+                    com.claw.server.common.dto.BmsTelemetryReport report =
+                            bmsAdapter.normalize(node, BmsAdapter.Profile.GENERIC_MQTT);
+                    bmsTelemetryService.handleReport(report, deviceNo);
+                }
             } else {
                 // 老 BMS 链路：imei 帧（保持兼容）
                 IoTRequests.TelemetryReport req = new IoTRequests.TelemetryReport(
@@ -205,6 +222,57 @@ public class EmqxMqttInboundAdapter implements MqttCallbackExtended {
         } catch (MqttException e) {
             log.warn("[EMQX] 断开异常", e);
         }
+    }
+
+    /**
+     * 判定遥测报文归属链路。
+     *
+     * <p><b>查设备的键</b>：优先取报文体 {@code deviceNo}，缺失/空白时回退到 topic
+     * 路径 {@code claw/iot/{deviceNo}/telemetry} 的第 3 段（与
+     * {@code BmsTelemetryService#handleReport} 的 topicDeviceNo 兜底同口径）。
+     *
+     * <p><b>分流规则</b>：按 {@code devices.device_type} ——
+     * INVERTER / PV_METER / WEATHER_STATION / PV_GATEWAY 走光伏；BATTERY_BMS 走 BMS。
+     *
+     * <p><b>回落</b>：设备查不到、deviceNo 缺失、deviceType 为空或为其它未知类型时，
+     * 一律<b>回落 BMS 老链路</b>（保兼容，避免未建档/老设备报文被丢弃）并打 warn 日志说明原因。
+     */
+    private TelemetryKind resolveTelemetryHandler(JsonNode node, String topicDeviceNo) {
+        String deviceNo = topicDeviceNo;
+        if (node.hasNonNull("deviceNo")) {
+            String inBody = node.get("deviceNo").asText();
+            if (inBody != null && !inBody.isBlank()) {
+                deviceNo = inBody;
+            }
+        }
+        if (deviceNo == null || deviceNo.isBlank()) {
+            log.warn("[EMQX] 遥测报文缺 deviceNo（topic={}），回落 BMS 链路", topicDeviceNo);
+            return TelemetryKind.BMS;
+        }
+        Optional<Device> device = deviceRepository.findByDeviceNo(deviceNo);
+        if (device.isEmpty()) {
+            log.warn("[EMQX] 遥测设备未建档 deviceNo={}，回落 BMS 链路", deviceNo);
+            return TelemetryKind.BMS;
+        }
+        String type = device.get().getDeviceType();
+        if (type == null || type.isBlank()) {
+            log.warn("[EMQX] 遥测设备 deviceNo={} 的 device_type 为空，回落 BMS 链路", deviceNo);
+            return TelemetryKind.BMS;
+        }
+        return switch (type) {
+            case "INVERTER", "PV_METER", "WEATHER_STATION", "PV_GATEWAY" -> TelemetryKind.PV;
+            case "BATTERY_BMS" -> TelemetryKind.BMS;
+            default -> {
+                log.warn("[EMQX] 遥测设备 deviceNo={} 的 device_type={} 无对应链路，回落 BMS 链路", deviceNo, type);
+                yield TelemetryKind.BMS;
+            }
+        };
+    }
+
+    /** 遥测链路归属。 */
+    private enum TelemetryKind {
+        PV,
+        BMS
     }
 
     private BigDecimal big(JsonNode node, String field) {

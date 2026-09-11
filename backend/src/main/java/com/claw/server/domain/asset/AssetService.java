@@ -20,6 +20,8 @@ import com.claw.server.common.security.DataScopeSpec;
 import com.claw.server.domain.custody.CustodyService;
 import com.claw.server.domain.iot.Device;
 import com.claw.server.domain.iot.DeviceRepository;
+import com.claw.server.domain.iot.PvStation;
+import com.claw.server.domain.iot.PvStationRepository;
 import com.claw.server.domain.iot.Telemetry;
 import com.claw.server.domain.iot.TelemetryRepository;
 import com.claw.server.domain.role.DataScopeService;
@@ -72,6 +74,7 @@ public class AssetService {
     private final DroneRepository droneRepository;
     private final TelemetryRepository telemetryRepository;
     private final AssetMaintenanceRecordRepository maintenanceRecordRepository;
+    private final PvStationRepository pvStationRepository;
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
@@ -323,6 +326,9 @@ public class AssetService {
                 base = assetRepository.save(base);
                 recordLifecycle(base.getId(), AssetLifecycleStage.PRODUCED, operatorId, null, "资产建档");
                 grantOwnership(ownerId, base.getId());
+                if (type == AssetType.PV_STATION) {
+                    createPvStationExtension(base.getId(), ownerId);
+                }
                 view = toView(base);
             }
         }
@@ -342,6 +348,28 @@ public class AssetService {
         log.info("订单登记生成资产 assetId={} orderItemId={} assetType={} owner={}",
                 asset.getId(), req.orderItemId(), type, ownerId);
         return toView(asset);
+    }
+
+    /**
+     * 建光伏电站扩展行（best-effort）。
+     *
+     * <p>电站扩展不是建档成功的必要条件：失败只 warn，绝不阻断资产建档
+     * （扩展表缺失不影响 assets 主链路与产权，后续可由运维补录）。
+     * 铭牌装机容量 rated_power_wp 建档时通常无输入，留空由运维补录；
+     * 留空时 PR 一律返回 null（不编造分母）。
+     */
+    private void createPvStationExtension(Long assetId, Long operatorId) {
+        try {
+            if (pvStationRepository.findByAssetId(assetId).isPresent()) {
+                return;
+            }
+            pvStationRepository.save(PvStation.builder()
+                    .assetId(assetId)
+                    .operatorId(operatorId)
+                    .build());
+        } catch (Exception e) {
+            log.warn("光伏电站扩展建档失败（不阻断资产建档）assetId={}", assetId, e);
+        }
     }
 
     /**
