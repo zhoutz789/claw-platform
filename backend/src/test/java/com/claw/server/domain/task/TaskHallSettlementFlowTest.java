@@ -317,6 +317,205 @@ class TaskHallSettlementFlowTest {
         verify(taskAssignmentRepository, never()).save(any(TaskAssignment.class));
     }
 
+    /* =====================================================================
+     *  终态护栏（40902）：已 SETTLED / CANCELLED 的任务不得被打回非终态
+     * ===================================================================== */
+
+    /** 终态护栏错误码：TaskService.TASK_ALREADY_TERMINAL。 */
+    private static final int TASK_ALREADY_TERMINAL = 40902;
+
+    /**
+     * 护栏不得误伤正常流程（ASSIGNED 起）：双方推进到 IN_PROGRESS，task 同步落库。
+     *
+     * <p>这是本次改动最容易踩坏的一条 —— 护栏加错位置会让任务大厅彻底跑不动，
+     * 所以「能推进」比「能拦住」更需要先钉死。
+     */
+    @Test
+    void updateProgress_whenAssigned_advancesBothToInProgress() {
+        Task task = task(TaskStatus.ASSIGNED);
+        TaskAssignment assignment = assignment(TaskStatus.ASSIGNED);
+        stubLookup(task, assignment);
+
+        TaskViews.AssignmentView view =
+                taskService.updateProgress(TASK_ID, PROVIDER_ID, new TaskRequests.Progress(30, "on the way"));
+
+        assertEquals(TaskStatus.IN_PROGRESS, assignment.getStatus());
+        assertEquals(TaskStatus.IN_PROGRESS, task.getStatus());
+        assertEquals(30, assignment.getProgressPct().intValue());
+        assertEquals(TaskStatus.IN_PROGRESS, view.status());
+        verify(taskRepository, times(1)).save(task);
+    }
+
+    /** 护栏不得误伤正常流程（已 IN_PROGRESS 起）：可继续上报进度，且 task 不重复 save。 */
+    @Test
+    void updateProgress_whenAlreadyInProgress_keepsInProgressAndUpdatesPct() {
+        Task task = task(TaskStatus.IN_PROGRESS);
+        TaskAssignment assignment = assignment(TaskStatus.IN_PROGRESS);
+        when(taskAssignmentRepository.findByTaskIdAndProviderId(TASK_ID, PROVIDER_ID))
+                .thenReturn(Optional.of(assignment));
+        when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
+        when(taskAssignmentRepository.save(any(TaskAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        TaskViews.AssignmentView view =
+                taskService.updateProgress(TASK_ID, PROVIDER_ID, new TaskRequests.Progress(80, "almost done"));
+
+        assertEquals(TaskStatus.IN_PROGRESS, assignment.getStatus());
+        assertEquals(TaskStatus.IN_PROGRESS, task.getStatus());
+        assertEquals(80, assignment.getProgressPct().intValue());
+        assertEquals(TaskStatus.IN_PROGRESS, view.status());
+        verify(taskRepository, never()).save(any(Task.class));
+    }
+
+    /**
+     * 核心回归：已结算任务重复 complete 必须被 40902 拦死，绝不降级、绝不二次过账。
+     *
+     * <p>修复前的行为：第二次 complete 先把 task/assignment 降回 COMPLETED，
+     * settle 的幂等护栏（{@code task.status == SETTLED}）随之失效 → 二次过账撞 ledger
+     * {@code (bizType, bizRef)} 幂等键抛 40950，且 assignment 被打回 COMPLETED，
+     * {@code assetEarnings()} 的对账口径重新落空（钱过了账却查不到）。
+     */
+    @Test
+    void complete_twiceOnSettledTask_throwsConflict_noSecondLedgerEntry_noDowngrade() {
+        Task task = task(TaskStatus.IN_PROGRESS);
+        TaskAssignment assignment = assignment(TaskStatus.IN_PROGRESS);
+        stubLookup(task, assignment);
+        stubAccounts();
+
+        taskService.complete(TASK_ID, PROVIDER_ID);
+        assertEquals(TaskStatus.SETTLED, task.getStatus());
+        assertEquals(TaskStatus.SETTLED, assignment.getStatus());
+
+        BizException ex = assertThrows(BizException.class, () -> taskService.complete(TASK_ID, PROVIDER_ID));
+
+        assertEquals(TASK_ALREADY_TERMINAL, ex.getCode(), "重复 complete 须被终态护栏拦住");
+        assertEquals("error.task.already.terminal", ex.getMessageCode());
+        assertEquals(TaskStatus.SETTLED, task.getStatus(), "task 不得被降级回 COMPLETED");
+        assertEquals(TaskStatus.SETTLED, assignment.getStatus(),
+                "assignment 不得被降级，否则 assetEarnings() 对账口径落空");
+        verify(ledgerService, times(1)).postEntries(any(BizType.class), anyString(), anyList());
+    }
+
+    /** 已结算接单上报进度 → 40902，状态保持 SETTLED，且不产生任何落库。 */
+    @Test
+    void updateProgress_onSettledAssignment_throwsConflictAndKeepsSettled() {
+        Task task = task(TaskStatus.SETTLED);
+        TaskAssignment assignment = assignment(TaskStatus.SETTLED);
+        when(taskAssignmentRepository.findByTaskIdAndProviderId(TASK_ID, PROVIDER_ID))
+                .thenReturn(Optional.of(assignment));
+        when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
+
+        BizException ex = assertThrows(BizException.class,
+                () -> taskService.updateProgress(TASK_ID, PROVIDER_ID, new TaskRequests.Progress(60, "replay")));
+
+        assertEquals(TASK_ALREADY_TERMINAL, ex.getCode());
+        assertEquals(TaskStatus.SETTLED, assignment.getStatus(), "SETTLED 不得回退到 IN_PROGRESS");
+        assertEquals(TaskStatus.SETTLED, task.getStatus());
+        assertEquals(100, assignment.getProgressPct().intValue(), "不得改写已结算接单的进度");
+        verify(taskAssignmentRepository, never()).save(any(TaskAssignment.class));
+        verify(taskRepository, never()).save(any(Task.class));
+    }
+
+    /** 已 CANCELLED 的任务 complete → 40902，且不触碰资金组件。 */
+    @Test
+    void complete_onCancelledTask_throwsConflictWithoutTouchingFunds() {
+        Task task = task(TaskStatus.CANCELLED);
+        TaskAssignment assignment = assignment(TaskStatus.COMPLETED);
+        when(taskAssignmentRepository.findByTaskIdAndProviderId(TASK_ID, PROVIDER_ID))
+                .thenReturn(Optional.of(assignment));
+        when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
+
+        BizException ex = assertThrows(BizException.class, () -> taskService.complete(TASK_ID, PROVIDER_ID));
+
+        assertEquals(TASK_ALREADY_TERMINAL, ex.getCode());
+        assertEquals(TaskStatus.CANCELLED, task.getStatus());
+        assertEquals(TaskStatus.COMPLETED, assignment.getStatus(), "不得被推进为 COMPLETED");
+        assertNotPostingAndNoSave();
+    }
+
+    /** 已 CANCELLED 的任务上报进度 → 40902，且不触碰资金组件。 */
+    @Test
+    void updateProgress_onCancelledTask_throwsConflictWithoutTouchingFunds() {
+        Task task = task(TaskStatus.CANCELLED);
+        TaskAssignment assignment = assignment(TaskStatus.ASSIGNED);
+        when(taskAssignmentRepository.findByTaskIdAndProviderId(TASK_ID, PROVIDER_ID))
+                .thenReturn(Optional.of(assignment));
+        when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
+
+        BizException ex = assertThrows(BizException.class,
+                () -> taskService.updateProgress(TASK_ID, PROVIDER_ID, new TaskRequests.Progress(10, "replay")));
+
+        assertEquals(TASK_ALREADY_TERMINAL, ex.getCode());
+        assertEquals(TaskStatus.CANCELLED, task.getStatus());
+        assertEquals(TaskStatus.ASSIGNED, assignment.getStatus());
+        assertNotPostingAndNoSave();
+    }
+
+    /**
+     * assignment 单独处于终态也必须拦住（只判 task 会漏掉这种不一致态）：
+     * task 还是 IN_PROGRESS，但 assignment 已 SETTLED —— 说明钱已经进过账了。
+     */
+    @Test
+    void complete_whenOnlyAssignmentSettled_throwsConflict() {
+        Task task = task(TaskStatus.IN_PROGRESS);
+        TaskAssignment assignment = assignment(TaskStatus.SETTLED);
+        when(taskAssignmentRepository.findByTaskIdAndProviderId(TASK_ID, PROVIDER_ID))
+                .thenReturn(Optional.of(assignment));
+        when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
+
+        BizException ex = assertThrows(BizException.class, () -> taskService.complete(TASK_ID, PROVIDER_ID));
+
+        assertEquals(TASK_ALREADY_TERMINAL, ex.getCode());
+        assertEquals(TaskStatus.SETTLED, assignment.getStatus());
+        assertEquals(TaskStatus.IN_PROGRESS, task.getStatus(), "task 不得被推进");
+        assertNotPostingAndNoSave();
+    }
+
+    /**
+     * accept() 的既有 OPEN 前置校验已强于终态护栏（SETTLED / CANCELLED ⊂ 非 OPEN），
+     * 因此保持原 40901 语义不动，此处把该行为钉成回归、防止后续改动把语义漂走。
+     */
+    @Test
+    void accept_onSettledTask_throwsNotOpenAndCreatesNoAssignment() {
+        Task task = task(TaskStatus.SETTLED);
+        when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
+
+        BizException ex = assertThrows(BizException.class,
+                () -> taskService.accept(TASK_ID, PROVIDER_ID, ASSET_ID));
+
+        assertEquals(40901, ex.getCode(), "accept 的非 OPEN 拦截沿用既有 error.task.not.open");
+        assertEquals("error.task.not.open", ex.getMessageCode());
+        assertEquals(TaskStatus.SETTLED, task.getStatus());
+        verify(taskAssignmentRepository, never()).save(any(TaskAssignment.class));
+    }
+
+    /** 断言：未发生任何过账、且 task / assignment 都没有落库。 */
+    private void assertNotPostingAndNoSave() {
+        verifyNoInteractions(ledgerService);
+        verify(taskRepository, never()).save(any(Task.class));
+        verify(taskAssignmentRepository, never()).save(any(TaskAssignment.class));
+    }
+
+    /**
+     * 预置 provider/publisher 双方的结算账户。
+     * 只在实际会走到 settle 的用例里调用 —— MockitoExtension 默认严格桩，
+     * 多余的 stub 会直接判失败。
+     */
+    private void stubAccounts() {
+        when(accountService.getOrCreateUserAccount(PUBLISHER_ID))
+                .thenReturn(Account.builder().id(10L).userId(PUBLISHER_ID).build());
+        when(accountService.getOrCreateUserAccount(PROVIDER_ID))
+                .thenReturn(Account.builder().id(20L).userId(PROVIDER_ID).build());
+    }
+
+    /** 预置「按任务+provider 查接单」与「按 id 查任务 / 保存实体」的最小可用仓储桩。 */
+    private void stubLookup(Task task, TaskAssignment assignment) {
+        when(taskAssignmentRepository.findByTaskIdAndProviderId(TASK_ID, PROVIDER_ID))
+                .thenReturn(Optional.of(assignment));
+        when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
+        when(taskAssignmentRepository.save(any(TaskAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
+    }
+
     /** DRONE_OP 发布请求（missionType=SPRAY，资产 55L / 飞手 88L）。 */
     private static TaskRequests.Publish droneReq() {
         return new TaskRequests.Publish(

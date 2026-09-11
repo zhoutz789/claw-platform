@@ -46,6 +46,9 @@ public class TaskService {
     private final TaskSettlementService taskSettlementService;
     private final DroneMissionRepository droneMissionRepository;
 
+    /** 任务/接单已处于终态（SETTLED / CANCELLED），拒绝任何后续流转（HTTP 409）。 */
+    private static final int TASK_ALREADY_TERMINAL = 40902;
+
     /** taskType → 预期 capability_required 的强制映射（发布校验用）。 */
     private static final Map<TaskType, AssetCapability> CAPABILITY_FOR_TYPE = Map.of(
             TaskType.LOGISTICS, AssetCapability.LOGISTICS,
@@ -218,18 +221,28 @@ public class TaskService {
         return toAssignmentView(assignment);
     }
 
+    /**
+     * provider 上报进度：application / task 双方推进到 IN_PROGRESS。
+     *
+     * <p>终态护栏必须早于任何赋值：本方法原先把 assignment 无条件打成 IN_PROGRESS，
+     * 对已 SETTLED 的接单一调用就把 {@code SETTLED → IN_PROGRESS} 直接回退。
+     *
+     * @throws BizException 40902 error.task.already.terminal（task 或 assignment 处于终态）
+     */
     @Transactional
     public TaskViews.AssignmentView updateProgress(Long taskId, Long providerId, TaskRequests.Progress req) {
         TaskAssignment assignment = taskAssignmentRepository.findByTaskIdAndProviderId(taskId, providerId)
                 .orElseThrow(() -> BizException.notFound("error.task.assignment.not.found"));
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> BizException.notFound("error.task.not.found"));
+        assertNotTerminal(task, assignment);
+
         assignment.setProgressPct(req.progressPct());
         assignment.setLastProgressNote(req.note());
         assignment.setUpdatedAt(Instant.now());
 
         if (req.progressPct() != null && req.progressPct() > 0) {
             assignment.setStatus(TaskStatus.IN_PROGRESS);
-            Task task = taskRepository.findById(taskId)
-                    .orElseThrow(() -> BizException.notFound("error.task.not.found"));
             if (task.getStatus() == TaskStatus.ASSIGNED) {
                 task.setStatus(TaskStatus.IN_PROGRESS);
                 taskRepository.save(task);
@@ -239,18 +252,32 @@ public class TaskService {
         return toAssignmentView(assignment);
     }
 
+    /**
+     * provider 完成任务：双方置 COMPLETED 后立刻结算。
+     *
+     * <p>终态护栏必须早于任何 setStatus / save：本方法原先<b>先无条件</b>把 task 与 assignment
+     * 降回 COMPLETED，再调 {@link TaskSettlementService#settle}，而 settle 的幂等护栏判据是
+     * {@code task.status == SETTLED}。于是对已结算任务重复调一次，task 先被降级 → 幂等护栏失效
+     * → 二次过账撞 ledger 的 {@code (bizType, bizRef)} 幂等键抛 40950，同时库里 assignment
+     * 被打回 COMPLETED，{@code assetEarnings()} 的 {@code status == SETTLED} 对账口径再次落空
+     * ——与「settle 不同步 assignment」那个 bug 的后果完全一样：钱过了账，对账却查不到。
+     *
+     * @throws BizException 40902 error.task.already.terminal（task 或 assignment 处于终态）
+     */
     @Transactional
     public TaskViews.AssignmentView complete(Long taskId, Long providerId) {
         TaskAssignment assignment = taskAssignmentRepository.findByTaskIdAndProviderId(taskId, providerId)
                 .orElseThrow(() -> BizException.notFound("error.task.assignment.not.found"));
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> BizException.notFound("error.task.not.found"));
+        assertNotTerminal(task, assignment);
+
         assignment.setStatus(TaskStatus.COMPLETED);
         assignment.setFinishedAt(Instant.now());
         assignment.setProgressPct(100);
         assignment.setUpdatedAt(Instant.now());
         assignment = taskAssignmentRepository.save(assignment);
 
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> BizException.notFound("error.task.not.found"));
         task.setStatus(TaskStatus.COMPLETED);
         task.setCompletedAt(Instant.now());
         task = taskRepository.save(task);
@@ -328,6 +355,30 @@ public class TaskService {
                 t.getCreatedAt(), t.getDeadlineAt(), t.getAssignedAt(), t.getCompletedAt(), t.getSettledAt(),
                 t.getDroneMissionId(),
                 logistics, ride, ad, drone);
+    }
+
+    /**
+     * 终态护栏：task 或 assignment 任一处于终态（SETTLED / CANCELLED）即抛 40902 拒绝流转。
+     *
+     * <p>为什么两边都要判而不仅判 task：资金已过账的凭证是<b>双方</b>同时为 SETTLED，
+     * 而 {@code assetEarnings()} 的对账口径只看 {@code assignment.status == SETTLED}。
+     * 只判 task 会漏掉「task 正常、assignment 已结算」这类不一致态。
+     *
+     * @param task       任务实体，允许为 null
+     * @param assignment 接单记录，允许为 null
+     * @throws BizException 40902 error.task.already.terminal
+     */
+    private static void assertNotTerminal(Task task, TaskAssignment assignment) {
+        TaskStatus taskStatus = task == null ? null : task.getStatus();
+        TaskStatus assignmentStatus = assignment == null ? null : assignment.getStatus();
+        if (isTerminal(taskStatus) || isTerminal(assignmentStatus)) {
+            throw BizException.of(TASK_ALREADY_TERMINAL, "error.task.already.terminal");
+        }
+    }
+
+    /** 终态判定（{@link TaskStatus#isTerminal()}），对 null 返回 false 以免 NPE 掩盖真实状态。 */
+    private static boolean isTerminal(TaskStatus status) {
+        return status != null && status.isTerminal();
     }
 
     /** TaskAssignment → AssignmentView。 */
