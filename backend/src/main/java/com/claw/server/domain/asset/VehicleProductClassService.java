@@ -70,6 +70,7 @@ public class VehicleProductClassService {
                     .code(spec.code)
                     .nameZh(spec.nameZh).nameEn(spec.nameEn).nameKm(spec.nameKm)
                     .scenario(spec.scenario)
+                    .autonomyLevel(AUTONOMOUS_CODES.contains(spec.code) ? "FULL" : "NONE")
                     .capabilityTags(String.join(",", spec.capabilities))
                     .defaultDeviceTypes(String.join(",", spec.devices))
                     .requiredCerts(String.join(",", spec.certs))
@@ -112,6 +113,10 @@ public class VehicleProductClassService {
             this.labelZh = labelZh; this.labelEn = labelEn; this.labelKm = labelKm; this.order = order;
         }
     }
+
+    /** 出厂即全自主的车型（建档时自动挂载自主模块，autonomy_level=FULL）。 */
+    private static final java.util.Set<String> AUTONOMOUS_CODES =
+            java.util.Set.of("SANITATION_TRUCK", "LOGISTICS_VAN", "PATROL_CAR");
 
     private static final ProfileSpec[] DEFAULT_PROFILES = {
         new ProfileSpec("COLD_CHAIN_TRUCK", "冷链运输车", "Cold-chain Truck", "រថយន្តត្រជាក់", "COLD_CHAIN",

@@ -13,6 +13,9 @@ import com.claw.server.domain.asset.Drone;
 import com.claw.server.domain.asset.DroneRepository;
 import com.claw.server.domain.iot.Telemetry;
 import com.claw.server.domain.iot.TelemetryRepository;
+import com.claw.server.domain.iot.VehicleTrajectory;
+import com.claw.server.domain.iot.VehicleTrajectoryRepository;
+import com.claw.server.domain.settings.SystemConfigRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -49,6 +52,8 @@ public class AssetLifecycleScheduler {
     private final TelemetryRepository telemetryRepository;
     private final AssetLifecycleEventRepository lifecycleEventRepository;
     private final AssetService assetService;
+    private final VehicleTrajectoryRepository vehicleTrajectoryRepository;
+    private final SystemConfigRepository systemConfigRepository;
 
     /** 退役阈值：健康度下限（%）。 */
     private static final BigDecimal RETIRE_SOH_THRESHOLD = BigDecimal.valueOf(70);
@@ -58,6 +63,10 @@ public class AssetLifecycleScheduler {
     private static final long DRONE_RETIRE_FLIGHT_MIN = 3000;
     /** 回收宽限期：退役后多少天进入回收。 */
     private static final long RECYCLE_GRACE_DAYS = 30;
+    /** 车辆里程退役阈值（km）默认（system_config 缺省时回落）。 */
+    private static final long DEFAULT_VEHICLE_RETIRE_ODOMETER_KM = 200000L;
+    /** system_config 里程退役阈值键。 */
+    private static final String VEHICLE_RETIRE_ODOMETER_KM_KEY = "VEHICLE_RETIRE_ODOMETER_KM";
 
     /** 每小时扫描一次（生产可调为每日凌晨）。 */
     @Scheduled(cron = "0 0 * * * *")
@@ -65,6 +74,7 @@ public class AssetLifecycleScheduler {
     public void scan() {
         retireElderlyAssets();
         recycleRetiredAssets();
+        checkVehicleMileageRetirement();
     }
 
     /** 在网资产：SOH 过低或超期 → 退役。 */
@@ -107,6 +117,51 @@ public class AssetLifecycleScheduler {
                         }
                     });
         }
+    }
+
+    /**
+     * 车辆里程退役（仿无人机飞行时长退役）：VEHICLE/EV 资产累计里程
+     * （vehicle_trajectory 最新点的 odometer_km）达到 system_config.VEHICLE_RETIRE_ODOMETER_KM
+     * 阈值即自动退役。复用 {@link AssetService#autoTransition}（状态机校验 + 审计），仅对尚未退役的
+     * 在网资产触发，autoTransition 内部再做状态机合法性校验，自然幂等（已退役不会重复流转）。
+     */
+    private void checkVehicleMileageRetirement() {
+        long threshold = readVehicleRetireOdometerThreshold();
+        List<Asset> vehicles = assetRepository.findAll().stream()
+                .filter(a -> a.getAssetType() == AssetType.VEHICLE
+                        || a.getAssetType() == AssetType.EV)
+                .filter(a -> a.getStatus() == AssetStatus.IN_USE
+                        || a.getStatus() == AssetStatus.SHARED)
+                .toList();
+        for (Asset a : vehicles) {
+            Long odometer = vehicleTrajectoryRepository.findTopByAssetIdOrderByTDesc(a.getId())
+                    .map(VehicleTrajectory::getOdometerKm)
+                    .orElse(0L);
+            if (isMileageRetire(odometer, threshold)) {
+                assetService.autoTransition(a.getId(), AssetStatus.RETIRED,
+                        "车辆累计里程超阈值自动退役");
+            }
+        }
+    }
+
+    /** 里程退役判定（抽成纯函数便于单测；odometerKm 为 null 视作 0，不触发）。 */
+    boolean isMileageRetire(Long odometerKm, long threshold) {
+        return odometerKm != null && odometerKm >= threshold;
+    }
+
+    /** 读取里程退役阈值；配置缺失/不可解析时回落默认 20 万公里。 */
+    private long readVehicleRetireOdometerThreshold() {
+        return systemConfigRepository.findByConfigKeyAndDeletedFalse(VEHICLE_RETIRE_ODOMETER_KM_KEY)
+                .map(c -> {
+                    try {
+                        return Long.parseLong(c.getConfigValue().trim());
+                    } catch (NumberFormatException e) {
+                        log.warn("VEHICLE_RETIRE_ODOMETER_KM 解析失败，回落默认 {}",
+                                DEFAULT_VEHICLE_RETIRE_ODOMETER_KM);
+                        return DEFAULT_VEHICLE_RETIRE_ODOMETER_KM;
+                    }
+                })
+                .orElse(DEFAULT_VEHICLE_RETIRE_ODOMETER_KM);
     }
 
     /** SOH 数据源：遥测快照优先，缺失回退电池 SOH。 */

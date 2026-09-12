@@ -40,6 +40,11 @@ public class VehicleProductClass {
     @Column(name = "scenario", nullable = false)
     private String scenario;
 
+    /** 自动驾驶等级（NONE / ASSISTED / FULL），由 V126 增加；FULL 车型建档时自动挂载自主模块。 */
+    @Column(name = "autonomy_level", nullable = false)
+    @Builder.Default
+    private String autonomyLevel = "NONE";
+
     /** CSV 能力标签，引用 {@code AssetCapability} 枚举 code。 */
     @Column(name = "capability_tags")
     private String capabilityTags;

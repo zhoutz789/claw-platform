@@ -1,0 +1,13 @@
+package com.claw.server.domain.adapter;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface DeviceAdapterRepository extends JpaRepository<DeviceAdapter, Long> {
+
+    List<DeviceAdapter> findByDeviceId(Long deviceId);
+
+    Optional<DeviceAdapter> findByDeviceIdAndProfileId(Long deviceId, Long profileId);
+}

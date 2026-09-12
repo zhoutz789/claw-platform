@@ -10,6 +10,8 @@ public interface SwapOrderRepository extends JpaRepository<SwapOrder, Long> {
 
     List<SwapOrder> findByUserIdOrderByCreatedAtDesc(Long userId);
 
+    List<SwapOrder> findByVehicleIdOrderByCreatedAtDesc(Long vehicleId);
+
     List<SwapOrder> findByStationIdAndStatus(Long stationId, String status);
 
     List<SwapOrder> findByStationIdAndCreatedAtBetween(Long stationId, java.time.Instant from, java.time.Instant to);
