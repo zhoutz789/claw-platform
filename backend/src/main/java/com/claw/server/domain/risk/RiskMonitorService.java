@@ -29,6 +29,7 @@ public class RiskMonitorService {
 
     private final StationRiskMonitorRepository monitorRepository;
     private final InsuranceFundRepository fundRepository;
+    private final PaymentDefaultLockTrigger paymentDefaultLockTrigger;
 
     /**
      * 记录风控指标（DB 触发器自动评分）。
@@ -125,5 +126,17 @@ public class RiskMonitorService {
     public boolean isCircuitBroken(Long stationId) {
         List<StationRiskMonitor> monitors = monitorRepository.findByStationIdAndDeletedFalse(stationId);
         return monitors.stream().anyMatch(m -> m.getStatus() == RiskMonitorStatus.CIRCUIT_BREAK);
+    }
+
+    /**
+     * 车辆欠费断缴 → 触发平台锁车（T3 控车挂钩点）。
+     *
+     * <p>风控判定欠费后调用，经 {@code PaymentDefaultLockTrigger} 对车辆下发断缴锁车指令。
+     * 当前 {@code RiskMonitorService} 聚焦站点风控，本方法作为车辆欠费锁车的统一入口预留，
+     * 后续车辆欠费检测器可直接调用。
+     */
+    @Transactional
+    public void triggerVehiclePaymentDefaultLock(Long assetId) {
+        paymentDefaultLockTrigger.onPaymentDefault(assetId);
     }
 }
