@@ -1,6 +1,7 @@
 package com.claw.server.web.v1;
 
 import com.claw.server.common.api.ApiResult;
+import com.claw.server.common.security.RequirePermission;
 import com.claw.server.domain.vpp.VppDispatchOrder;
 import com.claw.server.domain.vpp.VppDispatchService;
 import com.claw.server.domain.vpp.VppResourceService;
@@ -19,9 +20,10 @@ import java.util.List;
 /**
  * 虚拟电厂只读/影子入口（VPP 切片第一批）。
  *
- * <p><b>权限说明：本批次刻意不加权限注解</b>（与 PvTelemetryController 同节奏），
- * 权限位与租户隔离校验待「VPP 权限收口」切片统一补齐——此处不留半套注解，
- * 以免产生"已鉴权"的假象。
+ * <p><b>权限收口（V116）：</b>{@code POST /{portfolioId}/dispatch-plan} 已加
+ * {@code @RequirePermission("vpp:dispatch")}（生成调度建议/指令属写动作）；
+ * {@code GET capacity / orders} 为只读，按项目约定不加注解。权限位与菜单由 V116 迁移播种，
+ * PLATFORM_ADMIN 通配放行，MANUFACTURER/REGULATOR 仅可见菜单、无写权限。
  *
  * <p>三个入口均为只读或影子语义：{@code dispatch-plan} 只返回建议、不落库不下发；
  * {@code orders} 只读历史指令。真实下发在本批次不可达（影子开关缺省开）。
@@ -44,6 +46,7 @@ public class VppController {
     }
 
     /** 调度建议（不落库、不下发）。 */
+    @RequirePermission("vpp:dispatch")
     @PostMapping("/{portfolioId}/dispatch-plan")
     public ApiResult<VppDispatchService.DispatchOutcome> dispatchPlan(
             @PathVariable Long portfolioId,

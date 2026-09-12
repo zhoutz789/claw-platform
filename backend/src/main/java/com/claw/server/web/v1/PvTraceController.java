@@ -18,9 +18,10 @@ import java.time.LocalDate;
  *
  * <p>三个端点：组件溯源 / 批次概览 / 电站发电量（含 PR）。
  *
- * <p><b>权限说明：</b>本切片刻意<b>不加</b>权限注解（{@code @RequirePermission} 等），
- * 与 {@code PvTelemetryController} 保持一致的接入节奏；权限位与菜单由后续「光伏权限收口」
- * 切片统一补齐（届时与遥测上报端点一并加），此处不留半套注解以免产生"已鉴权"的假象。
+ * <p><b>权限收口（V116）：</b>本控制器三个端点均为只读 GET，按项目约定（读接口一律不动）
+ * 不加 {@code @RequirePermission}；权限位与菜单由 V116 迁移播种，PLATFORM_ADMIN 通配放行，
+ * MANUFACTURER/REGULATOR 可见菜单并可读取。写动作（遥测上报 / 调度指令）的单测门禁在
+ * {@code PvTelemetryController} / {@code VppController} 中单独收口。
  */
 @RestController
 @RequestMapping("/api/v1/pv/trace")
