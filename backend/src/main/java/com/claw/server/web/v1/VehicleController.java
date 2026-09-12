@@ -70,9 +70,11 @@ public class VehicleController {
     /** 当前绑定电池 + 绑定历史。 */
     @GetMapping("/{vehicleId}/battery")
     public ApiResult<Map<String, Object>> getBattery(@PathVariable Long vehicleId) {
-        Map<String, Object> result = Map.of(
-                "currentBatteryId", batteryBindingService.getCurrentBatteryId(vehicleId).orElse(null),
-                "history", batteryBindingService.getHistory(vehicleId));
+        // 注意：未绑定电池时 currentBatteryId 为 null，HashMap 允许 null 值；
+        // 切勿用 Map.of（ImmutableCollections 拒绝 null，会抛 NPE → HTTP 500）。
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("currentBatteryId", batteryBindingService.getCurrentBatteryId(vehicleId).orElse(null));
+        result.put("history", batteryBindingService.getHistory(vehicleId));
         return ApiResult.ok(result);
     }
 

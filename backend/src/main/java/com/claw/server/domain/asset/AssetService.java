@@ -222,10 +222,15 @@ public class AssetService {
         if (deviceRepository.findByAssetId(asset.getId()).isEmpty()) {
             String devType = deriveDeviceType(asset.getAssetType(), req.deviceType());
             if (devType != null) {
+                // 设备须有 deviceNo（指令路由身份）+ secret（HMAC 下行签名密钥），否则控车指令会 Empty key 500。
+                String devNo = (req.imei() != null && !req.imei().isBlank())
+                        ? req.imei() : ("DEV-" + asset.getId() + "-" + devType);
                 deviceRepository.save(Device.builder()
                         .assetId(asset.getId())
                         .deviceType(devType)
+                        .deviceNo(devNo)
                         .imei(req.imei())
+                        .secret(com.claw.server.domain.iot.MqttSigner.newDeviceSecret())
                         .status("ACTIVE")
                         .build());
             }
@@ -381,6 +386,7 @@ public class AssetService {
                     .assetId(base.getId())
                     .deviceType("CHARGER")
                     .deviceNo(chargePointId)
+                    .secret(com.claw.server.domain.iot.MqttSigner.newDeviceSecret())
                     .status("ACTIVE")
                     .build());
         }
@@ -515,7 +521,9 @@ public class AssetService {
     // ---- 内部工具 ----
 
     private void grantOwnership(Long ownerId, Long assetId) {
-        roleGrantService.grantByEvent(ownerId, "OWNER");
+        // V11 已将 OWNER 重命名为 ASSET_OWNER 并停用旧 OWNER（人人经济：购车即车主）。
+        // 此处必须引用新码，否则 createVehicle 在真实 PG（V11 后）会 40401 Role not found。
+        roleGrantService.grantByEvent(ownerId, "ASSET_OWNER");
         if (!aclRepository.existsByUserIdAndAssetIdAndRelation(ownerId, assetId, AclRelation.MANAGE)) {
             aclRepository.save(UserAssetsAcl.builder()
                     .userId(ownerId)

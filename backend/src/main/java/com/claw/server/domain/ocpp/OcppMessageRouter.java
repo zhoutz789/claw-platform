@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -27,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * </pre>
  */
 @Slf4j
+@Component
 public class OcppMessageRouter {
 
     /** OCPP 消息类型前缀。 */

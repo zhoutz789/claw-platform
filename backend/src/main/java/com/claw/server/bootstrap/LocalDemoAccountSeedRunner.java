@@ -57,9 +57,15 @@ public class LocalDemoAccountSeedRunner implements org.springframework.boot.Comm
     public void run(String... args) {
         log.info("[local-seed] 开始播入演示账号（仅 local 环境）");
 
-        // 1) 补建 CUSTOMER / PLATFORM_ADMIN 角色行（local H2 缺省不存在）
+        // 1) 补建 CUSTOMER / PLATFORM_ADMIN / ASSET_OWNER 角色行（local H2 缺省不存在）
+        //    ASSET_OWNER：V11 把旧 OWNER 重命名为 ASSET_OWNER；资产建档 grantOwnership 引用此码，
+        //    缺则 createVehicle 在本地 H2 同样 40401。grants 与 V11 迁移保持一致。
         ensureRole("CUSTOMER", "role.customer.name", "SELF", "[]");
         ensureRole("PLATFORM_ADMIN", "role.platform_admin.name", "ALL", "[\"*\"]");
+        ensureRole("ASSET_OWNER", "role.asset_owner.name", "SELF",
+                "[\"PURCHASE_ASSET\",\"LIST_IN_SHARED_POOL\",\"SET_RENTAL_SHARE\",\"VIEW_REVENUE_SHARE\","
+                        + "\"REQUEST_RECOVERY\",\"TRADE_IN\",\"VIEW_ASSET_STATUS\",\"VIEW_ASSET_SOH\","
+                        + "\"VIEW_CUSTODY_CHAIN\",\"SET_USAGE_FEE\"]");
 
         // 2) 为每个演示账号建 user + 角色包（驱动 JWT roles 声明 + effectivePermissions）
         int ok = 0;

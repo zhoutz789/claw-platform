@@ -4,6 +4,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.SecureRandom;
 
 /**
  * 下行指令签名工具（对齐选型书 4.3）。
@@ -36,6 +37,22 @@ public final class MqttSigner {
                     .substring(0, 12);
         } catch (Exception e) {
             throw new IllegalStateException("nonce 生成失败", e);
+        }
+    }
+
+    /**
+     * 生成设备下行签名密钥（出厂烧录 / 平台注册等价物）。
+     *
+     * <p>32 字节密码学随机熵 → 64 位十六进制。设备须持此密钥才能校验平台下发的签名指令；
+     * 缺则 {@link #hmacSha256} 会因空密钥抛 {@code IllegalArgumentException: Empty key}（见 bindDevice 建设备时补密钥）。
+     */
+    public static String newDeviceSecret() {
+        try {
+            byte[] raw = new byte[32];
+            SecureRandom.getInstanceStrong().nextBytes(raw);
+            return toHex(raw);
+        } catch (Exception e) {
+            throw new IllegalStateException("device secret 生成失败", e);
         }
     }
 
