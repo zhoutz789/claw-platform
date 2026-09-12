@@ -351,6 +351,45 @@ public class AssetService {
     }
 
     /**
+     * 充电桩建档（OCPP 接入用，最小分支）：基础资产 + 生命周期 + 产权 + 必要的 Device 行。
+     *
+     * <p>对齐 PV_STATION 范式，但充电桩只建基础资产（{@code AssetType.CHARGER}）、写 PRODUCED 生命周期、
+     * 授予归属人 OWNER 产权，并补一条 {@code device_type=CHARGER} 的设备行（device_no = chargePointId），
+     * 使其经 {@code devices} 成为可寻址设备、可被遥测/调度引用。不建扩展表、不过度设计。
+     *
+     * <p>充电桩商品分类树种子 / EAV 模板属产品侧独立任务，本期不做。
+     *
+     * @param operatorId   操作人（建档归属人 / 产权人）；为空回落平台默认 owner=1
+     * @param chargePointId OCPP chargePointId（同时作为 assetNo 前缀与 device_no）
+     * @param vendor       厂商（可选）
+     * @param model        型号（可选）
+     * @return 资产视图
+     */
+    @Transactional
+    public ApiViews.AssetView createChargingPileAsset(Long operatorId, String chargePointId,
+                                                    String vendor, String model) {
+        Long ownerId = operatorId != null ? operatorId : 1L;
+        String assetNo = "CP-" + (chargePointId == null ? "UNKNOWN" : chargePointId);
+        // qrCode 用 chargePointId 保证唯一且可被扫码绑定
+        Asset base = newAsset(AssetType.CHARGER, assetNo, chargePointId, ownerId);
+        base = assetRepository.save(base);
+        recordLifecycle(base.getId(), AssetLifecycleStage.PRODUCED, ownerId, null, "充电桩建档（OCPP）");
+        grantOwnership(ownerId, base.getId());
+        // 必要 Device 行：device_type=CHARGER，device_no=chargePointId（与 OCPP WS 路径/站点主键一致）
+        if (deviceRepository.findByAssetId(base.getId()).isEmpty()) {
+            deviceRepository.save(Device.builder()
+                    .assetId(base.getId())
+                    .deviceType("CHARGER")
+                    .deviceNo(chargePointId)
+                    .status("ACTIVE")
+                    .build());
+        }
+        log.info("充电桩建档 assetId={} chargePointId={} owner={} vendor={} model={}",
+                base.getId(), chargePointId, ownerId, vendor, model);
+        return toView(base);
+    }
+
+    /**
      * 建光伏电站扩展行（best-effort）。
      *
      * <p>电站扩展不是建档成功的必要条件：失败只 warn，绝不阻断资产建档

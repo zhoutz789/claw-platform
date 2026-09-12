@@ -1,6 +1,7 @@
 package com.claw.server.web.v1;
 
 import com.claw.server.common.api.ApiResult;
+import com.claw.server.common.api.BizException;
 import com.claw.server.common.security.RequirePermission;
 import com.claw.server.domain.vpp.VppDispatchOrder;
 import com.claw.server.domain.vpp.VppDispatchService;
@@ -9,9 +10,11 @@ import com.claw.server.domain.vpp.VppPortfolioRepository;
 import com.claw.server.domain.vpp.VppResource;
 import com.claw.server.domain.vpp.VppResourceRepository;
 import com.claw.server.domain.vpp.VppResourceService;
+import com.claw.server.domain.ocpp.OcppCommandService;
 import jakarta.validation.Valid;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -39,6 +42,7 @@ import java.util.Objects;
  * <p>错误一律抛 {@code BizException}，不返回 {@code ApiResult.error(...)}
  * （后者是 HTTP 200 包错误体，前端无法按状态码分流，项目已踩过）。
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/vpp")
 @RequiredArgsConstructor
@@ -48,6 +52,7 @@ public class VppController {
     private final VppDispatchService vppDispatchService;
     private final VppPortfolioRepository vppPortfolioRepository;
     private final VppResourceRepository vppResourceRepository;
+    private final OcppCommandService ocppCommandService;
 
     /** 当前可调容量（只统计 ONLINE 资源，缺遥测者标记为不可用且不计入总量）。 */
     @GetMapping("/{portfolioId}/capacity")
@@ -55,14 +60,49 @@ public class VppController {
         return ApiResult.ok(vppResourceService.capacity(portfolioId));
     }
 
-    /** 调度建议（不落库、不下发）。 */
+    /**
+     * 调度建议（影子语义：只生成建议、不落库不下发）。
+     *
+     * <p>新增显式执行路径：{@code execute=true} 时，对 CHARGER 类指令（SET_CHARGER_POWER /
+     * CURTAIL_CHARGER）经 OCPP 层真实下发 {@code SetChargingProfile}（仅充电桩有真实协议，
+     * 其它资源保持影子）。执行结果随响应一并返回，单条失败不影响整体计划。
+     */
     @RequirePermission("vpp:dispatch")
     @PostMapping("/{portfolioId}/dispatch-plan")
-    public ApiResult<VppDispatchService.DispatchOutcome> dispatchPlan(
+    public ApiResult<DispatchPlanResult> dispatchPlan(
             @PathVariable Long portfolioId,
             @Valid @RequestBody(required = false) DispatchPlanRequest body) {
         boolean exportAllowed = body != null && Boolean.TRUE.equals(body.getExportAllowed());
-        return ApiResult.ok(vppDispatchService.planForPortfolio(portfolioId, exportAllowed));
+        boolean execute = body != null && Boolean.TRUE.equals(body.getExecute());
+        VppDispatchService.DispatchOutcome plan = vppDispatchService.planForPortfolio(portfolioId, exportAllowed);
+
+        List<OcppCommandService.ExecutionResult> executed = new ArrayList<>();
+        if (execute) {
+            for (VppDispatchService.CommandDraft c : plan.commands()) {
+                if (isChargerCommand(c.commandType())) {
+                    try {
+                        executed.add(ocppCommandService.apply(c));
+                    } catch (BizException e) {
+                        log.warn("[VPP] 充电桩指令执行失败 resourceId={}：{}", c.resourceId(), e.getMessage());
+                        executed.add(new OcppCommandService.ExecutionResult(
+                                c.resourceId(), c.commandType(), null, false, e.getMessage()));
+                    }
+                }
+            }
+        }
+        return ApiResult.ok(new DispatchPlanResult(plan, executed));
+    }
+
+    /** CHARGER 类指令（需经 OCPP 真实下发）。 */
+    private static boolean isChargerCommand(String commandType) {
+        return VppDispatchService.CMD_SET_CHARGER_POWER.equals(commandType)
+                || VppDispatchService.CMD_CURTAIL_CHARGER.equals(commandType);
+    }
+
+    /** 调度计划 + 执行结果（execute=true 时携带）。 */
+    public record DispatchPlanResult(
+            VppDispatchService.DispatchOutcome plan,
+            List<OcppCommandService.ExecutionResult> executed) {
     }
 
     /** 历史指令（含影子标记）。 */
@@ -93,6 +133,9 @@ public class VppController {
     public static class DispatchPlanRequest {
         /** 光伏余电是否允许上网；缺省 false（无 TOU 电价信号时默认限发）。 */
         private Boolean exportAllowed;
+
+        /** 是否真实下发 CHARGER 指令（经 OCPP 下发 SetChargingProfile）；缺省 false 保持影子。 */
+        private Boolean execute;
     }
 
     /** 组合概览（静态聚合；实时可调容量见 {@code /{portfolioId}/capacity}）。 */
