@@ -150,6 +150,26 @@ export const validateGeofence = (body) => api.post('/v1/vehicles/geofences/valid
 export const listVehicleAssets = (assetType = 'VEHICLE') =>
   api.get('/v1/assets', { params: { assetType } });
 
+/* ------------------------------ 车辆资产生命周期（建档 / 入网） ------------------------------ */
+
+/**
+ * 新建车辆资产（assetType = VEHICLE）。后端 AssetController.POST /v1/assets/vehicle。
+ * @param {{assetNo:string,model:string,qrCode?:string,vin?:string,frameNo?:string,
+ *          motorNo?:string,lessorId?:number,protocolVer?:string,ownerId?:number}} body 请求体
+ * @returns {Promise<Object>} 新建的 AssetView
+ */
+export const createVehicleAsset = (body) => api.post('/v1/assets/vehicle', body);
+
+/**
+ * 设备上线部署（绑定到站点 / 产权人，写产权链首笔 + 补建 IoT 设备行）。
+ * 后端 AssetController.POST /v1/assets/{assetId}/bind；assetId 同时写入 body 以满足后端 @NotNull。
+ * @param {number} assetId 资产 ID
+ * @param {{stationId?:number,imei?:string,deviceType?:string,location?:string}} [body] 请求体
+ * @returns {Promise<Object>} 绑定后的 AssetView
+ */
+export const bindVehicleDevice = (assetId, body = {}) =>
+  api.post(`/v1/assets/${assetId}/bind`, { assetId, ...body });
+
 export default {
   cleanParams,
   listProductClasses,
@@ -179,4 +199,6 @@ export default {
   listGeofences,
   validateGeofence,
   listVehicleAssets,
+  createVehicleAsset,
+  bindVehicleDevice,
 };

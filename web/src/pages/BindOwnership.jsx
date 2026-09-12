@@ -5,6 +5,7 @@ import {
 import { LinkOutlined, SwapOutlined } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import api from '../api';
+import { bindVehicleDevice } from '../api/vehicle';
 import { useTranslation } from 'react-i18next';
 
 const { Text, Paragraph } = Typography;
@@ -53,8 +54,7 @@ export default function BindOwnership() {  const { t } = useTranslation('common'
     if (!dev) return;
     setBinding(true);
     try {
-      await api.post(`/v1/assets/${dev.id}/bind`, {
-        assetId: dev.id,
+      await bindVehicleDevice(dev.id, {
         stationId: stationId ? Number(stationId) : null,
         location: null,
       });

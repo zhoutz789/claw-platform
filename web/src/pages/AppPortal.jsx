@@ -3,6 +3,7 @@ import { Card, Segmented, Tag, Modal, Descriptions, Button, Alert, Space, messag
 import { ScanOutlined } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import api from '../api';
+import { bindVehicleDevice } from '../api/vehicle';
 import { useTranslation } from 'react-i18next';
 
 const ROLE_ENTRY = [
@@ -64,8 +65,7 @@ export default function AppPortal() {  const { t } = useTranslation('common');
     if (!id) { message.error(t('common:m941')); return; }
     setBindLoading(true);
     try {
-      await api.post(`/v1/assets/${id}/bind`, {
-        assetId: id,
+      await bindVehicleDevice(id, {
         stationId: bindStation ? Number(bindStation) : null,
         location: null,
       });
