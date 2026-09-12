@@ -270,6 +270,24 @@
       "pageTitle": "Vehicle Trajectory Playback",
       "latestSoc": "Latest SOC",
       "odometer": "Odometer"
+    },
+    "create": {
+      "button": "New vehicle",
+      "title": "Create vehicle asset",
+      "assetNo": "Asset No.",
+      "assetNoRequired": "Enter asset No.",
+      "model": "Model",
+      "modelRequired": "Select a model",
+      "modelPlaceholder": "Select an existing model or type a code",
+      "qrCode": "QR code",
+      "vin": "VIN",
+      "frameNo": "Frame No.",
+      "motorNo": "Motor No.",
+      "ownerId": "Owner user ID",
+      "ownerIdPlaceholder": "Owner user ID (optional; blank = current operator)",
+      "submit": "Create",
+      "success": "Vehicle created",
+      "failed": "Failed to create vehicle: {{message}}"
     }
   }
 }

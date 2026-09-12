@@ -270,6 +270,24 @@
       "pageTitle": "车辆轨迹回放",
       "latestSoc": "最新电量",
       "odometer": "里程"
+    },
+    "create": {
+      "button": "新建车辆",
+      "title": "新建车辆资产",
+      "assetNo": "资产编号",
+      "assetNoRequired": "请输入资产编号",
+      "model": "车型",
+      "modelRequired": "请选择车型",
+      "modelPlaceholder": "选择已有车型或填写编码",
+      "qrCode": "二维码",
+      "vin": "VIN",
+      "frameNo": "车架号",
+      "motorNo": "电机号",
+      "ownerId": "归属用户 ID",
+      "ownerIdPlaceholder": "归属用户 ID（可选，留空则归当前操作人）",
+      "submit": "创建",
+      "success": "车辆已创建",
+      "failed": "创建车辆失败：{{message}}"
     }
   }
 }

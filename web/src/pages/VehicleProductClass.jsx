@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  Card, Table, Button, Modal, Form, Input, Select, Tag, Drawer, message, Space, Spin, Empty, Typography, Popconfirm,
+  Card, Table, Button, Modal, Form, Input, InputNumber, Select, Tag, Drawer, message, Space, Spin, Empty, Typography, Popconfirm,
 } from 'antd';
 import { PlusOutlined, ReloadOutlined, SettingOutlined } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import {
   listProductClasses, createProductClass, seedProductClasses,
-  getProductClassAttrs, createProductClassAttr,
+  getProductClassAttrs, createProductClassAttr, createVehicleAsset,
 } from '../api/vehicle';
 import { useTranslation } from 'react-i18next';
 
@@ -46,6 +47,38 @@ export default function VehicleProductClass() {
   const [attrsLoading, setAttrsLoading] = useState(false);
   const [attrForm] = Form.useForm();
   const [attrAdding, setAttrAdding] = useState(false);
+
+  /* ---------- 新建车辆资产（调 createVehicleAsset 走门面） ---------- */
+  const navigate = useNavigate();
+  const [createVehicleOpen, setCreateVehicleOpen] = useState(false);
+  const [createVehicleForm] = Form.useForm();
+  const [creatingVehicle, setCreatingVehicle] = useState(false);
+
+  const openCreateVehicle = () => { createVehicleForm.resetFields(); setCreateVehicleOpen(true); };
+  const submitCreateVehicle = () => {
+    createVehicleForm.validateFields().then(async (v) => {
+      setCreatingVehicle(true);
+      try {
+        const body = {
+          assetNo: v.assetNo,
+          model: v.model,
+          qrCode: v.qrCode || '',
+          vin: v.vin || '',
+          frameNo: v.frameNo || '',
+          motorNo: v.motorNo || '',
+          ownerId: v.ownerId != null ? Number(v.ownerId) : null,
+        };
+        await createVehicleAsset(body);
+        message.success(t('task:vehicle.create.success'));
+        setCreateVehicleOpen(false);
+        navigate('/assets');
+      } catch (e) {
+        message.error(t('task:vehicle.create.failed', { message: e.message }));
+      } finally {
+        setCreatingVehicle(false);
+      }
+    }).catch(() => {});
+  };
 
   const load = useCallback(() => {
     setLoading(true);
@@ -188,6 +221,7 @@ export default function VehicleProductClass() {
         >
           <Button icon={<ReloadOutlined />}>{t('task:vehicle.productClass.seed')}</Button>
         </Popconfirm>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreateVehicle}>{t('task:vehicle.create.button')}</Button>
       </Space>
 
       <Table
@@ -307,6 +341,48 @@ export default function VehicleProductClass() {
           locale={{ emptyText: <Empty description={t('task:vehicle.productClass.attrEmpty')} /> }}
         />
       </Drawer>
+
+      {/* 新建车辆资产：调 createVehicleAsset 走统一门面，成功后跳资产列表核验 */}
+      <Modal
+        title={t('task:vehicle.create.title')}
+        open={createVehicleOpen}
+        onOk={submitCreateVehicle}
+        confirmLoading={creatingVehicle}
+        onCancel={() => setCreateVehicleOpen(false)}
+        okText={t('task:vehicle.create.submit')}
+        cancelText={t('common:m96')}
+        width={600}
+        destroyOnClose
+      >
+        <Form form={createVehicleForm} layout="vertical">
+          <Form.Item label={t('task:vehicle.create.assetNo')} name="assetNo" rules={[{ required: true, message: t('task:vehicle.create.assetNoRequired') }]}>
+            <Input placeholder="VEH-0001" />
+          </Form.Item>
+          <Form.Item label={t('task:vehicle.create.model')} name="model" rules={[{ required: true, message: t('task:vehicle.create.modelRequired') }]}>
+            <Select
+              showSearch
+              placeholder={t('task:vehicle.create.modelPlaceholder')}
+              optionFilterProp="label"
+              options={rows.map((r) => ({ label: `${r.code} / ${r.nameZh || ''}`, value: r.code }))}
+            />
+          </Form.Item>
+          <Form.Item label={t('task:vehicle.create.qrCode')} name="qrCode">
+            <Input placeholder="https://…/qr.png" />
+          </Form.Item>
+          <Form.Item label={t('task:vehicle.create.vin')} name="vin">
+            <Input placeholder="VIN" />
+          </Form.Item>
+          <Form.Item label={t('task:vehicle.create.frameNo')} name="frameNo">
+            <Input placeholder="车架号" />
+          </Form.Item>
+          <Form.Item label={t('task:vehicle.create.motorNo')} name="motorNo">
+            <Input placeholder="电机号" />
+          </Form.Item>
+          <Form.Item label={t('task:vehicle.create.ownerId')} name="ownerId">
+            <InputNumber style={{ width: '100%' }} placeholder={t('task:vehicle.create.ownerIdPlaceholder')} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </PageCard>
   );
 }
