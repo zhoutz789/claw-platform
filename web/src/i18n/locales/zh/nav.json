@@ -14,7 +14,8 @@
     "risk-center": "风控中心",
     "onboarding": "入驻管理",
     "sys": "系统中心",
-    "platform-settings": "平台设置"
+    "platform-settings": "平台设置",
+    "vehicle": "车辆域"
   },
   "item": {
     "workbench": "工作台",
@@ -100,6 +101,9 @@
     "pv-station": "光伏电站",
     "pv-trace": "光伏追溯",
     "vpp": "虚拟电厂",
-    "product-energy": "能源品类商品"
+    "product-energy": "能源品类商品",
+    "vehicle-product-classes": "车型管理",
+    "vehicle-trajectory": "车辆轨迹",
+    "task-vehicle": "车辆任务"
   }
 }

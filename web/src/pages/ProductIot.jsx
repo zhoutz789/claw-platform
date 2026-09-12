@@ -5,7 +5,7 @@ import {
 } from 'antd';
 import {
   ArrowRightOutlined, QrcodeOutlined, PrinterOutlined, SafetyCertificateOutlined,
-  PlusOutlined, EditOutlined, DeleteOutlined,
+  PlusOutlined, EditOutlined, DeleteOutlined, LockOutlined, SendOutlined,
 } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import api from '../api';
@@ -14,6 +14,9 @@ import api from '../api';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getSafetyStatus, listSafetyEvents } from '../api/drone';
+// T8：车辆（地面自动驾驶 / 换电）域接口 + 无依赖 SVG 轨迹回放组件。
+import * as vehicleApi from '../api/vehicle';
+import TrajectoryPlayback from '../components/TrajectoryPlayback';
 
 const { Text } = Typography;
 
@@ -40,7 +43,7 @@ const AUTH_MATRIX = [
   { f: '产权/转让', o: '✓', r: '禁止', rule: '仅产权人' },
 ];
 
-export default function ProductIot() {  const { t } = useTranslation('common');
+export default function ProductIot() {  const { t } = useTranslation(['common', 'task']);
 
   const [tab, setTab] = useState('dev');
   const [prodId, setProdId] = useState(null);
@@ -146,6 +149,9 @@ export default function ProductIot() {  const { t } = useTranslation('common');
         { label: t('common:m125'), value: 'prod' },
         { label: t('common:m126'), value: 'dev' },
         { label: t('common:m49'), value: 'cert' },
+        ...(dev && (dev.assetType === 'VEHICLE' || dev.assetType === 'EV')
+          ? [{ label: t('task:vehicle.tab'), value: 'vehicle' }]
+          : []),
       ]}
     />}>
       <Alert
@@ -240,6 +246,8 @@ export default function ProductIot() {  const { t } = useTranslation('common');
       )}
 
       {tab === 'cert' && <CertPanel asset={certAsset} products={products} manufacturers={manufacturers} />}
+
+      {tab === 'vehicle' && dev && <VehicleIotTab dev={dev} />}
 
       <DeviceDrawer dev={dev} products={products} manufacturers={manufacturers} transfers={transfers} onClose={() => setDev(null)} />
 
@@ -508,5 +516,158 @@ function DroneAirTab({ asset }) {
         {t('drone:common.gotoOps')}
       </Button>
     </Space>
+  );
+}
+
+// 驾驶模式（与后端 /autonomy/drive-mode 约定的常见取值）
+const DRIVE_MODE_OPTIONS = ['AUTO', 'ASSISTED', 'MANUAL', 'TELEOP'];
+
+/**
+ * 车辆（地面自动驾驶 / 换电）专属 Tab：聚合能源视图、电池绑定历史、自动驾驶模块
+ * （驾驶模式 + 安全态 + 遥控进入/退出 + 安全锁机）与轨迹回放。全部对接真实后端，无 mock。
+ * @param {{dev: Object}} props dev 为当前选中的车辆资产
+ * @returns {JSX.Element}
+ */
+function VehicleIotTab({ dev }) {
+  const { t } = useTranslation(['common', 'task']);
+  const [energy, setEnergy] = useState(null);
+  const [battery, setBattery] = useState(null);
+  const [module, setModule] = useState(null); // { algoVersion, driveMode }
+  const [safety, setSafety] = useState(null); // { state, ... }
+  const [loading, setLoading] = useState(false);
+  const [moduleForm] = Form.useForm();
+  const [busy, setBusy] = useState('');
+
+  const load = useCallback(() => {
+    setLoading(true);
+    Promise.all([
+      vehicleApi.getVehicleEnergy(dev.id).catch(() => null),
+      vehicleApi.getVehicleBattery(dev.id).catch(() => null),
+      vehicleApi.getAutonomyModule(dev.id).catch(() => null),
+      vehicleApi.getAutonomySafety(dev.id).catch(() => null),
+    ]).then(([e, b, m, s]) => { setEnergy(e); setBattery(b); setModule(m); setSafety(s); })
+      .finally(() => setLoading(false));
+  }, [dev.id]);
+  useEffect(() => { load(); }, [load]);
+
+  const onSetModule = async () => {
+    let v;
+    try { v = await moduleForm.validateFields(); } catch { return; }
+    setBusy('module');
+    try {
+      await vehicleApi.setAutonomyModule(dev.id, { algoVersion: v.algoVersion, driveMode: v.driveMode });
+      message.success(t('task:vehicle.autonomy.moduleSetSuccess'));
+      load();
+    } catch (e) {
+      message.error(t('task:vehicle.autonomy.actionFailed', { message: e.message }));
+    } finally { setBusy(''); }
+  };
+
+  const onDriveMode = async (driveMode) => {
+    setBusy('drive');
+    try {
+      await vehicleApi.setDriveMode(dev.id, { driveMode });
+      message.success(t('task:vehicle.autonomy.driveModeSetSuccess'));
+      load();
+    } catch (e) {
+      message.error(t('task:vehicle.autonomy.actionFailed', { message: e.message }));
+    } finally { setBusy(''); }
+  };
+
+  const onTeleop = async (enter) => {
+    setBusy(enter ? 'teleopIn' : 'teleopOut');
+    try {
+      if (enter) await vehicleApi.enterTeleop(dev.id);
+      else await vehicleApi.exitTeleop(dev.id);
+      message.success(enter ? t('task:vehicle.autonomy.teleopEnterSuccess') : t('task:vehicle.autonomy.teleopExitSuccess'));
+      load();
+    } catch (e) {
+      message.error(t('task:vehicle.autonomy.actionFailed', { message: e.message }));
+    } finally { setBusy(''); }
+  };
+
+  const onLock = async () => {
+    setBusy('lock');
+    try {
+      await vehicleApi.lockSafety(dev.id);
+      message.success(t('task:vehicle.autonomy.lockSuccess'));
+      load();
+    } catch (e) {
+      message.error(t('task:vehicle.autonomy.actionFailed', { message: e.message }));
+    } finally { setBusy(''); }
+  };
+
+  const safetyState = safety ? (safety.state || safety.safetyState || safety.status) : null;
+  const batteryId = energy ? (energy.currentBatteryId ?? (energy.currentBattery && energy.currentBattery.batteryId) ?? '—') : '—';
+  const recentSwaps = energy ? (energy.recentSwaps || []) : [];
+  const batteryBindings = battery ? (battery.bindings || (Array.isArray(battery) ? battery : [])) : [];
+
+  return (
+    <Spin spinning={loading}>
+      <Space direction="vertical" style={{ width: '100%' }} size="middle">
+        {/* 能源视图 */}
+        <Card size="small" title={t('task:vehicle.energy.title')}>
+          <Descriptions column={2} bordered size="small">
+            <Descriptions.Item label={t('task:vehicle.energy.currentBattery')}>{batteryId}</Descriptions.Item>
+            <Descriptions.Item label={t('task:vehicle.energy.recentSwaps')}>
+              {Array.isArray(recentSwaps) && recentSwaps.length
+                ? `${recentSwaps.length} ${t('task:vehicle.energy.swapCount')}`
+                : t('task:vehicle.energy.noSwap')}
+            </Descriptions.Item>
+          </Descriptions>
+          {Array.isArray(recentSwaps) && recentSwaps.length > 0 && (
+            <Table rowKey={(r, i) => r.id ?? i} pagination={false} size="small" style={{ marginTop: 10 }} dataSource={recentSwaps}
+              columns={[
+                { title: t('task:vehicle.energy.swapBattery'), dataIndex: 'batteryId', render: (v) => v || '—' },
+                { title: t('common:m35'), dataIndex: 'swappedAt', render: (v) => v || '—' },
+                { title: t('task:vehicle.energy.swapStation'), dataIndex: 'stationId', render: (v) => (v != null ? `#${v}` : '—') },
+              ]} />
+          )}
+        </Card>
+
+        {/* 电池绑定历史 */}
+        <Card size="small" title={t('task:vehicle.energy.batteryHistory')}>
+          {Array.isArray(batteryBindings) && batteryBindings.length > 0 ? (
+            <Table rowKey={(r, i) => r.id ?? i} pagination={false} size="small" dataSource={batteryBindings}
+              columns={[
+                { title: t('task:vehicle.energy.swapBattery'), dataIndex: 'batteryId', render: (v) => v || '—' },
+                { title: t('common:m35'), dataIndex: 'boundAt', render: (v) => v || '—' },
+                { title: t('common:m8'), dataIndex: 'status', render: (v) => (v ? <Tag>{v}</Tag> : '—') },
+              ]} />
+          ) : (
+            <Empty description={t('task:vehicle.energy.batteryHistoryEmpty')} />
+          )}
+        </Card>
+
+        {/* 自动驾驶模块 + 安全态 */}
+        <Card size="small" title={t('task:vehicle.autonomy.title')}
+          extra={
+            <Space>
+              <Button size="small" icon={<SendOutlined />} loading={busy === 'teleopIn'} onClick={() => onTeleop(true)}>{t('task:vehicle.autonomy.teleopEnter')}</Button>
+              <Button size="small" loading={busy === 'teleopOut'} onClick={() => onTeleop(false)}>{t('task:vehicle.autonomy.teleopExit')}</Button>
+              <Button size="small" danger icon={<LockOutlined />} loading={busy === 'lock'} onClick={onLock}>{t('task:vehicle.autonomy.lock')}</Button>
+            </Space>
+          }>
+          <Space wrap style={{ marginBottom: 12 }}>
+            <Tag color="geekblue">{t('task:vehicle.autonomy.safetyState')}: {safetyState || '—'}</Tag>
+            {module && <Tag color="blue">{t('task:vehicle.autonomy.algoVersion')}: {module.algoVersion || '—'}</Tag>}
+            {module && <Tag>{t('task:vehicle.autonomy.driveMode')}: {module.driveMode || '—'}</Tag>}
+          </Space>
+          <Form layout="inline" form={moduleForm} initialValues={{ driveMode: module ? module.driveMode : 'AUTO', algoVersion: module ? module.algoVersion : '' }}>
+            <Form.Item label={t('task:vehicle.autonomy.algoVersion')} name="algoVersion" rules={[{ required: true, message: t('task:vehicle.autonomy.algoVersionRequired') }]}>
+              <Input placeholder="v1.2.0" style={{ width: 140 }} />
+            </Form.Item>
+            <Form.Item label={t('task:vehicle.autonomy.driveMode')} name="driveMode" rules={[{ required: true }]}>
+              <Select style={{ width: 160 }} options={DRIVE_MODE_OPTIONS.map((m) => ({ label: t(`task:vehicle.autonomy.driveMode.${m}`), value: m }))} />
+            </Form.Item>
+            <Button type="primary" size="small" loading={busy === 'module'} onClick={onSetModule}>{t('task:vehicle.autonomy.moduleSet')}</Button>
+            <Button size="small" style={{ marginLeft: 8 }} loading={busy === 'drive'} onClick={() => onDriveMode(moduleForm.getFieldValue('driveMode'))}>{t('task:vehicle.autonomy.driveModeSet')}</Button>
+          </Form>
+        </Card>
+
+        {/* 轨迹回放 */}
+        <TrajectoryPlayback assetId={dev.id} height={320} />
+      </Space>
+    </Spin>
   );
 }

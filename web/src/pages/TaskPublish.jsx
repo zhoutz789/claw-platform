@@ -2,9 +2,10 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Card, Form, Input, InputNumber, Select, Button, Table, Tag, Segmented, Space, message, Alert, Typography, Spin, Empty, List, Progress, Divider,
 } from 'antd';
-import { SwapOutlined, RocketOutlined, CarOutlined, SoundOutlined, VideoCameraOutlined, CloudUploadOutlined } from '@ant-design/icons';
+import { SwapOutlined, RocketOutlined, CarOutlined, SoundOutlined, VideoCameraOutlined, CloudUploadOutlined, LockOutlined, SafetyOutlined, SendOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import api from '../api';
+import * as vehicleApi from '../api/vehicle';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDroneOptions } from '../components/droneShared';
@@ -36,6 +37,20 @@ const missionLabel = (t, v) => {
 };
 
 const ASSET_TYPE_ICON = { VEHICLE: '🚗', BATTERY: '🔋', CHARGER: '🔌', DRONE: '🚁' };
+
+// 车辆自动驾驶任务子类型（后端 VehicleAutonomyTaskSubtype 枚举合法值）。
+const VEHICLE_SUBTYPES = [
+  { value: 'DELIVERY', label: '配送', key: 'task:vehicle.subtype.DELIVERY' },
+  { value: 'SWEEP', label: '清扫', key: 'task:vehicle.subtype.SWEEP' },
+  { value: 'PATROL', label: '巡逻', key: 'task:vehicle.subtype.PATROL' },
+];
+/** 车辆子类型标签：优先三语，未命中回落中文 label。 */
+const subtypeLabel = (t, v) => {
+  const hit = VEHICLE_SUBTYPES.find((m) => m.value === v);
+  if (!hit) return v || '—';
+  const translated = typeof t === 'function' ? t(hit.key) : null;
+  return translated || hit.label;
+};
 
 // 默认可承接任务的资产类型（车 / 电车）：能力 → 资产类型无命中时兜底，也用于「附近车辆」筛选。
 const DEFAULT_ASSET_TYPES = ['VEHICLE', 'EV'];
@@ -200,6 +215,10 @@ export default function TaskPublish({ mode }) {
     drone: {
       label: '无人机任务',
       children: <DronePanel assets={assets} pilotOptions={pilotOptions} />,
+    },
+    vehicle: {
+      label: '车辆自动驾驶任务',
+      children: <VehiclePanel assets={assets} />,
     },
   };
 
@@ -1318,6 +1337,254 @@ function DronePanel({ assets, pilotOptions = [] }) {
       <HallViewSwitch value={view} onChange={setView} />
       {view === 'publisher' ? publisherView : providerView}
     </>
+  );
+}
+
+// 车辆自动驾驶任务面板（mode=vehicle）：选车辆资产 → 选子类型 → 填路径 JSON →
+// 创建 / 派发 / 上报进度；展示任务列表（含进度条）、安全事件与锁机 / 遥控按钮；
+// 支持对平台地面围栏做路径越界校验。
+function VehiclePanel({ assets }) {
+  const { t } = useTranslation(['common', 'task']);
+  const [vehicleId, setVehicleId] = useState(null);
+  const [subtype, setSubtype] = useState('DELIVERY');
+  const [pathJson, setPathJson] = useState('[\n  [104.912, 11.556],\n  [104.930, 11.560],\n  [104.948, 11.552]\n]');
+  const [taskId, setTaskId] = useState(null);
+  const [pct, setPct] = useState(0);
+
+  const [tasks, setTasks] = useState([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
+  const [safety, setSafety] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [geofences, setGeofences] = useState([]);
+  const [validateMsg, setValidateMsg] = useState(null);
+  const [busy, setBusy] = useState('');
+
+  const vehicleOptions = useMemo(
+    () => (assets || [])
+      .filter((a) => ['VEHICLE', 'EV'].includes(a.assetType))
+      .map((a) => ({ label: `${a.assetNo || a.assetType} · #${a.id}`, value: a.id })),
+    [assets]
+  );
+
+  const loadTasks = useCallback(() => {
+    if (vehicleId == null) return Promise.resolve();
+    setTasksLoading(true);
+    return vehicleApi.listAutonomyTasks(vehicleId)
+      .then((d) => setTasks(Array.isArray(d) ? d : []))
+      .catch((e) => { message.error(t('task:vehicle.task.loadFailed', { message: e.message })); setTasks([]); })
+      .finally(() => setTasksLoading(false));
+  }, [vehicleId, t]);
+
+  const loadSafety = useCallback(() => {
+    if (vehicleId == null) return Promise.resolve();
+    return vehicleApi.getAutonomySafety(vehicleId)
+      .then((d) => {
+        setSafety(d);
+        setEvents(d && Array.isArray(d.events) ? d.events : (Array.isArray(d) ? d : []));
+      })
+      .catch(() => { setSafety(null); setEvents([]); });
+  }, [vehicleId]);
+
+  const loadGeofences = useCallback(() => {
+    if (vehicleId == null) return;
+    vehicleApi.listGeofences().then((d) => setGeofences(Array.isArray(d) ? d : [])).catch(() => setGeofences([]));
+  }, [vehicleId]);
+
+  useEffect(() => {
+    if (vehicleId != null) { loadTasks(); loadSafety(); loadGeofences(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vehicleId]);
+
+  // 解析路径 JSON（数组 of [lng,lat]），失败返回 null 并提示。
+  const parsePath = () => {
+    try {
+      const arr = JSON.parse(pathJson);
+      if (!Array.isArray(arr) || arr.length === 0) throw new Error('empty');
+      return arr;
+    } catch (e) {
+      message.error(t('task:vehicle.task.pathJsonInvalid'));
+      return null;
+    }
+  };
+
+  const onCreate = async () => {
+    const arr = parsePath();
+    if (!arr || vehicleId == null) return;
+    setBusy('create');
+    try {
+      await vehicleApi.createAutonomyTask(vehicleId, { subtype, pathJson });
+      message.success(t('task:vehicle.task.createSuccess'));
+      await loadTasks();
+    } catch (e) {
+      message.error(t('task:vehicle.task.actionFailed', { message: e.message }));
+    } finally { setBusy(''); }
+  };
+
+  const onDispatch = async () => {
+    const arr = parsePath();
+    if (!arr || vehicleId == null || taskId == null) { message.warning(t('task:vehicle.task.needTaskId')); return; }
+    setBusy('dispatch');
+    try {
+      await vehicleApi.dispatchAutonomyTask(vehicleId, { taskId: Number(taskId), subtype, pathJson });
+      message.success(t('task:vehicle.task.dispatchSuccess'));
+      await loadTasks();
+    } catch (e) {
+      message.error(t('task:vehicle.task.actionFailed', { message: e.message }));
+    } finally { setBusy(''); }
+  };
+
+  const onReport = async () => {
+    if (vehicleId == null) return;
+    setBusy('report');
+    try {
+      await vehicleApi.reportProgress(vehicleId, { pct: Number(pct) });
+      message.success(t('task:vehicle.task.reportSuccess'));
+      await loadTasks();
+    } catch (e) {
+      message.error(t('task:vehicle.task.actionFailed', { message: e.message }));
+    } finally { setBusy(''); }
+  };
+
+  const onValidate = async () => {
+    const arr = parsePath();
+    if (!arr || vehicleId == null) return;
+    setBusy('validate');
+    try {
+      const res = await vehicleApi.validateGeofence({ assetId: Number(vehicleId), pathJson });
+      setValidateMsg(res);
+      message.success(t('task:vehicle.task.validateSuccess'));
+    } catch (e) {
+      message.error(t('task:vehicle.task.actionFailed', { message: e.message }));
+    } finally { setBusy(''); }
+  };
+
+  const onLock = async () => {
+    if (vehicleId == null) return;
+    setBusy('lock');
+    try {
+      await vehicleApi.lockSafety(vehicleId);
+      message.success(t('task:vehicle.task.lockSuccess'));
+      await loadSafety();
+    } catch (e) {
+      message.error(t('task:vehicle.task.actionFailed', { message: e.message }));
+    } finally { setBusy(''); }
+  };
+
+  const onTeleop = async (enter) => {
+    if (vehicleId == null) return;
+    setBusy(enter ? 'teleopIn' : 'teleopOut');
+    try {
+      if (enter) await vehicleApi.enterTeleop(vehicleId);
+      else await vehicleApi.exitTeleop(vehicleId);
+      message.success(enter ? t('task:vehicle.task.teleopEnterSuccess') : t('task:vehicle.task.teleopExitSuccess'));
+      await loadSafety();
+    } catch (e) {
+      message.error(t('task:vehicle.task.actionFailed', { message: e.message }));
+    } finally { setBusy(''); }
+  };
+
+  const safetyTag = (() => {
+    if (!safety) return <Tag>—</Tag>;
+    const state = safety.state || safety.safetyState || safety.status;
+    return state ? <Tag color={state === 'LOCKED' ? 'red' : 'green'}>{state}</Tag> : <Tag>{t('common:m209')}</Tag>;
+  })();
+
+  return (
+    <Space direction="vertical" style={{ width: '100%' }} size="middle">
+      <Card>
+        <Space wrap size="large" align="end">
+          <Form.Item label={t('task:vehicle.task.selectAsset')} style={{ marginBottom: 0, minWidth: 240 }}>
+            <Select
+              showSearch optionFilterProp="label"
+              placeholder={vehicleOptions.length ? t('task:vehicle.task.selectAsset') : t('task:vehicle.task.noAsset')}
+              value={vehicleId}
+              onChange={setVehicleId}
+              options={vehicleOptions}
+              disabled={vehicleOptions.length === 0}
+              style={{ width: 240 }}
+            />
+          </Form.Item>
+          <Form.Item label={t('task:vehicle.task.subtype')} style={{ marginBottom: 0 }}>
+            <Select style={{ width: 160 }} value={subtype} onChange={setSubtype}
+              options={VEHICLE_SUBTYPES.map((s) => ({ label: subtypeLabel(t, s.value), value: s.value }))} />
+          </Form.Item>
+        </Space>
+        <Form.Item label={t('task:vehicle.task.pathJson')} style={{ margin: '12px 0 0' }}>
+          <Input.TextArea rows={4} value={pathJson} onChange={(e) => setPathJson(e.target.value)}
+            placeholder="[ [lng,lat], [lng,lat], ... ]" />
+        </Form.Item>
+        <Space wrap style={{ marginTop: 12 }}>
+          <Button type="primary" loading={busy === 'create'} onClick={onCreate} disabled={vehicleId == null}>{t('task:vehicle.task.createTask')}</Button>
+          <Form.Item label={t('task:vehicle.task.taskId')} style={{ marginBottom: 0 }}>
+            <InputNumber min={1} value={taskId} onChange={setTaskId} placeholder="id" style={{ width: 120 }} />
+          </Form.Item>
+          <Button loading={busy === 'dispatch'} onClick={onDispatch} disabled={vehicleId == null}>{t('task:vehicle.task.dispatch')}</Button>
+          <Form.Item label={t('task:vehicle.task.progress')} style={{ marginBottom: 0 }}>
+            <InputNumber min={0} max={100} value={pct} onChange={setPct} style={{ width: 120 }} />
+          </Form.Item>
+          <Button loading={busy === 'report'} onClick={onReport} disabled={vehicleId == null}>{t('task:vehicle.task.reportProgress')}</Button>
+          <Button icon={<SafetyOutlined />} loading={busy === 'validate'} onClick={onValidate} disabled={vehicleId == null}>{t('task:vehicle.task.validatePath')}</Button>
+        </Space>
+        {validateMsg != null && (
+          <Alert type="info" showIcon style={{ marginTop: 12 }}
+            message={t('task:vehicle.task.validateResult')}
+            description={<pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{JSON.stringify(validateMsg, null, 2)}</pre>} />
+        )}
+      </Card>
+
+      <Card title={t('task:vehicle.task.tasks')}>
+        {tasksLoading ? <Spin /> : tasks.length === 0 ? (
+          <Empty description={t('task:vehicle.task.emptyTasks')} />
+        ) : (
+          <Table rowKey="id" pagination={false} size="small" dataSource={tasks}
+            columns={[
+              { title: 'ID', dataIndex: 'id', width: 80 },
+              { title: t('task:vehicle.task.subtype'), dataIndex: 'subtype', render: (v) => <Tag color="geekblue">{subtypeLabel(t, v) || v}</Tag> },
+              { title: t('task:vehicle.task.status'), dataIndex: 'status', render: (s) => <Tag color={TASK_STATUS_COLOR[String(s).toUpperCase()] || 'default'}>{s || '—'}</Tag> },
+              {
+                title: t('task:vehicle.task.progress'),
+                key: 'progress',
+                render: (_, r) => <Progress percent={Number(r.progress != null ? r.progress : r.pct != null ? r.pct : 0)} size="small" />,
+              },
+              { title: t('task:vehicle.task.createdAt'), dataIndex: 'createdAt', render: (v) => v || '—' },
+            ]} />
+        )}
+      </Card>
+
+      <Card title={t('task:vehicle.task.safetyEvents')}
+        extra={<Space>
+          <Button size="small" icon={<SendOutlined />} loading={busy === 'teleopIn'} onClick={() => onTeleop(true)} disabled={vehicleId == null}>{t('task:vehicle.autonomy.teleopEnter')}</Button>
+          <Button size="small" loading={busy === 'teleopOut'} onClick={() => onTeleop(false)} disabled={vehicleId == null}>{t('task:vehicle.autonomy.teleopExit')}</Button>
+          <Button size="small" danger icon={<LockOutlined />} loading={busy === 'lock'} onClick={onLock} disabled={vehicleId == null}>{t('task:vehicle.autonomy.lock')}</Button>
+        </Space>}
+      >
+        <Space style={{ marginBottom: 10 }}>{t('task:vehicle.autonomy.safetyState')}: {safetyTag}</Space>
+        {events.length === 0 ? (
+          <Empty description={t('task:vehicle.task.emptyEvents')} />
+        ) : (
+          <Table rowKey="id" pagination={false} size="small" dataSource={events}
+            columns={[
+              { title: t('task:vehicle.task.createdAt'), dataIndex: 'createdAt', render: (v) => <span style={{ fontSize: 12 }}>{v || '—'}</span> },
+              { title: t('task:vehicle.task.cause'), dataIndex: 'cause', render: (v) => <Tag>{v || '—'}</Tag> },
+              { title: t('task:vehicle.task.detail'), dataIndex: 'detail', render: (v) => v || '—' },
+              { title: t('common:m8'), dataIndex: 'status', render: (v) => <Tag color={v === 'RESOLVED' ? 'green' : 'red'}>{v || '—'}</Tag> },
+            ]} />
+        )}
+      </Card>
+
+      <Card title={t('task:vehicle.task.geofenceList')}>
+        {geofences.length === 0 ? (
+          <Empty description={t('task:vehicle.task.emptyGeofences')} />
+        ) : (
+          <Table rowKey="id" pagination={false} size="small" dataSource={geofences}
+            columns={[
+              { title: t('task:vehicle.task.gfId'), dataIndex: 'id' },
+              { title: t('task:vehicle.task.gfName'), dataIndex: 'name', render: (v) => v || '—' },
+              { title: t('task:vehicle.task.gfType'), dataIndex: 'fenceType', render: (v) => <Tag>{v || '—'}</Tag> },
+            ]} />
+        )}
+      </Card>
+    </Space>
   );
 }
 

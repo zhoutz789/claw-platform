@@ -25,7 +25,7 @@ import { tv } from './i18n';
 import {
   DashboardOutlined, AppstoreOutlined, ShoppingOutlined, ProjectOutlined, RocketOutlined,
   DeploymentUnitOutlined, AccountBookOutlined, SafetyOutlined, SettingOutlined, InboxOutlined,
-  IdcardOutlined, SendOutlined, ShopOutlined, ControlOutlined, ThunderboltOutlined,
+  IdcardOutlined, SendOutlined, ShopOutlined, ControlOutlined, ThunderboltOutlined, CarOutlined,
 } from '@ant-design/icons';
 
 // 九大模块（工作台 + A/B/C/D 期新设计 + 四大中心）；children 为各模块下的页面。
@@ -111,6 +111,15 @@ export const NAV = [
       { key: 'task-ad', label: 'nav:item.task-ad', path: '/task-ad' },
       { key: 'task-video', label: 'nav:item.task-video', path: '/task-video' },
       { key: 'task-near', label: 'nav:item.task-near', path: '/task-near' },
+      { key: 'task-vehicle', label: 'nav:item.task-vehicle', path: '/task-vehicle' },
+    ],
+  },
+  // T8 · 车辆（地面自动驾驶 / 换电）域（menu:* 权限码见 V120 迁移）
+  {
+    key: 'vehicle', label: 'nav:group.vehicle', icon: CarOutlined,
+    children: [
+      { key: 'vehicle-product-classes', label: 'nav:item.vehicle-product-classes', path: '/vehicle-product-classes' },
+      { key: 'vehicle-trajectory', label: 'nav:item.vehicle-trajectory', path: '/vehicle-trajectory' },
     ],
   },
   // ——— 以下为 2026-08-29 恢复的旧四大中心 ———
@@ -282,6 +291,8 @@ export const ROUTES = [
   '/camera-playback',
   // 能源运营（光伏 / 虚拟电厂 / 追溯 / 能源品类，menu:* 权限码见 V116 / V117 迁移）
   '/pv-station', '/pv-trace', '/vpp', '/product-energy',
+  // T8 · 车辆（地面自动驾驶 / 换电）域（menu:* 权限码见 V120 迁移）
+  '/vehicle-product-classes', '/vehicle-trajectory', '/task-vehicle',
 ];
 
 // 拍平为「带父级标签」的搜索索引：[{ key,label,path,group,groupKey }]，递归展开所有叶子。

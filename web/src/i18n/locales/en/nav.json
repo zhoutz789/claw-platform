@@ -15,7 +15,8 @@
     "onboarding": "Onboarding",
     "sys": "System",
     "platform-settings": "Platform Settings",
-    "energy": "Energy Operations"
+    "energy": "Energy Operations",
+    "vehicle": "Vehicle"
   },
   "item": {
     "workbench": "Workbench",
@@ -101,6 +102,9 @@
     "pv-station": "PV Stations",
     "pv-trace": "PV Traceability",
     "vpp": "Virtual Power Plant",
-    "product-energy": "Energy Products"
+    "product-energy": "Energy Products",
+    "vehicle-product-classes": "Vehicle Models",
+    "vehicle-trajectory": "Vehicle Trajectory",
+    "task-vehicle": "Vehicle Tasks"
   }
 }

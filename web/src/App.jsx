@@ -95,6 +95,10 @@ import PvStation from './pages/PvStation';
 import PvTrace from './pages/PvTrace';
 import VppOps from './pages/VppOps';
 import ProductEnergy from './pages/ProductEnergy';
+// —— T8 · 车辆（地面自动驾驶 / 换电）域 ——
+import VehicleProductClass from './pages/VehicleProductClass';
+import VehicleTrajectory from './pages/VehicleTrajectory';
+import TaskVehicle from './pages/TaskVehicle';
 import ErrorBoundary from './ErrorBoundary';
 
 // 登录态下启动权限内核：拉取「我的权限」并下发后端权威菜单。
@@ -218,6 +222,10 @@ export default function App() {
           <Route path="pv-trace" element={<RequirePermRoute menuKey="pv-trace"><PvTrace /></RequirePermRoute>} />
           <Route path="vpp" element={<RequirePermRoute menuKey="vpp"><VppOps /></RequirePermRoute>} />
           <Route path="product-energy" element={<RequirePermRoute menuKey="product-energy"><ProductEnergy /></RequirePermRoute>} />
+          {/* T8 · 车辆（地面自动驾驶 / 换电）域（menu:* 权限码见 V120 迁移） */}
+          <Route path="vehicle-product-classes" element={<VehicleProductClass />} />
+          <Route path="vehicle-trajectory" element={<VehicleTrajectory />} />
+          <Route path="task-vehicle" element={<TaskVehicle />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
