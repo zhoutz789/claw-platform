@@ -6,6 +6,9 @@ OCPP 1.6J 充电桩模拟器（纯标准库实现，零外部依赖，python3 �
 联调 claw 平台 OCPP 服务端（JSR-356 端点 /ocpp/{chargePointId}）：
   * 与服务端完成 WebSocket 握手
   * 周期发送 BootNotification / Heartbeat / StatusNotification / MeterValues
+  * 模拟充电交易链路：状态转 "Charging" 时发 StartTransaction，
+    从服务端 CALLRESULT 捕获 transactionId；状态回 "Available" 时发
+    StopTransaction（带 transactionId + 当前电表读数），闭环结算 ChargeSession
   * 收到服务端下发的 CALL（SetChargingProfile / RemoteStartTransaction /
     RemoteStopTransaction / Reset / ChangeAvailability）自动回 CALLRESULT(Accepted)
 
@@ -15,11 +18,11 @@ OCPP 1.6J 充电桩模拟器（纯标准库实现，零外部依赖，python3 �
   CALLERROR   = [4, "msgId", "errorCode", "desc", {details}]
 
 用法：
-  python3 ocpp_simulator.py --host localhost --port 8080 \
+  python3 tools/ocpp_simulator.py --host localhost --port 8080 \
       --charge-point-id CP-001 --interval 10 --power 7000
 
   # 自定义鉴权令牌（与服务端 ocpp_charging_stations.auth_token 对齐才校验通过）
-  python3 ocpp_simulator.py --charge-point-id CP-002 --auth-token s3cr3t
+  python3 tools/ocpp_simulator.py --charge-point-id CP-002 --auth-token s3cr3t
 
 退出：Ctrl+C
 依赖：仅 python3 标准库（socket / hashlib / base64 / struct / json / threading）。
@@ -150,7 +153,7 @@ def handle_server_call(sock, lock, arr):
     print(f"  >> 应答 CALLRESULT {action}: {result}")
 
 
-def handle_server_message(sock, lock, text):
+def handle_server_message(sock, lock, text, pending_start, tx_state):
     print(f"  << 服务端: {text}")
     try:
         arr = json.loads(text)
@@ -162,12 +165,24 @@ def handle_server_message(sock, lock, text):
     if msg_type == 2:  # CALL
         handle_server_call(sock, lock, arr)
     elif msg_type == 3:  # CALLRESULT
-        print(f"  [CALLRESULT] msgId={arr[1]} payload={arr[2] if len(arr) > 2 else ''}")
+        msg_id = arr[1]
+        payload = arr[2] if len(arr) > 2 else {}
+        if msg_id in pending_start:
+            # 这是我们对 StartTransaction 的应答：取出 transactionId 进入充电中
+            tx_id = payload.get("transactionId") if isinstance(payload, dict) else None
+            if tx_id is not None:
+                tx_state["id"] = tx_id
+                print(f"  [TX] StartTransaction 已确认 transactionId={tx_id}（进入充电中）")
+            else:
+                print(f"  [TX][warn] StartTransaction 应答缺少 transactionId: {payload}")
+            pending_start.pop(msg_id, None)
+        else:
+            print(f"  [CALLRESULT] msgId={msg_id} payload={payload if isinstance(payload, dict) else ''}")
     elif msg_type == 4:  # CALLERROR
         print(f"  [CALLERROR] msgId={arr[1]} code={arr[2]} desc={arr[3] if len(arr) > 3 else ''}")
 
 
-def reader_loop(sock, lock, stop):
+def reader_loop(sock, lock, stop, pending_start, tx_state):
     while not stop.is_set():
         try:
             res = recv_frame(sock)
@@ -186,7 +201,9 @@ def reader_loop(sock, lock, stop):
         elif opcode == 0x9:  # ping -> pong
             send_control(sock, lock, 0xA, payload)
         elif opcode == 0x1:  # text
-            handle_server_message(sock, lock, payload.decode("utf-8", "ignore"))
+            handle_server_message(
+                sock, lock, payload.decode("utf-8", "ignore"), pending_start, tx_state
+            )
 
 
 def main():
@@ -199,6 +216,7 @@ def main():
     ap.add_argument("--power", type=int, default=7000, help="模拟充电功率 W（MeterValues 上报）")
     ap.add_argument("--energy-start", type=float, default=12000.0, help="起始累计电量 Wh")
     ap.add_argument("--connector-id", type=int, default=1)
+    ap.add_argument("--id-tag", default="CP-USER", help="交易鉴权卡号 idTag（Start/StopTransaction 使用）")
     args = ap.parse_args()
 
     path = f"/ocpp/{args.charge_point_id}"
@@ -208,7 +226,13 @@ def main():
 
     stop = threading.Event()
     lock = threading.Lock()
-    reader = threading.Thread(target=reader_loop, args=(sock, lock, stop), daemon=True)
+    pending_start = {}            # msgId -> True：等待服务端确认 StartTransaction
+    tx_state = {"id": None, "start_wh": None}  # 当前进行中的交易
+    reader = threading.Thread(
+        target=reader_loop,
+        args=(sock, lock, stop, pending_start, tx_state),
+        daemon=True,
+    )
     reader.start()
 
     def send(text):
@@ -236,13 +260,14 @@ def main():
 
     seq = 0
     energy = args.energy_start
+    prev_status = "Available"
     try:
         while not stop.is_set():
             time.sleep(args.interval)
             seq += 1
             # Heartbeat
             send(json.dumps([2, f"hb-{seq}", "Heartbeat", {}]))
-            # 周期性状态：前 3 轮空闲，之后模拟占用/充电
+            # 周期性状态：每 6 轮前 3 轮空闲，后 3 轮充电（seq%6<3 空闲）
             if seq % 6 < 3:
                 status = "Available"
             else:
@@ -251,8 +276,40 @@ def main():
                 2, f"st-{seq}", "StatusNotification",
                 {"connectorId": args.connector_id, "status": status, "errorCode": "NoError"},
             ]))
-            # 电量累加
-            energy += args.power * (args.interval / 3600.0)
+
+            # —— 交易链路状态机 ——
+            if status == "Charging" and tx_state["id"] is None and prev_status != "Charging":
+                # 状态由空闲转入充电：发起 StartTransaction
+                start_msg_id = f"start-{seq}"
+                pending_start[start_msg_id] = True
+                tx_state["start_wh"] = int(energy)
+                payload = {
+                    "connectorId": args.connector_id,
+                    "idTag": args.id_tag,
+                    "meterStart": tx_state["start_wh"],
+                }
+                send(json.dumps([2, start_msg_id, "StartTransaction", payload]))
+                print(f"  [TX] 发送 StartTransaction connector={args.connector_id} "
+                      f"idTag={args.id_tag} meterStart={tx_state['start_wh']}")
+            elif status == "Available" and tx_state["id"] is not None:
+                # 状态由充电转回空闲：发起 StopTransaction 闭环结算
+                payload = {
+                    "transactionId": tx_state["id"],
+                    "idTag": args.id_tag,
+                    "meterStop": int(energy),
+                }
+                send(json.dumps([2, f"stop-{seq}", "StopTransaction", payload]))
+                delivered = int(energy) - (tx_state["start_wh"] or 0)
+                print(f"  [TX] 发送 StopTransaction transactionId={tx_state['id']} "
+                      f"meterStop={int(energy)}（预计结算 {delivered} Wh）")
+                tx_state["id"] = None
+                tx_state["start_wh"] = None
+
+            prev_status = status
+
+            # 电量累加（仅充电中才涨，模拟真实电表）
+            if status == "Charging":
+                energy += args.power * (args.interval / 3600.0)
             meter = [
                 2, f"mv-{seq}", "MeterValues",
                 {
@@ -261,8 +318,10 @@ def main():
                         {
                             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                             "sampledValue": [
-                                {"measurand": "Power.Active.Import", "unit": "W", "value": str(args.power)},
-                                {"measurand": "Energy.Active.Import.Register", "unit": "Wh", "value": str(int(energy))},
+                                {"measurand": "Power.Active.Import", "unit": "W",
+                                 "value": str(args.power if status == "Charging" else 0)},
+                                {"measurand": "Energy.Active.Import.Register", "unit": "Wh",
+                                 "value": str(int(energy))},
                             ],
                         }
                     ],
