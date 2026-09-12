@@ -18,5 +18,7 @@ public enum AssetCapability {
     /** 无人机作业。 */
     DRONE_OP,
     /** 换电（预留）。 */
-    SWAP
+    SWAP,
+    /** 自主驾驶能力（无人车 autonomy 子域）。 */
+    AUTONOMY
 }

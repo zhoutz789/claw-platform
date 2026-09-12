@@ -16,5 +16,11 @@ public enum TaskType {
     /** 出租车。 */
     TAXI,
     /** 广告投放。 */
-    AD
+    AD,
+    /** 无人车自动配送。 */
+    AUTO_DELIVERY,
+    /** 无人车自动清扫。 */
+    AUTO_SWEEP,
+    /** 无人车自动巡逻。 */
+    AUTO_PATROL
 }
