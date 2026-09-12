@@ -17,6 +17,9 @@ public interface AssetRepository extends JpaRepository<Asset, Long>, JpaSpecific
 
     List<Asset> findByAssetTypeAndStatus(AssetType assetType, AssetStatus status);
 
+    /** 取某类型下全部资产（光伏日对账：取所有 PV_STATION 逐个对账）。 */
+    List<Asset> findByAssetType(AssetType assetType);
+
     List<Asset> findByUserId(Long userId);
 
     /** 取用户（使用人）名下未删除资产，供 provider 接单前能力匹配（P0 任务大厅）。 */

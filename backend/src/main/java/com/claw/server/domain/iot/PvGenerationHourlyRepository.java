@@ -30,4 +30,17 @@ public interface PvGenerationHourlyRepository extends JpaRepository<PvGeneration
             + "where h.deviceNo in :deviceNos and h.source = :source group by h.deviceNo")
     List<Object[]> sumEnergyWhGroupByDeviceNo(@Param("deviceNos") Collection<String> deviceNos,
                                               @Param("source") String source);
+
+    /**
+     * 单站单日、按来源隔离的小时电量合计（光伏日对账用）。
+     * bucket_at 为 UTC 整点，day 边界按 UTC 计算 [start, end)。
+     * 返回 coalesce(sum, 0)，无数据时为 0（调用方据此判 GAP）。
+     */
+    @Query("select coalesce(sum(h.energyWh), 0) from PvGenerationHourly h "
+            + "where h.stationAssetId = :stationAssetId and h.source = :source "
+            + "and h.bucketAt >= :start and h.bucketAt < :end")
+    BigDecimal sumEnergyWhByStationAndSourceAndDay(@Param("stationAssetId") Long stationAssetId,
+                                                   @Param("source") String source,
+                                                   @Param("start") Instant start,
+                                                   @Param("end") Instant end);
 }
