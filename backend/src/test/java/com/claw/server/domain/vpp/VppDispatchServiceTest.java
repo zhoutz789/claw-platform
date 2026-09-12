@@ -212,14 +212,18 @@ class VppDispatchServiceTest {
         var derate = byType(out, VppDispatchService.CMD_DERATE_PV);
         assertThat(derate).hasSize(1);
         // 无 TOU 电价信号 → 不上网：余电先充储能 1500W（50V×CCL 30A），
-        // 再由充电桩放开吸收 6000W（上限 7000 − 当前 1000），仍余 1500W 转限发。
+        // 再由充电桩以 SET_CHARGER_POWER 绝对功率吸收 6000W（上限 7000 − 当前 1000），仍余 1500W 转限发。
         assertThat(derate.get(0).targetW()).isEqualByComparingTo("8500");
         assertThat(out.curtailedPvW()).isEqualByComparingTo("1500");
         assertThat(out.notes()).anyMatch(n -> n.contains("限发"));
+        var setCharger = byType(out, VppDispatchService.CMD_SET_CHARGER_POWER);
+        assertThat(setCharger).hasSize(1);
+        assertThat(setCharger.get(0).targetW()).isEqualByComparingTo("7000");
     }
 
     @Test
-    void surplus_is_exported_when_export_allowed() {
+    void surplus_is_curtailed_when_export_allowed_but_no_price() {
+        // 第二批口径：exportAllowed=true 但无 TOU 价格信号时，回落保守策略（限发而非上网）。
         var opt = new VppDispatchService.VppDispatchOptions(new BigDecimal("5"), new BigDecimal("10"), true);
         var out = VppDispatchService.dispatchPlan(
                 List.of(pv(1L, new BigDecimal("900"), new BigDecimal("10000"), BigDecimal.ZERO),
@@ -229,8 +233,81 @@ class VppDispatchServiceTest {
                 NOW, opt);
 
         var derate = byType(out, VppDispatchService.CMD_DERATE_PV);
+        assertThat(derate).hasSize(1);
+        assertThat(derate.get(0).targetW()).isEqualByComparingTo("8500");
+        assertThat(out.curtailedPvW()).isEqualByComparingTo("1500");
+        assertThat(out.notes()).anyMatch(n -> n.contains("回落保守"));
+    }
+
+    @Test
+    void surplus_is_exported_when_export_allowed_and_peak_price() {
+        // 高价时段（energyPrice ≥ referencePrice）：即便 exportAllowed 由价格信号驱动，余电上网不限制。
+        var opt = new VppDispatchService.VppDispatchOptions(new BigDecimal("5"), new BigDecimal("10"), true);
+        var ctx = new VppDispatchService.DispatchContext("PEAK",
+                new BigDecimal("0.30"), null, new BigDecimal("0.15"), null, null);
+        var out = VppDispatchService.dispatchPlan(
+                List.of(pv(1L, new BigDecimal("900"), new BigDecimal("10000"), BigDecimal.ZERO),
+                        ess(2L, new BigDecimal("50"), new BigDecimal("25"),
+                                new BigDecimal("30"), new BigDecimal("60"), new BigDecimal("50"), true),
+                        charger(3L, new BigDecimal("1000"))),
+                NOW, opt, ctx);
+
+        var derate = byType(out, VppDispatchService.CMD_DERATE_PV);
         assertThat(derate.get(0).targetW()).isEqualByComparingTo("10000");
+        assertThat(out.curtailedPvW()).isEqualByComparingTo("0");
         assertThat(out.notes()).anyMatch(n -> n.contains("上网"));
+    }
+
+    @Test
+    void deficit_prefers_ess_when_demand_exceeded() {
+        // 并网点需量 20000W 超目标 10000W → 优先储能放电削峰。
+        var ctx = new VppDispatchService.DispatchContext("FLAT",
+                null, new BigDecimal("5"), new BigDecimal("0.15"),
+                new BigDecimal("20000"), new BigDecimal("10000"));
+        var out = VppDispatchService.dispatchPlan(
+                List.of(pv(1L, new BigDecimal("300"), new BigDecimal("2000"), BigDecimal.ZERO),
+                        ess(2L, new BigDecimal("80"), new BigDecimal("25"),
+                                new BigDecimal("100"), new BigDecimal("100"), new BigDecimal("50"), true),
+                        charger(3L, new BigDecimal("5000"))),
+                NOW, VppDispatchService.VppDispatchOptions.defaults(), ctx);
+
+        assertThat(out.deficitW()).isEqualByComparingTo("3000");
+        var discharge = byType(out, VppDispatchService.CMD_DISCHARGE_ESS);
+        assertThat(discharge).hasSize(1);
+        assertThat(discharge.get(0).targetW()).isEqualByComparingTo("3000");
+        assertThat(out.notes()).anyMatch(n -> n.contains("需量") && n.contains("削峰"));
+    }
+
+    @Test
+    void deficit_prefers_ess_when_peak_price() {
+        // 高价时段（energyPrice ≥ referencePrice）→ 优先储能放电替代高价市电。
+        var ctx = new VppDispatchService.DispatchContext("PEAK",
+                new BigDecimal("0.30"), null, new BigDecimal("0.15"), null, null);
+        var out = VppDispatchService.dispatchPlan(
+                List.of(pv(1L, new BigDecimal("300"), new BigDecimal("2000"), BigDecimal.ZERO),
+                        ess(2L, new BigDecimal("80"), new BigDecimal("25"),
+                                new BigDecimal("100"), new BigDecimal("100"), new BigDecimal("50"), true),
+                        charger(3L, new BigDecimal("5000"))),
+                NOW, VppDispatchService.VppDispatchOptions.defaults(), ctx);
+
+        assertThat(byType(out, VppDispatchService.CMD_DISCHARGE_ESS)).hasSize(1);
+        assertThat(out.notes()).anyMatch(n -> n.contains("高价") && n.contains("替代高价市电"));
+    }
+
+    @Test
+    void deficit_uses_grid_when_low_price_and_no_demand() {
+        // 低价时段且未超需量 → 缺口由市电承担，储能保留至峰段（不产生放电指令）。
+        var ctx = new VppDispatchService.DispatchContext("VALLEY",
+                new BigDecimal("0.08"), null, new BigDecimal("0.15"), null, null);
+        var out = VppDispatchService.dispatchPlan(
+                List.of(pv(1L, new BigDecimal("300"), new BigDecimal("2000"), BigDecimal.ZERO),
+                        ess(2L, new BigDecimal("80"), new BigDecimal("25"),
+                                new BigDecimal("100"), new BigDecimal("100"), new BigDecimal("50"), true),
+                        charger(3L, new BigDecimal("5000"))),
+                NOW, VppDispatchService.VppDispatchOptions.defaults(), ctx);
+
+        assertThat(byType(out, VppDispatchService.CMD_DISCHARGE_ESS)).isEmpty();
+        assertThat(out.notes()).anyMatch(n -> n.contains("市电") && n.contains("储能保留至峰段"));
     }
 
     // ===================== 落库 / 影子模式 =====================

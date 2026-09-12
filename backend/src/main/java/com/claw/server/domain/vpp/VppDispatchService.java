@@ -1,6 +1,7 @@
 package com.claw.server.domain.vpp;
 
 import com.claw.server.common.api.BizException;
+import com.claw.server.domain.energy.ElecTouService;
 import com.claw.server.domain.energy.EnergyDispatchService;
 import com.claw.server.domain.iot.Device;
 import com.claw.server.domain.iot.DeviceCommandService;
@@ -71,12 +72,15 @@ public class VppDispatchService {
     public static final String CMD_DERATE_PV = "DERATE_PV";
     public static final String CMD_CHARGE_ESS = "CHARGE_ESS";
     public static final String CMD_DISCHARGE_ESS = "DISCHARGE_ESS";
+    /** 削减充电桩功率，targetW = 相对当前功率的<b>削减量</b>。 */
     public static final String CMD_CURTAIL_CHARGER = "CURTAIL_CHARGER";
+    /** 设定充电桩功率，targetW = <b>绝对功率</b> W（余电升功率场景用，避免用削减量反向表达）。 */
+    public static final String CMD_SET_CHARGER_POWER = "SET_CHARGER_POWER";
     public static final String CMD_START_GEN = "START_GEN";
 
     public static final Set<String> VALID_RESOURCE_TYPES = Set.of(PV, ESS, CHARGER, DIESEL_GEN, CONTROLLABLE_LOAD);
-    public static final Set<String> VALID_COMMAND_TYPES =
-            Set.of(CMD_DERATE_PV, CMD_CHARGE_ESS, CMD_DISCHARGE_ESS, CMD_CURTAIL_CHARGER, CMD_START_GEN);
+    public static final Set<String> VALID_COMMAND_TYPES = Set.of(CMD_DERATE_PV, CMD_CHARGE_ESS,
+            CMD_DISCHARGE_ESS, CMD_CURTAIL_CHARGER, CMD_SET_CHARGER_POWER, CMD_START_GEN);
 
     public static final String STATUS_ONLINE = "ONLINE";
 
@@ -86,8 +90,16 @@ public class VppDispatchService {
     public static final String KEY_CHARGE_TEMP_MIN = "VPP_ESS_CHARGE_TEMP_MIN";
     /** ESS 放电 SOC 下限 %。 */
     public static final String KEY_ESS_SOC_MIN = "VPP_ESS_SOC_MIN";
-    /** 光伏余电是否允许上网（无 TOU 电价信号时默认 false → 限发）。 */
+    /**
+     * 光伏余电是否允许上网。
+     *
+     * <p><b>仅当确认存在净计量 / 余电回购时才可开启，否则应保守弃光</b>——
+     * 不存在收益模型时假设收益会导致错误的调度决策。TOU 电价接入后由价格信号驱动，
+     * 本开关作为兜底保留（取不到电价时以本开关为准）。
+     */
     public static final String KEY_EXPORT_ALLOWED = "VPP_EXPORT_ALLOWED";
+    /** 并网点需量目标 W（需量管理削峰阈值）；留空表示未配置，需量管理不生效。 */
+    public static final String KEY_DEMAND_TARGET_W = "VPP_DEMAND_TARGET_W";
 
     public static final BigDecimal DEFAULT_CHARGE_TEMP_MIN_C = new BigDecimal("5");
     public static final BigDecimal DEFAULT_ESS_SOC_MIN = new BigDecimal("10");
@@ -158,6 +170,48 @@ public class VppDispatchService {
         }
     }
 
+    /**
+     * 调度决策的外部上下文（TOU 价格信号 + 并网点需量）。
+     *
+     * <p>任一价格字段取不到时保持 {@code null}——调用方据此回落保守策略，
+     * <b>严禁用默认值冒充真实价格</b>。
+     */
+    public record DispatchContext(
+            /** PEAK / FLAT / VALLEY / UNKNOWN。 */
+            String slotCode,
+            /** 电度电价 $/kWh；null = 无 TOU 数据。 */
+            BigDecimal energyPrice,
+            /** 需量电价 $/kW；null = 无数据或未配置。 */
+            BigDecimal demandPrice,
+            /** 峰/谷判断参考基准（全时段加权平均电价）；null = 无法判断。 */
+            BigDecimal referencePrice,
+            /** 并网点当前实测需量 W（来自遥测 demand_w）；null = 无数据。 */
+            BigDecimal gridDemandW,
+            /** 需量目标 W（VPP_DEMAND_TARGET_W）；null = 未配置，需量管理不生效。 */
+            BigDecimal demandTargetW) {
+
+        /** 无价格、无需量数据的上下文（保守决策）。 */
+        public static DispatchContext unknown() {
+            return new DispatchContext(ElecTouService.UNKNOWN, null, null, null, null, null);
+        }
+
+        /** 价格信号可用（当前电价与参考基准都能取到）。 */
+        public boolean priceDriven() {
+            return energyPrice != null && referencePrice != null;
+        }
+
+        /** 当前电价 ≥ 参考基准 → 高价（峰）时段；价格不可用时不成立。 */
+        public boolean peakish() {
+            return priceDriven() && energyPrice.compareTo(referencePrice) >= 0;
+        }
+
+        /** 并网点需量已超目标（需量管理触发条件）；缺任一输入则不成立。 */
+        public boolean demandExceeded() {
+            return gridDemandW != null && demandTargetW != null
+                    && gridDemandW.compareTo(demandTargetW) > 0;
+        }
+    }
+
     /** 指令草稿（尚未落库）。 */
     public record CommandDraft(Long resourceId, String commandType, BigDecimal targetW, String reason) {
     }
@@ -203,21 +257,46 @@ public class VppDispatchService {
      * @return 调度结果
      */
     public static DispatchOutcome dispatchPlan(List<ResourceSnapshot> resources, Instant now) {
-        return dispatchPlan(resources, now, VppDispatchOptions.defaults());
+        return dispatchPlan(resources, now, VppDispatchOptions.defaults(), DispatchContext.unknown());
     }
 
     /**
-     * 调度决策（显式选项）。严格按优先级链降级，见类注释。
+     * 调度决策（显式选项，无价格上下文 → 保守决策）。
      *
      * @param resources 资源快照
      * @param now       决策时刻
      * @param opt       阈值与上网策略
      * @return 调度结果
      */
-    public static DispatchOutcome dispatchPlan(List<ResourceSnapshot> resources, Instant now, VppDispatchOptions opt) {
+    public static DispatchOutcome dispatchPlan(List<ResourceSnapshot> resources, Instant now,
+                                               VppDispatchOptions opt) {
+        return dispatchPlan(resources, now, opt, DispatchContext.unknown());
+    }
+
+    /**
+     * 调度决策（完整入参：显式选项 + 价格/需量上下文）。严格按优先级链降级，见类注释。
+     *
+     * <p><b>价格驱动的两处决策：</b>
+     * <ol>
+     *   <li>余电「上网 vs 限发」：{@code exportAllowed} 为 false 一律限发；为 true 但无电价
+     *       → 回落限发；有电价时仅在高价（≥ 参考基准）时段上网，低价时段限发。</li>
+     *   <li>缺口「ESS 放电 vs 市电/柴机」：无电价 → 回落「优先 ESS 放电」；
+     *       有电价且为低价时段且未超需量 → 市电更便宜，ESS 保留至峰段；
+     *       高价时段或需量超标 → 优先 ESS 放电（削峰）。</li>
+     * </ol>
+     *
+     * @param resources 资源快照
+     * @param now       决策时刻
+     * @param opt       阈值与上网策略
+     * @param ctx       价格与需量上下文；null 视为 unknown（保守）
+     * @return 调度结果
+     */
+    public static DispatchOutcome dispatchPlan(List<ResourceSnapshot> resources, Instant now,
+                                               VppDispatchOptions opt, DispatchContext ctx) {
         List<ResourceSnapshot> list = resources == null ? List.of()
                 : resources.stream().filter(Objects::nonNull).toList();
         VppDispatchOptions options = opt == null ? VppDispatchOptions.defaults() : opt;
+        DispatchContext context = ctx == null ? DispatchContext.unknown() : ctx;
         Instant decidedAt = now == null ? Instant.EPOCH : now;
 
         List<CommandDraft> commands = new ArrayList<>();
@@ -263,62 +342,99 @@ public class VppDispatchService {
                         "光伏余电充电 " + take + "W，受 BMS CCL 限值 " + limit + "W 约束"));
                 remaining = remaining.subtract(take);
             }
-            // 3) 仍余 → 充充电桩（可调度负荷）：放开削减，余电用于提升充电功率
+            // 3) 仍余 → 充充电桩（可调度负荷）：用 SET_CHARGER_POWER 直接给绝对功率设定值
             for (ResourceSnapshot r : list) {
                 if (!r.isCharger() || remaining.signum() <= 0) {
                     continue;
                 }
                 BigDecimal headroom = capOf(r).subtract(nz(r.currentPowerW())).max(ZERO);
                 BigDecimal boost = headroom.min(remaining);
-                // CURTAIL_CHARGER 语义为「相对当前功率的削减量」：0 = 不削减，
-                // 余电可提升充电功率 boost W。
-                commands.add(new CommandDraft(r.resourceId(), CMD_CURTAIL_CHARGER, ZERO,
-                        "光伏余电放开充电（不削减），可提升充电功率 " + boost + "W"));
+                BigDecimal target = nz(r.currentPowerW()).add(boost);
+                commands.add(new CommandDraft(r.resourceId(), CMD_SET_CHARGER_POWER, target,
+                        "光伏余电提升充电功率至 " + target + "W（较当前 +" + boost + "W）"));
                 remaining = remaining.subtract(boost);
             }
-            // 4) 仍余 → 上网 or 限发
+            // 4) 仍余 → 上网 or 限发（价格驱动；兜底保守 = 限发）
             if (remaining.signum() > 0) {
-                if (options.exportAllowed()) {
-                    notes.add("余电 " + remaining + "W 上网（VPP_EXPORT_ALLOWED=true）");
+                if (!options.exportAllowed()) {
+                    pvAllowed = pvAvail.subtract(remaining).max(ZERO);
+                    notes.add("VPP_EXPORT_ALLOWED=false（保守兜底），余电 " + remaining
+                            + "W 转为光伏限发，出力上限压到 " + pvAllowed + "W");
+                } else if (!context.priceDriven()) {
+                    pvAllowed = pvAvail.subtract(remaining).max(ZERO);
+                    notes.add("无 TOU 电价数据，回落保守策略：余电 " + remaining
+                            + "W 不上网，转光伏限发，出力上限压到 " + pvAllowed + "W");
+                    log.debug("[VPP] 无 TOU 电价数据（slot={} price={} ref={}），回落保守策略：余电限发",
+                            context.slotCode(), context.energyPrice(), context.referencePrice());
+                } else if (context.peakish()) {
+                    notes.add("高价时段（" + context.slotCode() + " " + context.energyPrice()
+                            + " ≥ 参考 " + context.referencePrice() + " $/kWh），余电 " + remaining + "W 上网");
                 } else {
                     pvAllowed = pvAvail.subtract(remaining).max(ZERO);
-                    notes.add("无电价激励（无 TOU 信号，VPP_EXPORT_ALLOWED=false），"
-                            + "余电 " + remaining + "W 转为光伏限发，出力上限压到 " + pvAllowed + "W");
+                    notes.add("低价时段（" + context.slotCode() + " " + context.energyPrice()
+                            + " < 参考 " + context.referencePrice() + " $/kWh），上网价值低，余电 "
+                            + remaining + "W 转光伏限发，出力上限压到 " + pvAllowed + "W");
                 }
             }
         } else if (deficit.signum() > 0) {
-            // 5) 不足 → 储能放电：受 DCL / powerLimit 钳制
-            BigDecimal remaining = deficit;
-            for (ResourceSnapshot r : list) {
-                if (!r.isEss() || remaining.signum() <= 0) {
-                    continue;
-                }
-                BigDecimal limit = essDischargeW(r, options);
-                if (limit.signum() <= 0) {
-                    notes.add("资源 " + r.resourceId() + " 储能不可放电（"
-                            + essBlockReason(r, options) + "），跳过缺口填补");
-                    continue;
-                }
-                BigDecimal take = limit.min(remaining);
-                commands.add(new CommandDraft(r.resourceId(), CMD_DISCHARGE_ESS, take,
-                        "填补负荷缺口 " + take + "W，受 BMS DCL 限值 " + limit + "W 约束"));
-                remaining = remaining.subtract(take);
+            // 5/6) 不足 → 储能放电 or 市电/柴油（价格驱动 + 需量削峰）
+            boolean demandShaving = context.demandExceeded();
+            boolean preferEss;
+            if (demandShaving) {
+                preferEss = true;
+                notes.add("并网点需量 " + context.gridDemandW() + "W 超目标 " + context.demandTargetW()
+                        + "W（需量电价 " + context.demandPrice() + " $/kW），优先储能放电削峰");
+            } else if (!context.priceDriven()) {
+                preferEss = true;
+                notes.add("无 TOU 电价数据，回落保守策略：优先储能放电填补缺口");
+                log.debug("[VPP] 无 TOU 电价数据（slot={} price={} ref={}），回落保守策略：优先 ESS 放电",
+                        context.slotCode(), context.energyPrice(), context.referencePrice());
+            } else if (context.peakish()) {
+                preferEss = true;
+                notes.add("高价时段（" + context.slotCode() + " " + context.energyPrice()
+                        + " ≥ 参考 " + context.referencePrice() + " $/kWh），优先储能放电替代高价市电");
+            } else {
+                preferEss = false;
+                notes.add("低价时段（" + context.slotCode() + " " + context.energyPrice()
+                        + " < 参考 " + context.referencePrice() + " $/kWh）且未超需量，"
+                        + "缺口由市电承担，储能保留至峰段");
             }
-            // 6) 仍不足 → 柴油 / 市电（本期只输出建议，不真控柴机）
-            if (remaining.signum() > 0) {
-                boolean hasGen = false;
+
+            BigDecimal remaining = deficit;
+            if (preferEss) {
                 for (ResourceSnapshot r : list) {
-                    if (!r.isDieselGen() || remaining.signum() <= 0) {
+                    if (!r.isEss() || remaining.signum() <= 0) {
                         continue;
                     }
-                    hasGen = true;
-                    BigDecimal take = capOf(r).min(remaining);
-                    commands.add(new CommandDraft(r.resourceId(), CMD_START_GEN, take,
-                            "缺口 " + take + "W 建议投入柴油机组（本期仅建议，不实际控制）"));
+                    BigDecimal limit = essDischargeW(r, options);
+                    if (limit.signum() <= 0) {
+                        notes.add("资源 " + r.resourceId() + " 储能不可放电（"
+                                + essBlockReason(r, options) + "），跳过缺口填补");
+                        continue;
+                    }
+                    BigDecimal take = limit.min(remaining);
+                    commands.add(new CommandDraft(r.resourceId(), CMD_DISCHARGE_ESS, take,
+                            "填补负荷缺口 " + take + "W，受 BMS DCL 限值 " + limit + "W 约束"));
                     remaining = remaining.subtract(take);
                 }
+            }
+            if (remaining.signum() > 0) {
+                boolean hasGen = false;
+                if (preferEss) {
+                    for (ResourceSnapshot r : list) {
+                        if (!r.isDieselGen() || remaining.signum() <= 0) {
+                            continue;
+                        }
+                        hasGen = true;
+                        BigDecimal take = capOf(r).min(remaining);
+                        commands.add(new CommandDraft(r.resourceId(), CMD_START_GEN, take,
+                                "缺口 " + take + "W 建议投入柴油机组（本期仅建议，不实际控制）"));
+                        remaining = remaining.subtract(take);
+                    }
+                }
                 if (!hasGen) {
-                    notes.add("缺口 " + remaining + "W 由市电承担（无可调度柴机资源）");
+                    notes.add("缺口 " + remaining + "W 由市电承担"
+                            + (preferEss ? "（无可调度柴机资源）" : "（低价时段，市电更经济）"));
                 }
             }
         }
@@ -451,6 +567,7 @@ public class VppDispatchService {
     private final DeviceRepository deviceRepository;
     private final DeviceCommandService deviceCommandService;
     private final SystemConfigRepository systemConfigRepository;
+    private final ElecTouService elecTouService;
 
     /** 从配置解析选项（缺省值兜底，配置缺失或非法不抛异常）。 */
     public VppDispatchOptions resolveOptions() {
@@ -463,6 +580,59 @@ public class VppDispatchService {
     /** 影子模式开关：读 VPP_SHADOW_MODE，缺省 true。 */
     public boolean shadowMode() {
         return boolConfig(KEY_SHADOW_MODE, true);
+    }
+
+    /**
+     * 组装价格/需量上下文。取不到电价的字段保持 {@code null}——
+     * 下游 {@link #dispatchPlan} 据此回落保守策略，绝不编造默认值。
+     */
+    public DispatchContext resolveContext(Long portfolioId, Instant now) {
+        Instant at = now == null ? Instant.now() : now;
+        ElecTouService.TouSlot slot = elecTouService.slotAt(at);
+        BigDecimal price = slot.known() ? slot.energyPrice() : null;
+        BigDecimal demandPrice = slot.known() ? slot.demandPrice() : null;
+        BigDecimal reference = elecTouService.referencePrice();
+        if (price == null) {
+            log.debug("[VPP] 无 TOU 电价数据（slot={}），价格相关决策回落保守策略", slot.slotCode());
+        }
+        return new DispatchContext(slot.slotCode(), price, demandPrice, reference,
+                gridDemandW(portfolioId), demandTargetW());
+    }
+
+    /**
+     * 并网点当前实测需量 W：取站内资源遥测 {@code demand_w} 的最大值。
+     * 无该字段（电表未上报需量）时返回 null → 需量管理不生效。
+     */
+    private BigDecimal gridDemandW(Long portfolioId) {
+        BigDecimal max = null;
+        for (VppResource r : vppResourceRepository
+                .findByPortfolioIdAndStatus(portfolioId, STATUS_ONLINE)) {
+            TelemetryLatest t = telemetryLatestRepository
+                    .findTopByAssetIdOrderByReportedAtDescIdDesc(r.getAssetId()).orElse(null);
+            BigDecimal d = t == null ? null : t.getDemandW();
+            if (d != null && (max == null || d.compareTo(max) > 0)) {
+                max = d;
+            }
+        }
+        return max;
+    }
+
+    /** 需量目标 W（VPP_DEMAND_TARGET_W）；未配置返回 null。 */
+    private BigDecimal demandTargetW() {
+        return systemConfigRepository.findByConfigKeyAndDeletedFalse(KEY_DEMAND_TARGET_W)
+                .map(SystemConfig::getConfigValue)
+                .map(v -> v == null ? null : v.trim())
+                .filter(v -> !v.isEmpty())
+                .map(v -> {
+                    try {
+                        return new BigDecimal(v);
+                    } catch (NumberFormatException e) {
+                        log.warn("[VPP] system_config.{} 非法数值：{}，需量管理不生效", KEY_DEMAND_TARGET_W, v);
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .orElse(null);
     }
 
     /** 加载某虚拟电厂的在线资源快照（遥测缺失时 telemetryAvailable=false）。 */
@@ -482,7 +652,8 @@ public class VppDispatchService {
         if (exportAllowed) {
             opt = new VppDispatchOptions(opt.chargeTempMinC(), opt.essSocMinPercent(), true);
         }
-        return dispatchPlan(loadSnapshots(portfolioId), Instant.now(), opt);
+        return dispatchPlan(loadSnapshots(portfolioId), Instant.now(), opt,
+                resolveContext(portfolioId, Instant.now()));
     }
 
     /** 历史指令（按创建时间倒序）。 */
@@ -574,6 +745,7 @@ public class VppDispatchService {
             case CMD_CHARGE_ESS -> "enable_charge";
             case CMD_DISCHARGE_ESS -> "enable_discharge";
             case CMD_CURTAIL_CHARGER -> "set_output_power";
+            case CMD_SET_CHARGER_POWER -> "set_charger_power";
             case CMD_START_GEN -> "start_generator";
             default -> "noop";
         };

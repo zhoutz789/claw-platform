@@ -66,6 +66,17 @@ class VppResourceServiceTest {
                 .build();
     }
 
+    private com.claw.server.domain.iot.TelemetryLatest pvTelemetry(BigDecimal irradiance,
+                                                                   BigDecimal acPowerW,
+                                                                   BigDecimal deratePercent) {
+        return com.claw.server.domain.iot.TelemetryLatest.builder()
+                .assetId(ASSET_ID)
+                .irradiance(irradiance)
+                .acActivePowerW(acPowerW)
+                .deratePercent(deratePercent)
+                .build();
+    }
+
     @Test
     void register_returns_existing_row_when_asset_already_registered() {
         VppResource existing = resource(RESOURCE_ID, ASSET_ID, VppDispatchService.ESS, "ONLINE");
@@ -153,6 +164,42 @@ class VppResourceServiceTest {
         assertThat(view.resources().get(0).upW()).isEqualByComparingTo("0");
         assertThat(view.resources().get(0).downW()).isEqualByComparingTo("0");
         assertThat(view.resources().get(0).available()).isTrue();
+    }
+
+    @Test
+    void capacity_pv_full_power_has_zero_upward_headroom() {
+        // 增量口径：PV 满发时 up=0（已顶到技术上限，无上调空间）。
+        VppResource pv = resource(31L, ASSET_ID, VppDispatchService.PV, "ONLINE");
+        pv.setRatedPowerW(new BigDecimal("10000.00"));
+        when(vppResourceRepository.findByPortfolioIdAndStatus(PORTFOLIO_ID, "ONLINE"))
+                .thenReturn(List.of(pv));
+        when(telemetryLatestRepository.findTopByAssetIdOrderByReportedAtDescIdDesc(ASSET_ID))
+                .thenReturn(java.util.Optional.of(
+                        pvTelemetry(new BigDecimal("900"), new BigDecimal("10000"), BigDecimal.ZERO)));
+
+        VppResourceService.CapacityView view = service.capacity(PORTFOLIO_ID);
+        var cap = view.resources().get(0);
+        assertThat(cap.available()).isTrue();
+        assertThat(cap.upW()).isEqualByComparingTo("0");
+        assertThat(cap.downW()).isEqualByComparingTo("10000");
+    }
+
+    @Test
+    void capacity_pv_stopped_but_irradiated_has_rated_upward_headroom() {
+        // 增量口径：有辐照但当前出力 0（停机/未并网）→ up ≈ 额定，down=0。
+        VppResource pv = resource(32L, ASSET_ID, VppDispatchService.PV, "ONLINE");
+        pv.setRatedPowerW(new BigDecimal("10000.00"));
+        when(vppResourceRepository.findByPortfolioIdAndStatus(PORTFOLIO_ID, "ONLINE"))
+                .thenReturn(List.of(pv));
+        when(telemetryLatestRepository.findTopByAssetIdOrderByReportedAtDescIdDesc(ASSET_ID))
+                .thenReturn(java.util.Optional.of(
+                        pvTelemetry(new BigDecimal("900"), BigDecimal.ZERO, BigDecimal.ZERO)));
+
+        VppResourceService.CapacityView view = service.capacity(PORTFOLIO_ID);
+        var cap = view.resources().get(0);
+        assertThat(cap.available()).isTrue();
+        assertThat(cap.upW()).isEqualByComparingTo("10000");
+        assertThat(cap.downW()).isEqualByComparingTo("0");
     }
 
     @Test
