@@ -4,10 +4,15 @@ import com.claw.server.common.api.ApiResult;
 import com.claw.server.common.security.RequirePermission;
 import com.claw.server.domain.vpp.VppDispatchOrder;
 import com.claw.server.domain.vpp.VppDispatchService;
+import com.claw.server.domain.vpp.VppPortfolio;
+import com.claw.server.domain.vpp.VppPortfolioRepository;
+import com.claw.server.domain.vpp.VppResource;
+import com.claw.server.domain.vpp.VppResourceRepository;
 import com.claw.server.domain.vpp.VppResourceService;
 import jakarta.validation.Valid;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,7 +20,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 虚拟电厂只读/影子入口（VPP 切片第一批）。
@@ -38,6 +46,8 @@ public class VppController {
 
     private final VppResourceService vppResourceService;
     private final VppDispatchService vppDispatchService;
+    private final VppPortfolioRepository vppPortfolioRepository;
+    private final VppResourceRepository vppResourceRepository;
 
     /** 当前可调容量（只统计 ONLINE 资源，缺遥测者标记为不可用且不计入总量）。 */
     @GetMapping("/{portfolioId}/capacity")
@@ -61,10 +71,42 @@ public class VppController {
         return ApiResult.ok(vppDispatchService.listOrders(portfolioId));
     }
 
+    /** 组合列表（含资源数 / 额定总功率概览，供 VppOps 聚合看板；实时可调容量见各组合 /capacity）。 */
+    @GetMapping("/portfolios")
+    public ApiResult<List<PortfolioSummaryView>> portfolios() {
+        List<VppPortfolio> all = vppPortfolioRepository.findAll(Sort.by(Sort.Direction.ASC, "id"));
+        List<PortfolioSummaryView> views = new ArrayList<>();
+        for (VppPortfolio p : all) {
+            long resourceCount = vppResourceRepository.countByPortfolioId(p.getId());
+            BigDecimal totalRatedW = vppResourceRepository.findByPortfolioId(p.getId()).stream()
+                    .map(VppResource::getRatedPowerW)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            views.add(new PortfolioSummaryView(p.getId(), p.getName(), p.getOperatorId(), p.getRegionCode(),
+                    p.getGridNode(), p.getTargetSelfConsumptionRate(), p.getStatus(), resourceCount, totalRatedW));
+        }
+        return ApiResult.ok(views);
+    }
+
     /** 调度建议请求体。 */
     @Data
     public static class DispatchPlanRequest {
         /** 光伏余电是否允许上网；缺省 false（无 TOU 电价信号时默认限发）。 */
         private Boolean exportAllowed;
+    }
+
+    /** 组合概览（静态聚合；实时可调容量见 {@code /{portfolioId}/capacity}）。 */
+    public record PortfolioSummaryView(
+            Long id,
+            String name,
+            Long operatorId,
+            String regionCode,
+            String gridNode,
+            BigDecimal targetSelfConsumptionRate,
+            String status,
+            /** 纳入该组合的资源数。 */
+            long resourceCount,
+            /** 资源额定功率合计 W（含 PV/ESS/CHARGER/DIESEL 等，未配额定者不计）。 */
+            BigDecimal totalRatedPowerW) {
     }
 }

@@ -13,4 +13,6 @@ public interface VppResourceRepository extends JpaRepository<VppResource, Long> 
     List<VppResource> findByPortfolioId(Long portfolioId);
 
     List<VppResource> findByPortfolioIdAndStatus(Long portfolioId, String status);
+
+    long countByPortfolioId(Long portfolioId);
 }
