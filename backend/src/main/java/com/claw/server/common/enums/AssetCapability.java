@@ -20,5 +20,21 @@ public enum AssetCapability {
     /** 换电（预留）。 */
     SWAP,
     /** 自主驾驶能力（无人车 autonomy 子域）。 */
-    AUTONOMY
+    AUTONOMY,
+
+    // ===== 车辆多场景车型能力（T4 产品类配置，§3 场景剖面） =====
+    /** 冷链运输。 */
+    COLD_CHAIN,
+    /** 移动售卖。 */
+    VENDING,
+    /** 政府/公务资产。 */
+    GOV,
+    /** 应急/消防。 */
+    EMERGENCY,
+    /** 观光/旅游接驳。 */
+    TOURISM,
+    /** 巡逻/安保作业。 */
+    PATROL,
+    /** 安防/安保资质。 */
+    SECURITY
 }
