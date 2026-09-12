@@ -217,7 +217,7 @@
       "lock": "ចាក់សោសុវត្ថិភាព",
       "lockSuccess": "បានបញ្ឆេះចាក់សោសុវត្ថិភាព",
       "actionFailed": "បរាជ័យក្នុងប្រតិបត្តិការ: {{message}}",
-      "driveMode": { "AUTO": "ស្វ័យប្រវត្តិ", "ASSISTED": "ជំនួយ", "MANUAL": "ដៃ", "TELEOP": "ពីចម្ងាយ" }
+      "driveMode": { "ASSISTED": "ជំនួយ", "TELEOP": "ពីចម្ងាយ", "FULL": "ស្វ័យប្រវត្តិពេញលេញ" }
     },
     "task": {
       "selectAsset": "ជ្រើសរើសទ្រព្យយានយន្ត",

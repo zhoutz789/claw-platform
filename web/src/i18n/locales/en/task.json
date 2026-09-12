@@ -217,7 +217,7 @@
       "lock": "Safety lock",
       "lockSuccess": "Safety lock triggered",
       "actionFailed": "Operation failed: {{message}}",
-      "driveMode": { "AUTO": "Auto", "ASSISTED": "Assisted", "MANUAL": "Manual", "TELEOP": "Teleop" }
+      "driveMode": { "ASSISTED": "Assisted", "TELEOP": "Teleop", "FULL": "Full" }
     },
     "task": {
       "selectAsset": "Select vehicle asset",

@@ -653,7 +653,7 @@ function VehicleIotTab({ dev }) {
             {module && <Tag color="blue">{t('task:vehicle.autonomy.algoVersion')}: {module.algoVersion || '—'}</Tag>}
             {module && <Tag>{t('task:vehicle.autonomy.driveMode')}: {module.driveMode || '—'}</Tag>}
           </Space>
-          <Form layout="inline" form={moduleForm} initialValues={{ driveMode: module ? module.driveMode : 'AUTO', algoVersion: module ? module.algoVersion : '' }}>
+          <Form layout="inline" form={moduleForm} initialValues={{ driveMode: module ? module.driveMode : 'ASSISTED', algoVersion: module ? module.algoVersion : '' }}>
             <Form.Item label={t('task:vehicle.autonomy.algoVersion')} name="algoVersion" rules={[{ required: true, message: t('task:vehicle.autonomy.algoVersionRequired') }]}>
               <Input placeholder="v1.2.0" style={{ width: 140 }} />
             </Form.Item>

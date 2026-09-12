@@ -217,7 +217,7 @@
       "lock": "安全锁机",
       "lockSuccess": "已触发安全锁机",
       "actionFailed": "操作失败：{{message}}",
-      "driveMode": { "AUTO": "自动", "ASSISTED": "辅助", "MANUAL": "手动", "TELEOP": "遥控" }
+      "driveMode": { "ASSISTED": "辅助", "TELEOP": "遥控", "FULL": "全自主" }
     },
     "task": {
       "selectAsset": "选择车辆资产",
