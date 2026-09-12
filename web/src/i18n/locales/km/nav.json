@@ -14,7 +14,8 @@
     "risk-center": "",
     "onboarding": "ការគ្រប់គ្រងការចូលរួម",
     "sys": "មជ្ឈមណ្ឌលប្រព័ន្ធ",
-    "platform-settings": "ការកំណត់វេទិកា"
+    "platform-settings": "ការកំណត់វេទិកា",
+    "energy": ""
   },
   "item": {
     "workbench": "ផ្ទាំងការងារ",
@@ -96,6 +97,10 @@
     "capacity-booking": "ការកក់ចុះបន្ទុករបស់ខ្ញុំ",
     "station-contracts": "កិច្ចសន្យាស្ថានីយ",
     "categories": "ប្រភេទ",
-    "camera-playback": "ចាក់ឡើងវិញនៃទិន្នន័យ"
+    "camera-playback": "ចាក់ឡើងវិញនៃទិន្នន័យ",
+    "pv-station": "",
+    "pv-trace": "",
+    "vpp": "",
+    "product-energy": ""
   }
 }

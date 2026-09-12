@@ -96,6 +96,10 @@
     "capacity-booking": "我的容量预订",
     "station-contracts": "服务站合约管理",
     "categories": "类别管理",
-    "camera-playback": "数据回放"
+    "camera-playback": "数据回放",
+    "pv-station": "光伏电站",
+    "pv-trace": "光伏追溯",
+    "vpp": "虚拟电厂",
+    "product-energy": "能源品类商品"
   }
 }

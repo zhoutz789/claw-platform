@@ -90,6 +90,11 @@ import FlightPlans from './pages/FlightPlans';
 import PilotLicenses from './pages/PilotLicenses';
 import DroneOps from './pages/DroneOps';
 import CameraPlayback from './pages/CameraPlayback';
+// —— 能源运营（光伏 / 虚拟电厂 / 追溯 / 能源品类，menu:* 权限码见 V116 / V117 迁移） ——
+import PvStation from './pages/PvStation';
+import PvTrace from './pages/PvTrace';
+import VppOps from './pages/VppOps';
+import ProductEnergy from './pages/ProductEnergy';
 import ErrorBoundary from './ErrorBoundary';
 
 // 登录态下启动权限内核：拉取「我的权限」并下发后端权威菜单。
@@ -208,6 +213,11 @@ export default function App() {
           <Route path="drone-ops" element={<RequirePermRoute menuKey="drone-ops"><DroneOps /></RequirePermRoute>} />
           {/* 摄像头 / 录像域（数据回放）：按资产编号检索其下摄像头，实时/历史回放，menu:camera-playback 权限码见 V91 */}
           <Route path="camera-playback" element={<RequirePermRoute menuKey="camera-playback"><CameraPlayback /></RequirePermRoute>} />
+          {/* 能源运营：光伏电站监控 / 光伏追溯 / 虚拟电厂聚合看板 / 能源品类商品（menu:* 权限码见 V116 / V117） */}
+          <Route path="pv-station" element={<RequirePermRoute menuKey="pv-station"><PvStation /></RequirePermRoute>} />
+          <Route path="pv-trace" element={<RequirePermRoute menuKey="pv-trace"><PvTrace /></RequirePermRoute>} />
+          <Route path="vpp" element={<RequirePermRoute menuKey="vpp"><VppOps /></RequirePermRoute>} />
+          <Route path="product-energy" element={<RequirePermRoute menuKey="product-energy"><ProductEnergy /></RequirePermRoute>} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

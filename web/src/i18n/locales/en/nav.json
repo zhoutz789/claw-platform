@@ -14,7 +14,8 @@
     "risk-center": "Risk Control",
     "onboarding": "Onboarding",
     "sys": "System",
-    "platform-settings": "Platform Settings"
+    "platform-settings": "Platform Settings",
+    "energy": "Energy Operations"
   },
   "item": {
     "workbench": "Workbench",
@@ -96,6 +97,10 @@
     "capacity-booking": "My Capacity Booking",
     "station-contracts": "Station Contracts",
     "categories": "Categories",
-    "camera-playback": "Data Playback"
+    "camera-playback": "Data Playback",
+    "pv-station": "PV Stations",
+    "pv-trace": "PV Traceability",
+    "vpp": "Virtual Power Plant",
+    "product-energy": "Energy Products"
   }
 }

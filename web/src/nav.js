@@ -25,7 +25,7 @@ import { tv } from './i18n';
 import {
   DashboardOutlined, AppstoreOutlined, ShoppingOutlined, ProjectOutlined, RocketOutlined,
   DeploymentUnitOutlined, AccountBookOutlined, SafetyOutlined, SettingOutlined, InboxOutlined,
-  IdcardOutlined, SendOutlined, ShopOutlined, ControlOutlined,
+  IdcardOutlined, SendOutlined, ShopOutlined, ControlOutlined, ThunderboltOutlined,
 } from '@ant-design/icons';
 
 // 九大模块（工作台 + A/B/C/D 期新设计 + 四大中心）；children 为各模块下的页面。
@@ -189,6 +189,16 @@ export const NAV = [
       { key: 'menu-manager', label: 'nav:item.menu-manager', path: '/menu-manager' },
     ],
   },
+  // 能源运营（光伏 / 虚拟电厂 / 追溯 / 能源品类，menu:* 权限码见 V116 / V117 迁移）
+  {
+    key: 'energy', label: 'nav:group.energy', icon: ThunderboltOutlined,
+    children: [
+      { key: 'pv-station', label: 'nav:item.pv-station', path: '/pv-station' },
+      { key: 'pv-trace', label: 'nav:item.pv-trace', path: '/pv-trace' },
+      { key: 'vpp', label: 'nav:item.vpp', path: '/vpp' },
+      { key: 'product-energy', label: 'nav:item.product-energy', path: '/product-energy' },
+    ],
+  },
 ];
 
 /** 顶级叶子（无分组）在搜索结果里显示的分组名。 */
@@ -270,6 +280,8 @@ export const ROUTES = [
   '/airspace-zones', '/flight-plans', '/pilot-licenses', '/drone-ops',
   // 摄像头 / 录像域（数据回放，menu:camera-playback 权限码见 V91 迁移）
   '/camera-playback',
+  // 能源运营（光伏 / 虚拟电厂 / 追溯 / 能源品类，menu:* 权限码见 V116 / V117 迁移）
+  '/pv-station', '/pv-trace', '/vpp', '/product-energy',
 ];
 
 // 拍平为「带父级标签」的搜索索引：[{ key,label,path,group,groupKey }]，递归展开所有叶子。
