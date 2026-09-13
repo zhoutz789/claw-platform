@@ -2,6 +2,8 @@
 # 阶段 1：用 Node 构建 Vite 产物
 FROM node:20-alpine AS build
 WORKDIR /app
+# CN 服务器构建走 npmmirror 镜像，避免直连 npmjs.org 超时
+RUN npm config set registry https://registry.npmmirror.com
 # 仅复制依赖清单先装，利用镜像层缓存
 COPY package.json package-lock.json ./
 RUN npm ci
