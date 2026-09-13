@@ -81,5 +81,5 @@ dist/assets/index-*.js   2,451.80 kB (gzip 769.23 kB)
 - **独立建档页 `CreateVehicle.jsx`**：两步式——① 建档表单提交 `createVehicleAsset`(POST /v1/assets/vehicle)，响应经 `api.js` 解包为 `AssetView`，取 `asset.id` 进入第二阶段；② 「立即入网绑定」快捷流程：服务站 Select（复用 `listStations` 真实接口 `/v1/stations/nearby`）+ 设备类型（VEHICLE_TCU/BATTERY_BMS/CHARGER）+ 可选 IMEI / 安装位置，提交 `bindVehicleDevice(id, …)`(POST /v1/assets/{id}/bind)。可「跳过，稍后绑定」直接跳 `/assets`，绑定成功后提供「查看资产台账 / 再建一辆」。
 - **三语 parity**：`task.json` 新增 `vehicle.create.bind.*` 18 key（assetCreated/title/hint/station/stationPlaceholder/deviceType/imei/imeiPlaceholder/location/locationPlaceholder/submit/skip/success/failed/noId/done/viewAssets/createAnother），zh/en/km 程序化 diff **0 差异**。
 - **构建**：`npm run build` → **0 错误 0 警告**，6.40s，3309 modules。最终 chunk 与 §6 一致：antd 1,603kB / index 894kB / react 164kB / i18n 58kB / dayjs 17kB。
-- **保留既有入口**：`VehicleProductClass.jsx` 内「新建车辆」模态（快速建档，成功后跳 `/assets`）仍保留，与独立导航页并行——前者为车型页内快捷建档，后者为「建档 + 入网绑定」完整流程。
+- **车型页入口收敛为跳转**（commit 6aea733）：`VehicleProductClass.jsx` 内「新建车辆」模态（及 `createVehicleAsset`/`InputNumber` 未用导入）已移除，「新建车辆」按钮改为 `navigate('/vehicle-create')`，统一走独立建档 + 入网绑定页；`vehicle.create.*`（含 `bind.*`）18 key 仍由 `CreateVehicle.jsx` 复用，无孤儿 i18n。`npm run build` **0 错误 0 警告**（6.32s）本地提交未 push。
 - 约束复核：本地提交、未 push；前端门面单点取数（无直写 /v1 端点）；i18n 三语齐备；`ApiResult` 解包后 `created.id` 防御性兜底（`asset.id ?? asset.data?.id`，缺则提示 `noId`）。
