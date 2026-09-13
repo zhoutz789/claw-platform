@@ -287,7 +287,27 @@
       "ownerIdPlaceholder": "归属用户 ID（可选，留空则归当前操作人）",
       "submit": "创建",
       "success": "车辆已创建",
-      "failed": "创建车辆失败：{{message}}"
+      "failed": "创建车辆失败：{{message}}",
+      "bind": {
+        "assetCreated": "车辆已建档（编号 {{assetNo}}，ID {{id}}）",
+        "title": "立即入网绑定",
+        "hint": "绑定仅一次；再次绑定需产权转移。选择入网服务站与车载终端类型，完成设备上电入网。",
+        "station": "入网服务站",
+        "stationPlaceholder": "选择入网服务站",
+        "deviceType": "设备类型",
+        "imei": "设备 IMEI",
+        "imeiPlaceholder": "可选，终端硬件号",
+        "location": "安装位置",
+        "locationPlaceholder": "可选，如前舱 / 底盘",
+        "submit": "完成入网绑定",
+        "skip": "跳过，稍后绑定",
+        "success": "车辆已入网绑定",
+        "failed": "入网绑定失败：{{message}}",
+        "noId": "后端未返回车辆 ID，无法继续绑定",
+        "done": "车辆已创建并入网绑定成功",
+        "viewAssets": "查看资产台账",
+        "createAnother": "再建一辆车"
+      }
     }
   }
 }

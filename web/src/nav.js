@@ -120,6 +120,7 @@ export const NAV = [
     children: [
       { key: 'vehicle-product-classes', label: 'nav:item.vehicle-product-classes', path: '/vehicle-product-classes' },
       { key: 'vehicle-trajectory', label: 'nav:item.vehicle-trajectory', path: '/vehicle-trajectory' },
+      { key: 'vehicle-create', label: 'nav:item.vehicle-create', path: '/vehicle-create' },
     ],
   },
   // ——— 以下为 2026-08-29 恢复的旧四大中心 ———
@@ -292,7 +293,7 @@ export const ROUTES = [
   // 能源运营（光伏 / 虚拟电厂 / 追溯 / 能源品类，menu:* 权限码见 V116 / V117 迁移）
   '/pv-station', '/pv-trace', '/vpp', '/product-energy',
   // T8 · 车辆（地面自动驾驶 / 换电）域（menu:* 权限码见 V120 迁移）
-  '/vehicle-product-classes', '/vehicle-trajectory', '/task-vehicle',
+  '/vehicle-product-classes', '/vehicle-trajectory', '/task-vehicle', '/vehicle-create',
 ];
 
 // 拍平为「带父级标签」的搜索索引：[{ key,label,path,group,groupKey }]，递归展开所有叶子。

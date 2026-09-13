@@ -104,6 +104,7 @@
     "product-energy": "能源品类商品",
     "vehicle-product-classes": "车型管理",
     "vehicle-trajectory": "车辆轨迹",
+    "vehicle-create": "新建车辆",
     "task-vehicle": "车辆任务"
   }
 }

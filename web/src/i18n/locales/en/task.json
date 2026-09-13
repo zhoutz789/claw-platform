@@ -287,7 +287,27 @@
       "ownerIdPlaceholder": "Owner user ID (optional; blank = current operator)",
       "submit": "Create",
       "success": "Vehicle created",
-      "failed": "Failed to create vehicle: {{message}}"
+      "failed": "Failed to create vehicle: {{message}}",
+      "bind": {
+        "assetCreated": "Vehicle registered (No. {{assetNo}}, ID {{id}})",
+        "title": "Bind to network now",
+        "hint": "Binding is one-time; rebinding requires ownership transfer. Pick the onboarding station and the onboard terminal type to bring the device online.",
+        "station": "Onboarding station",
+        "stationPlaceholder": "Select onboarding station",
+        "deviceType": "Device type",
+        "imei": "Device IMEI",
+        "imeiPlaceholder": "Optional, terminal hardware no.",
+        "location": "Install location",
+        "locationPlaceholder": "Optional, e.g. front bay / chassis",
+        "submit": "Complete network binding",
+        "skip": "Skip, bind later",
+        "success": "Vehicle bound to network",
+        "failed": "Network binding failed: {{message}}",
+        "noId": "Backend did not return a vehicle ID; cannot continue binding",
+        "done": "Vehicle created and bound to network successfully",
+        "viewAssets": "View asset ledger",
+        "createAnother": "Create another"
+      }
     }
   }
 }

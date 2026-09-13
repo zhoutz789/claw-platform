@@ -226,6 +226,7 @@ export default function App() {
           <Route path="vehicle-product-classes" element={<VehicleProductClass />} />
           <Route path="vehicle-trajectory" element={<VehicleTrajectory />} />
           <Route path="task-vehicle" element={<TaskVehicle />} />
+          <Route path="vehicle-create" element={<CreateVehicle />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
