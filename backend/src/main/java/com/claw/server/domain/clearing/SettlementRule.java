@@ -39,7 +39,7 @@ public class SettlementRule {
     @Column(name = "payee_type", nullable = false, length = 24)
     private String payeeType;
 
-    /** 计价基准：RATE / FIXED / TIER。 */
+    /** 计价基准：RATE / FIXED / TIER / RESIDUAL（残差兜底，V132 起显式化）。 */
     @Enumerated(EnumType.STRING)
     @Column(name = "basis", nullable = false, length = 16)
     private RuleBasis basis;

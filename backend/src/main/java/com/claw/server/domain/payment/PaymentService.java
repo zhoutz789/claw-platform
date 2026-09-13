@@ -8,6 +8,7 @@ import com.claw.server.common.enums.AccountType;
 import com.claw.server.common.enums.BizType;
 import com.claw.server.common.enums.PayStatus;
 import com.claw.server.common.enums.WalletTxnStatus;
+import com.claw.server.common.event.OutboxPublisher;
 import com.claw.server.domain.ledger.Account;
 import com.claw.server.domain.ledger.AccountService;
 import com.claw.server.domain.ledger.LedgerService;
@@ -43,11 +44,25 @@ public class PaymentService {
     private static final Set<AccountType> ESCROW_TYPES = Set.of(
             AccountType.RESIDUAL_RESERVE, AccountType.BATTERY_FUND, AccountType.VEHICLE_RISK);
 
+    /**
+     * R1 扫码购支付单的业务单号前缀（{@code payment_orders.biz_ref}）。
+     *
+     * <p>只有以此前缀创建的支付单，在支付成功后才发布 {@link #EVENT_PAYMENT_PAID} 事件触发清分分账。
+     * 既有充值（{@code RECHARGE:}）与三专户收单（{@code COLLECT:}）<b>不匹配该前缀</b>，因此
+     * 本次接入对既有支付链路<b>零行为变更</b>（不产生额外 outbox 行，不影响既有单测/集成测试断言）。
+     */
+    public static final String SCAN_PURCHASE_BIZ_REF_PREFIX = "SCAN_PURCHASE:";
+
+    /** 支付成功事件类型（由 {@code ConsignmentClearingHandler} 消费，驱动 R1 扫码购分账）。 */
+    public static final String EVENT_PAYMENT_PAID = ConsignmentClearingHandler.EVENT_TYPE;
+
     private final PaymentOrderRepository paymentOrderRepository;
     private final WalletTxnRepository walletTxnRepository;
     private final AccountService accountService;
     private final LedgerService ledgerService;
     private final AbaGateway abaGateway;
+    /** 事务性发件箱：与业务变更同事务落库，保证「支付成功 → 触发清分」不丢事件。 */
+    private final OutboxPublisher outboxPublisher;
 
     // ------------------------------------------------------------------
     // 1. 充值：KHQR 收单（用户总账户）
@@ -138,8 +153,40 @@ public class PaymentService {
         txn.setUpdatedAt(Instant.now());
         walletTxnRepository.save(txn);
 
+        // R1 扫码购：支付成功后在同一事务内发布清分触发事件（仅扫码购单；既有充值/三专户链路不受影响）
+        publishPaymentPaidIfScanPurchase(order);
+
         log.info("支付回调入账 {} 金额 ${} escrow={}", orderNo, order.getAmountUsd(), order.getEscrowType());
         return toView(txn);
+    }
+
+    /**
+     * R1 扫码购分账触发：仅对 {@code bizRef} 以 {@value #SCAN_PURCHASE_BIZ_REF_PREFIX} 开头的支付单，
+     * 在支付成功事务内发布 {@link #EVENT_PAYMENT_PAID} outbox 事件。
+     *
+     * <p><b>为什么不直接调用清分</b>：清分属资金链路，必须「不丢 + 可重试 + 有死信」，故落 outbox 由
+     * {@code OutboxRelay} 投递给 {@code ConsignmentClearingHandler}（见该类 javadoc 的取舍说明）。
+     *
+     * <p><b>隔离性</b>：本方法整体 try/catch 兜底 —— 清分触发属<b>支付主流程的旁路</b>，
+     * 任何发布异常都不得影响「支付成功」这一既定事实（否则 ABA 回调会被上游判失败并重推）。
+     * 发布动作与支付状态变更同事务（{@code OutboxPublisher} 为 MANDATORY 传播），
+     * 因此正常路径下「支付成功」与「清分待触发」原子一致。
+     *
+     * @param order 已置为 PAID 的支付单
+     */
+    private void publishPaymentPaidIfScanPurchase(PaymentOrder order) {
+        String bizRef = order.getBizRef();
+        if (bizRef == null || !bizRef.startsWith(SCAN_PURCHASE_BIZ_REF_PREFIX)) {
+            return;
+        }
+        try {
+            outboxPublisher.publish("payment_order", order.getId(), EVENT_PAYMENT_PAID,
+                    "{\"orderNo\":\"" + order.getOrderNo() + "\"}");
+            log.info("R1 扫码购分账触发事件已发布 orderNo={}", order.getOrderNo());
+        } catch (Exception e) {
+            log.warn("R1 分账触发事件发布失败（不影响支付主流程）orderNo={}：{}",
+                    order.getOrderNo(), e.getMessage());
+        }
     }
 
     // ------------------------------------------------------------------

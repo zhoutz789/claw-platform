@@ -6,11 +6,13 @@ import com.claw.server.common.enums.AccountType;
 import com.claw.server.common.enums.BizType;
 import com.claw.server.common.enums.PayStatus;
 import com.claw.server.common.enums.WalletTxnStatus;
+import com.claw.server.common.event.OutboxPublisher;
 import com.claw.server.domain.ledger.Account;
 import com.claw.server.domain.ledger.AccountService;
 import com.claw.server.domain.ledger.LedgerService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -21,12 +23,14 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
- * 支付域单元测试：充值收单/回调入账（幂等）/三专户收单/提现状态机/出金失败退回。
+ * 支付域单元测试：充值收单/回调入账（幂等）/三专户收单/提现状态机/出金失败退回/
+ * 扫码购（R1）清分触发事件发布。
  */
 @ExtendWith(MockitoExtension.class)
 class PaymentServiceTest {
@@ -36,6 +40,7 @@ class PaymentServiceTest {
     @Mock private AccountService accountService;
     @Mock private LedgerService ledgerService;
     @Mock private AbaGateway abaGateway;
+    @Mock private OutboxPublisher outboxPublisher;
     @InjectMocks private PaymentService service;
 
     private Account account(Long id, String balance) {
@@ -174,5 +179,42 @@ class PaymentServiceTest {
 
         assertEquals("FAILED_REFUND", v.status());
         verify(ledgerService).postEntries(eq(BizType.WITHDRAW), eq("WDR-1:REFUND"), anyList());
+    }
+
+    // ------------------------------------------------------------------
+    // R1 扫码购：支付成功后发布清分触发事件（outbox，仅扫码购单）
+    // ------------------------------------------------------------------
+    @Test
+    void callback_scanPurchase_publishesClearingTriggerEvent() {
+        PaymentOrder scan = PaymentOrder.builder().id(9L).orderNo("PAY-S1")
+                .bizRef(PaymentService.SCAN_PURCHASE_BIZ_REF_PREFIX + "T-1")
+                .amountUsd(new BigDecimal("100.00")).channel("khqr").paymentMethod("SCAN_PURCHASE")
+                .status(PayStatus.CREATED).build();
+        when(paymentOrderRepository.findByOrderNo("PAY-S1")).thenReturn(Optional.of(scan));
+        when(paymentOrderRepository.save(any(PaymentOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(walletTxnRepository.findByPaymentOrderNo("PAY-S1"))
+                .thenReturn(Optional.of(createdTxn("RCH-S1", "SCAN_PURCHASE")));
+        when(accountService.getOrCreatePlatformAccount(AccountType.MASTER)).thenReturn(account(1L, "0.00"));
+        when(accountService.getOrCreateUserAccount(100L)).thenReturn(account(2L, "0.00"));
+
+        service.onCallback("PAY-S1");
+
+        ArgumentCaptor<String> payload = ArgumentCaptor.forClass(String.class);
+        verify(outboxPublisher).publish(eq("payment_order"), eq(9L),
+                eq(PaymentService.EVENT_PAYMENT_PAID), payload.capture());
+        assertTrue(payload.getValue().contains("PAY-S1"), "载荷须带订单号供 handler 定位（金额一律以 DB 为权威）");
+    }
+
+    @Test
+    void callback_recharge_doesNotPublishClearingTriggerEvent() {
+        when(paymentOrderRepository.findByOrderNo("PAY-1")).thenReturn(Optional.of(createdOrder("PAY-1", null)));
+        when(paymentOrderRepository.save(any(PaymentOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(walletTxnRepository.findByPaymentOrderNo("PAY-1")).thenReturn(Optional.of(createdTxn("RCH-1", "RECHARGE")));
+        when(accountService.getOrCreatePlatformAccount(AccountType.MASTER)).thenReturn(account(1L, "100.00"));
+        when(accountService.getOrCreateUserAccount(100L)).thenReturn(account(2L, "0.00"));
+
+        service.onCallback("PAY-1");
+
+        verify(outboxPublisher, never()).publish(anyString(), any(), anyString(), anyString());
     }
 }

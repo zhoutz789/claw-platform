@@ -93,7 +93,7 @@ public class ClearingService {
                     currency, payeeAccountId, cmd.channel()));
         }
         log.info("[Clearing] basisRef={} 清分完成，{} 腿，合计 {}", cmd.basisRef(), legs.size(), cmd.total());
-        return ClearingResult.completed(cmd.basisRef(), cmd.bizScene(), cmd.total(), instructions);
+        return ClearingResult.completed(cmd.basisRef(), cmd.bizScene(), cmd.total(), instructions, legs);
     }
 
     /**
@@ -142,13 +142,20 @@ public class ClearingService {
      * @param legCount         腿数
      * @param idempotentReplay 是否为幂等重放（true 表示未重复入账）
      * @param instructions     各腿清分指令
+     * @param legs             各腿分账明细（{@code payeeType + amount + settleCycle}）。
+     *                         <p>通道层（{@code ConsignmentClearingHandler} / {@code ChannelSplitPlanner}）需要
+     *                         「收款方类型」来解析 ABA 账户并做尾差吸收；{@code clearing_instruction} 表刻意
+     *                         不冗余 {@code payee_type} 列（只存 {@code idem_key} / {@code ledger_biz_ref}），
+     *                         故由本结果对象透出，避免调用方去解析字符串后缀。
+     *                         <b>幂等重放时为空表</b>（既有指令已含金额，通道动作早已发生过）。
      */
     public record ClearingResult(String basisRef, String bizScene, BigDecimal total, int legCount,
-                                 boolean idempotentReplay, List<ClearingInstruction> instructions) {
+                                 boolean idempotentReplay, List<ClearingInstruction> instructions,
+                                 List<SplitEngine.SplitLeg> legs) {
 
         static ClearingResult completed(String basisRef, String bizScene, BigDecimal total,
-                                        List<ClearingInstruction> instructions) {
-            return new ClearingResult(basisRef, bizScene, total, instructions.size(), false, instructions);
+                                        List<ClearingInstruction> instructions, List<SplitEngine.SplitLeg> legs) {
+            return new ClearingResult(basisRef, bizScene, total, instructions.size(), false, instructions, legs);
         }
 
         static ClearingResult existing(String basisRef, String bizScene, List<ClearingInstruction> instructions) {
@@ -156,7 +163,7 @@ public class ClearingService {
                     .map(ClearingInstruction::getAmount)
                     .filter(java.util.Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            return new ClearingResult(basisRef, bizScene, total, instructions.size(), true, instructions);
+            return new ClearingResult(basisRef, bizScene, total, instructions.size(), true, instructions, List.of());
         }
     }
 }

@@ -209,4 +209,45 @@ class SplitEngineTest {
                 () -> splitEngine.compute(SCENE, new BigDecimal("-1"), null, "USD"));
         assertEquals(BizException.INVALID_PARAM, ex.getCode());
     }
+
+    // ===================== 残差显式化（V132 · RuleBasis.RESIDUAL）=====================
+
+    @Test
+    void residualBasis_receivesRemainder_withoutRate() {
+        stubScene(
+                rule("PLATFORM", RuleBasis.RATE, "0.05", null, null, 1, null),
+                rule("MANUFACTURER", RuleBasis.RESIDUAL, null, null, null, 99, null));
+
+        List<SplitEngine.SplitLeg> legs = splitEngine.compute(SCENE, new BigDecimal("100"), null, "USD");
+
+        assertEquals(2, legs.size());
+        assertEquals(0, sum(legs).compareTo(new BigDecimal("100")));
+        // RESIDUAL 无需 rate/fixed/tier，直接拿残差：100 − 5 = 95
+        assertEquals(0, legOf(legs, "MANUFACTURER").amount().compareTo(new BigDecimal("95.0000")));
+    }
+
+    @Test
+    void legacyRateOneFallback_stillWorks_whenNoResidualBasis() {
+        // V131 历史种子写法（basis=RATE, rate=1.0）→ 向后兼容，存量配置不改也能跑
+        stubScene(
+                rule("PLATFORM", RuleBasis.RATE, "0.05", null, null, 1, null),
+                rule("MANUFACTURER", RuleBasis.RATE, "1.0", null, null, 99, null));
+
+        List<SplitEngine.SplitLeg> legs = splitEngine.compute(SCENE, new BigDecimal("100"), null, "USD");
+
+        assertEquals(0, sum(legs).compareTo(new BigDecimal("100")));
+        assertEquals(0, legOf(legs, "MANUFACTURER").amount().compareTo(new BigDecimal("95.0000")));
+    }
+
+    @Test
+    void duplicateResidualBasis_failsLoud() {
+        // 两条 RESIDUAL：仅 priority 最大者作兜底，另一条按 basis 计算不了 → 必须显式报错，绝不静默错账
+        stubScene(
+                rule("PLATFORM", RuleBasis.RESIDUAL, null, null, null, 50, null),
+                rule("MANUFACTURER", RuleBasis.RESIDUAL, null, null, null, 99, null));
+
+        BizException ex = assertThrows(BizException.class,
+                () -> splitEngine.compute(SCENE, new BigDecimal("100"), null, "USD"));
+        assertEquals(BizException.INVALID_PARAM, ex.getCode());
+    }
 }

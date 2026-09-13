@@ -26,9 +26,14 @@ import java.util.Map;
  * 若指定 {@code manufacturerId}，仅保留「厂家专属规则」与「通用规则（manufacturer_id 为空）」，其中
  * 厂家专属规则优先（同 priority 时排前）。
  *
- * <p><b>残差归位（兜底项）</b>：设计 §2 的种子以 {@code basis=RATE, rate=1.0} 标记兜底收款方
- * （“残差归厂家”）。引擎据约定识别残差规则：{@code basis=RATE 且 rate>=1}（多条时取 priority 最大者），
- * 其金额 = {@code total − Σ其余腿}；其余规则按各自 basis 计算。Σ腿金额恒等于 total。
+ * <p><b>残差归位（兜底项）</b>：兜底收款方由 {@code basis=RESIDUAL} <b>显式</b>标记（V132 起；
+ * 落地设计附录 A.3「分账总额必须等于交易总额 / 错误码 92」的账本侧口径），其金额 =
+ * {@code total − Σ其余腿}，<b>无需</b> rate / fixed_amount / tier_json。
+ *
+ * <p><b>历史兼容</b>：场景内不存在 RESIDUAL 规则时，回退识别 {@code basis=RATE 且 rate>=1}
+ * 为兜底项（V131 种子「MANUFACTURER / RATE 1.000000」的旧写法），保证存量配置不改也能跑。
+ * 多条兜底候选时取 {@code priority} 最大者；未被选中的 RESIDUAL 规则属配置错误，会显式抛错。
+ * 其余规则按各自 basis 计算。Σ腿金额恒等于 total。
  *
  * <p><b>守恒断言</b>：分组完成后再次校验 {@code Σ(leg.amount) == total}；一切越界（残差为负、
  * 无规则命中、basis 配置缺失）均抛 {@link BizException}，<b>绝不静默返回空表或错账</b>。
@@ -69,12 +74,16 @@ public class SplitEngine {
             throw BizException.notFound("error.clearing.rule.not.found", bizScene);
         }
 
-        // 兜底项：basis=RATE 且 rate>=1（多条取 priority 最大者）
+        // 兜底项：优先显式 basis=RESIDUAL（V132）；无则回退历史约定 basis=RATE 且 rate>=1（V131 种子）。
+        // 多条候选时取 priority 最大者（“越小越先扣”语义下，兜底项必排在最后）。
         SettlementRule residueRule = rules.stream()
-                .filter(r -> r.getBasis() == RuleBasis.RATE
-                        && r.getRate() != null && r.getRate().compareTo(ONE) >= 0)
-                .max(Comparator.comparingInt(r -> nzPriority(r)))
-                .orElse(null);
+                .filter(r -> r.getBasis() == RuleBasis.RESIDUAL)
+                .max(Comparator.comparingInt(SplitEngine::nzPriority))
+                .orElseGet(() -> rules.stream()
+                        .filter(r -> r.getBasis() == RuleBasis.RATE
+                                && r.getRate() != null && r.getRate().compareTo(ONE) >= 0)
+                        .max(Comparator.comparingInt(SplitEngine::nzPriority))
+                        .orElse(null));
 
         List<SplitLeg> legs = new ArrayList<>();
         BigDecimal allocated = BigDecimal.ZERO;
@@ -166,6 +175,11 @@ public class SplitEngine {
             }
             case TIER -> {
                 return computeTier(rule, total);
+            }
+            case RESIDUAL -> {
+                // 只有「被 compute 选中的那一条」兜底规则走残差分支。走到这里说明同一场景配置了
+                // 多条 RESIDUAL 规则 —— 属配置错误，必须显式报错，绝不按 0 或全额静默错账。
+                throw BizException.invalidParam("error.clearing.rule.invalid", rule.getId());
             }
             default -> throw BizException.invalidParam("error.clearing.rule.invalid", rule.getId());
         }
