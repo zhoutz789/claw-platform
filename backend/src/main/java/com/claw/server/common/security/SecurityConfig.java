@@ -15,6 +15,8 @@ import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -123,6 +125,8 @@ public class SecurityConfig {
         } else {
             // 生产态：仅白名单免鉴权，其余强制 JWT。
             http.authorizeHttpRequests(auth -> auth
+                // 修改密码需携带有效 JWT（登录态），即便同属 /api/v1/auth 前缀也强制鉴权。
+                .requestMatchers("/api/v1/auth/change-password").authenticated()
                 .requestMatchers(
                     "/api/v1/auth/**",
                     "/api/v1/iot/auth",
@@ -146,6 +150,11 @@ public class SecurityConfig {
 
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     /**

@@ -9,6 +9,7 @@ import com.claw.server.domain.role.RoleView;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +34,7 @@ public class AuthService {
     private final PermissionService permissionService;
     private final JwtUtil jwtUtil;
     private final SmsGateway smsGateway;
+    private final PasswordEncoder passwordEncoder;
 
     @Value("${claw.security.sms-dev-echo:true}")
     private boolean smsDevEcho;
@@ -118,5 +120,62 @@ public class AuthService {
             u.setUpdatedAt(Instant.now());
             userRepository.save(u);
         });
+    }
+
+    /**
+     * 账号 + 密码登录。
+     * 未设置密码的账号（仅 OTP 注册）引导走短信找回；密码错误按参数异常拒绝。
+     */
+    public ApiViews.AuthResp loginWithPassword(String phone, String rawPassword) {
+        User user = userRepository.findByPhone(phone)
+                .orElseThrow(() -> BizException.invalidParam("error.auth.account.notfound"));
+        if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
+            throw BizException.invalidParam("error.auth.password.notset");
+        }
+        if (!passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
+            throw BizException.invalidParam("error.auth.password.wrong");
+        }
+        String token = jwtUtil.issue(user.getId(), user.getPhone(), summarizeRoles(user.getId()));
+        return new ApiViews.AuthResp(token, user.getId(), user.getPhone());
+    }
+
+    /**
+     * 短信验证码找回 / 重置密码。校验通过后直接覆写密码哈希，不要求旧密码。
+     * 用于「忘记密码」以及「修改密码时验证手机号」的等价入口（均走手机号 + 短信码）。
+     */
+    @Transactional
+    public void resetPassword(String phone, String code, String newPassword) {
+        if (!smsCodeStore.verify(phone, code)) {
+            throw BizException.invalidParam("error.auth.code.invalid");
+        }
+        User user = userRepository.findByPhone(phone)
+                .orElseThrow(() -> BizException.invalidParam("error.auth.account.notfound"));
+        applyPassword(user, newPassword);
+        userRepository.save(user);
+    }
+
+    /**
+     * 登录态下修改密码：校验旧密码（已设密码时）后更新。
+     * 若用户此前从未设密码（仅 OTP），则视为首次设置，跳过旧密码校验。
+     */
+    @Transactional
+    public void changePassword(Long userId, String oldPassword, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> BizException.notFound("error.user.not.found"));
+        if (user.getPasswordHash() != null && !user.getPasswordHash().isBlank()) {
+            if (oldPassword == null || !passwordEncoder.matches(oldPassword, user.getPasswordHash())) {
+                throw BizException.invalidParam("error.auth.password.wrong");
+            }
+        }
+        applyPassword(user, newPassword);
+        userRepository.save(user);
+    }
+
+    /** 校验并落地密码哈希（长度下限 6，BCrypt 编码）。 */
+    private void applyPassword(User user, String rawPassword) {
+        if (rawPassword == null || rawPassword.length() < 6) {
+            throw BizException.invalidParam("error.auth.password.weak");
+        }
+        user.setPasswordHash(passwordEncoder.encode(rawPassword));
     }
 }
