@@ -221,8 +221,10 @@ curl -sk https://127.0.0.1/actuator/health      # 期望含 "UP"
 ```bash
 cd /root/claw-platform
 git config --global --add safe.directory /root/claw-platform   # 若未设
-# 服务器需经代理镜像拉 GitHub（否则 GnuTLS 超时）：
-git config --global url."https://ghproxy.com/https://github.com/".insteadOf "https://github.com/"
+# 服务器直连 GitHub 会 GnuTLS 超时。⚠️ 注意：ghproxy.com 已失效（2026-09 实测），
+# 故本 cron 自动 pull 目前大概率失败；建议改用「Mac 打 bundle + scp 直传」（见 §9.1），
+# 或换一个当时可用的镜像代理后再配：
+git config --global url."https://<当前可用镜像>/https://github.com/".insteadOf "https://github.com/"
 chmod +x scripts/daily-deploy.sh
 touch /var/log/claw-daily-deploy.log
 # crontab -e 加入：  0 3 * * * /root/claw-platform/scripts/daily-deploy.sh
@@ -230,3 +232,37 @@ touch /var/log/claw-daily-deploy.log
 
 配置后，你只需在本机 `git push origin main`，服务器每日 03:00 自动 pull + 重建 + 部署，无需再手动跑第 5.1 节的链路。
 日志见 `/var/log/claw-daily-deploy.log`。
+
+## 9. 系统重装后从零部署（本轮实测踩坑清单）
+
+> 场景：服务器重装系统、旧数据卷清空（约定「无备份，清空重来」）。以下 4 类坑**只在空库从零跑 V1→V127 时**才暴露，重装部署务必先看。
+
+### 9.1 GitHub 在国内服务器不可达 → 用 git bundle 直传，别依赖网络
+- 现象：`git clone https://github.com/...` GnuTLS 超时；`ghproxy.com` 也已失效。
+- 做法：Mac 上 `git bundle create claw-platform.bundle --all` → `scp` 到服务器 → `git clone /root/claw-platform.bundle /root/claw-platform` → `git remote set-url origin https://github.com/zhoutz789/claw-platform.git`。
+- 仓库是**公开**的，克隆**不需要 token**（别再往聊天里贴 PAT）。
+
+### 9.2 docker build 必须配国内镜像源（否则 Maven/npm 拉依赖卡死）
+- 后端：`backend/maven-settings.xml`（阿里云镜像）+ Dockerfile 里 `mvn -B -s maven-settings.xml`；
+- 前端：`web/Dockerfile` 里 `npm config set registry https://registry.npmmirror.com`；
+- Docker daemon 加速：`/etc/docker/daemon.json` → `{"registry-mirrors":["https://mirror.ccs.tencentyun.com"]}`（腾讯云主机）。
+
+### 9.3 空库从零跑迁移会暴露「只在全新库才炸」的缺陷（本轮已修）
+| 迁移 | 现象 | 修复 |
+|---|---|---|
+| V123 | 新版 TimescaleDB 因「唯一索引不含分区列 t」拒绝 `create_hypertable`（SQLState TS103）→ 迁移链中断、后端崩溃重启 | 主键改复合 `(id, t)` + `create_hypertable` 加 `EXCEPTION` 降级 |
+| V125 | Flyway 把下行模板里的字面量 `${speed}` 当占位符 → `No value provided for placeholder: ${param}` | `application.yml` 关 `spring.flyway.placeholder-replacement: false` |
+
+> 这些改动只对**全新库**安全（无迁移历史，不触发 checksum 冲突）。若日后要恢复旧库快照，需评估 checksum。
+
+### 9.4 网关 nginx 起不来 / 恒 unhealthy 的两个原因
+1. **缺证书文件名**：`gateway.conf` 要 `/etc/nginx/ssl/fullchain.pem` + `privkey.pem`；自测把 `deploy/ssl/server.pem` → `fullchain.pem`、`server.key` → `privkey.pem`。
+2. **探针恒 unhealthy**：80 端口对 `/` 做了 `301 → https`，探针 `http://127.0.0.1/healthz` 跟着跳自签 HTTPS → 失败。已在 80 段加 `location = /healthz { return 200; }` 例外。
+
+### 9.5 外部访问：腾讯云安全组要放行 80/443
+- 宿主 80/443 已监听、`ufw` 未启用，但外网仅 22 可达 → 到腾讯云控制台**安全组**放行 TCP 80、443 入站。
+- 访问 `https://124.222.122.158`（自签证书有告警，继续即可）；生产换 Let's Encrypt / 云证书。
+
+### 9.6 登录 / 改密
+- 测试环境在 `deploy/.env.prod` 设 `CLAW_SMS_DEV_ECHO=true`：`POST /api/v1/auth/sms-code` 回显验证码。
+- 账号密码登录：`POST /api/v1/auth/password-login`；改密走手机号+短信码：`POST /api/v1/auth/forgot-password`。
