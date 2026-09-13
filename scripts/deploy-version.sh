@@ -65,7 +65,7 @@ compose_up() {
 }
 
 wait_healthy() {
-  local svc="$1" tries=20
+  local svc="$1" tries=60
   log "等待 $svc 健康（最多 ${tries} 次）…"
   for ((i=1; i<=tries; i++)); do
     if docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps "$svc" \

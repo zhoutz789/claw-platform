@@ -30,6 +30,11 @@ services:
     container_name: claw-redis
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     restart: unless-stopped
 
   rabbitmq:
@@ -40,6 +45,11 @@ services:
       RABBITMQ_DEFAULT_PASS: ${MQ_PASSWORD}
     volumes:
       - mq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
 
   # EMQX：车机/电池 BMS/无人机 MQTT 接入所需。资源占用较大，
@@ -77,6 +87,10 @@ services:
       TZ: Asia/Shanghai
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/actuator/health | grep -q UP || exit 1"]
