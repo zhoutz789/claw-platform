@@ -30,6 +30,10 @@ spring:
     schemas: claw
     default-schema: claw
     locations: classpath:db/migration
+    # 关闭 Flyway 占位符替换：迁移脚本里的 ${...} 是应用自身的下行模板语法
+    # （见 V125 device_adapters.downlink_templates_json 的 speed=${speed}），
+    # 不是 Flyway 占位符。Spring Boot 默认开启替换会让 V125 解析失败、迁移链中断。
+    placeholder-replacement: false
   data:
     redis:
       host: ${REDIS_HOST:localhost}
