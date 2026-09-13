@@ -13,7 +13,7 @@ export default function Login() {
   const { message } = App.useApp();
   const { t } = useTranslation();
   const [form] = Form.useForm();
-  const [phone, setPhone] = useState('13800000001');
+  const [phone, setPhone] = useState('13800000007');
   const [code, setCode] = useState('');
   const [sending, setSending] = useState(false);
   const [logging, setLogging] = useState(false);
@@ -23,8 +23,10 @@ export default function Login() {
       setSending(true);
       // 开发模式 sms-dev-echo=true：接口直接回显验证码，便于联调
       const echoed = await api.post('/v1/auth/sms-code', { phone });
-      setCode(echoed || '');
-      message.success(t('login.codeSent', { code: echoed }));
+      // 防御性取值：后端可能返回字符串、对象或 null（旧镜像/不同版本）
+      const codeStr = typeof echoed === 'string' ? echoed : (echoed?.code || echoed?.data || '');
+      setCode(codeStr);
+      message.success(t('login.codeSent', { code: codeStr }));
     } catch (e) {
       // 后端不可达 → 开发演示模式回退
       setCode('123456');
@@ -38,7 +40,9 @@ export default function Login() {
     try {
       setLogging(true);
       const resp = await api.post('/v1/auth/login', { phone, code });
-      setToken(resp.token);
+      // 防御性取值：兼容旧镜像可能的不同响应结构
+      const token = resp?.token || (typeof resp === 'string' ? resp : '');
+      setToken(token);
       message.success(t('login.success'));
       loadPermissions().catch(() => {});
       window.location.hash = '#/dashboard';
