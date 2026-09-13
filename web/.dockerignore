@@ -1,0 +1,11 @@
+# 前端构建由镜像内 npm ci 重新拉取，本地 node_modules/dist 不应进入上下文
+node_modules/
+dist/
+*.log
+.idea/
+*.iml
+.git/
+.gitignore
+**/.DS_Store
+.env.local
+.env.*.local

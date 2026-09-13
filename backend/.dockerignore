@@ -1,0 +1,11 @@
+# 排除构建上下文中的大目录/无关文件，减小 docker build 上下文并避免污染镜像
+target/
+*.log
+.idea/
+*.iml
+.git/
+.gitignore
+**/.DS_Store
+src/main/resources/application-local.yml
+src/test/
+**/*Test.java
