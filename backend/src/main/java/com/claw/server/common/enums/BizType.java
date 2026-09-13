@@ -40,5 +40,17 @@ public enum BizType {
     /** 履约异步结算（取货扫码触发：释放冻结 + 服务站提成 + 厂家货款，复用 ledger 双记账）。 */
     FULFILLMENT_SETTLEMENT,
     /** 任务大厅结算（任务报酬 publisher 出账 / provider 入账，复用 ledger 双记账，P0）。 */
-    TASK_SETTLEMENT
+    TASK_SETTLEMENT,
+    /** 清分分账过账（V128 资金路由：R1 扫码购 / R5 共享池分成通用）。 */
+    CLEARING_SETTLE,
+    /** 采购段过账（V128 资金路由：应付厂家，购销模式）。 */
+    PURCHASE_SETTLE,
+    /** 销售段过账（V128 资金路由：应收用户，购销模式）。 */
+    SALES_SETTLE,
+    /** 货款直结厂家/站（V128 资金路由：代付语义，区别于用户 WITHDRAW）。 */
+    MERCHANT_PAYOUT,
+    /** 差错挂账调整（V128 资金路由：差异差额入 SUSPENSE 科目）。 */
+    SUSPENSE_ADJUST,
+    /** 平台自有分润再分配（V128 资金路由：R10，平台花自己的钱分发推广者）。 */
+    PLATFORM_SPLIT_RE
 }
