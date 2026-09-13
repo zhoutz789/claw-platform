@@ -72,6 +72,8 @@ services:
       CLAW_PAYMENT_CALLBACK_SECRET: ${CLAW_PAYMENT_CALLBACK_SECRET}
       # 支付网关回调必须配置共享密钥（fail-closed）；dev-open-access 在生产必须为 false
       claw.security.dev-open-access: "false"
+      # 生产必须关闭短信验证码回显（否则 /auth/sms-code 会把验证码返回客户端，等价于任意登录）
+      claw.security.sms-dev-echo: "false"
       TZ: Asia/Shanghai
     depends_on:
       postgres:
@@ -81,7 +83,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 60s
+      start_period: 300s
     restart: unless-stopped
 
   web:
