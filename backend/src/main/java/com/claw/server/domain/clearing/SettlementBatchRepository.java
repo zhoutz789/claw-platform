@@ -2,6 +2,7 @@ package com.claw.server.domain.clearing;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,4 +16,8 @@ public interface SettlementBatchRepository extends JpaRepository<SettlementBatch
     List<SettlementBatch> findByStatusAndDeletedFalse(String status);
 
     List<SettlementBatch> findByBizSceneAndStatusAndDeletedFalse(String bizScene, String status);
+
+    /** 幂等：同 (scene, 周期) 已汇总则返回既有批次。 */
+    Optional<SettlementBatch> findByBizSceneAndPeriodStartAndPeriodEndAndDeletedFalse(
+            String bizScene, Instant periodStart, Instant periodEnd);
 }

@@ -1,5 +1,6 @@
 package com.claw.server.domain.clearing;
 
+import com.claw.server.common.enums.ClearingScene;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -18,4 +19,7 @@ public interface ClearingInstructionRepository extends JpaRepository<ClearingIns
     List<ClearingInstruction> findByBasisRef(String basisRef);
 
     List<ClearingInstruction> findByStatusOrderByCreatedAtAsc(String status);
+
+    /** 批次汇总：按场景 + 状态过滤（设计 §6.2）。 */
+    List<ClearingInstruction> findBySceneAndStatusOrderByCreatedAtAsc(ClearingScene scene, String status);
 }

@@ -45,4 +45,7 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     List<Account> findByUserIdAndAccountType(Long userId, AccountType accountType);
 
     List<Account> findByAccountType(AccountType accountType);
+
+    /** 按账户类型 + 币种查询（L3 托管对账聚合账本客户资金合计用）。 */
+    List<Account> findByAccountTypeAndCurrency(AccountType accountType, String currency);
 }

@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -126,6 +127,23 @@ public class AccountService {
                         e.getDirection(), e.getAmount(), e.getBizType(), e.getBizRef(), e.getMemo(),
                         e.getCreatedAt()))
                 .toList();
+    }
+
+    /**
+     * 汇总指定账户类型的余额合计（只读，跨域只读出口，供 L3 托管对账使用）。
+     *
+     * <p>ArchUnit 铁律：资金域仓储只允许本域访问，外部域必须经本方法而非直持
+     * {@code AccountRepository} 读取余额合计。默认币种 USD。
+     *
+     * @param type 账户类型（如 CUSTODY_BRIDGE / PAYABLE_OWNER）
+     * @return 该类型全部账户的余额之和（无记录时为零）
+     */
+    @Transactional(readOnly = true)
+    public BigDecimal sumBalanceByAccountType(AccountType type) {
+        return accountRepository.findByAccountTypeAndCurrency(type, "USD").stream()
+                .map(Account::getBalance)
+                .filter(java.util.Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private LedgerViews.AccountView toView(Account a) {

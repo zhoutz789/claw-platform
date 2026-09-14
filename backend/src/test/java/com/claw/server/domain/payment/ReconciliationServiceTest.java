@@ -2,6 +2,10 @@ package com.claw.server.domain.payment;
 
 import com.claw.server.common.dto.PaymentViews;
 import com.claw.server.common.enums.WalletTxnStatus;
+import com.claw.server.domain.clearing.SuspenseEntryRepository;
+import com.claw.server.domain.clearing.SuspenseService;
+import com.claw.server.domain.funds.FundsLocationService;
+import com.claw.server.domain.ledger.AccountService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,6 +30,11 @@ class ReconciliationServiceTest {
     @Mock private WalletTxnRepository walletTxnRepository;
     @Mock private ReconciliationRunRepository reconciliationRunRepository;
     @Mock private AbaGateway abaGateway;
+    @Mock private AccountService accountService;
+    @Mock private FundsLocationService fundsLocationService;
+    @Mock private SuspenseService suspenseService;
+    @Mock private SuspenseEntryRepository suspenseEntryRepository;
+    @Mock private CustodyBalanceFeed custodyBalanceFeed;
     @InjectMocks private ReconciliationService service;
 
     private WalletTxn txn(String type, WalletTxnStatus status, String amount) {

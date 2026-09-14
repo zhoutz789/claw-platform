@@ -15,4 +15,6 @@ public interface SuspenseEntryRepository extends JpaRepository<SuspenseEntry, Lo
     List<SuspenseEntry> findByStatusOrderByCreatedAtAsc(String status);
 
     List<SuspenseEntry> findByReconRunId(Long reconRunId);
+
+    List<SuspenseEntry> findByReconRunIdAndChannelRef(Long reconRunId, String channelRef);
 }
