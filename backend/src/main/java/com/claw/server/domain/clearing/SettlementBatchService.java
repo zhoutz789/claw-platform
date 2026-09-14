@@ -96,7 +96,7 @@ public class SettlementBatchService {
 
     private SettlementBatch doCollect(ClearingScene scene, Instant periodStart, Instant periodEnd) {
         List<ClearingInstruction> instructions = clearingInstructionRepository
-                .findBySceneAndStatusOrderByCreatedAtAsc(scene, ClearingStatus.CREATED.name())
+                .findBySceneAndStatusOrderByCreatedAtAsc(scene, ClearingStatus.CREATED)
                 .stream()
                 .filter(i -> i.getCreatedAt() != null
                         && !i.getCreatedAt().isBefore(periodStart)

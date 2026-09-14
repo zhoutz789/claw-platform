@@ -61,7 +61,7 @@ class SettlementBatchServiceTest {
     void collect_computes_T7_dueDate_and_items() {
         ClearingInstruction i1 = instruction(10L, new BigDecimal("10.00"), Instant.parse("2026-01-15T00:00:00Z"));
         ClearingInstruction i2 = instruction(11L, new BigDecimal("20.00"), Instant.parse("2026-01-20T00:00:00Z"));
-        when(clearingInstructionRepository.findBySceneAndStatusOrderByCreatedAtAsc(ClearingScene.R1, "CREATED"))
+        when(clearingInstructionRepository.findBySceneAndStatusOrderByCreatedAtAsc(ClearingScene.R1, ClearingStatus.CREATED))
                 .thenReturn(List.of(i1, i2));
         when(settlementBatchRepository.findByBizSceneAndPeriodStartAndPeriodEndAndDeletedFalse(
                 eq(ClearingScene.R1.name()), eq(periodStart), eq(periodEnd)))

@@ -1,5 +1,6 @@
 package com.claw.server.domain.clearing;
 
+import com.claw.server.common.enums.SuspenseStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -12,7 +13,7 @@ public interface SuspenseEntryRepository extends JpaRepository<SuspenseEntry, Lo
 
     Optional<SuspenseEntry> findByEntryNo(String entryNo);
 
-    List<SuspenseEntry> findByStatusOrderByCreatedAtAsc(String status);
+    List<SuspenseEntry> findByStatusOrderByCreatedAtAsc(SuspenseStatus status);
 
     List<SuspenseEntry> findByReconRunId(Long reconRunId);
 

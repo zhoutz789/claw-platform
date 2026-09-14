@@ -1,5 +1,6 @@
 package com.claw.server.domain.clearing;
 
+import com.claw.server.common.enums.BatchStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.Instant;
@@ -13,9 +14,9 @@ public interface SettlementBatchRepository extends JpaRepository<SettlementBatch
 
     Optional<SettlementBatch> findByBatchNo(String batchNo);
 
-    List<SettlementBatch> findByStatusAndDeletedFalse(String status);
+    List<SettlementBatch> findByStatusAndDeletedFalse(BatchStatus status);
 
-    List<SettlementBatch> findByBizSceneAndStatusAndDeletedFalse(String bizScene, String status);
+    List<SettlementBatch> findByBizSceneAndStatusAndDeletedFalse(String bizScene, BatchStatus status);
 
     /** 幂等：同 (scene, 周期) 已汇总则返回既有批次。 */
     Optional<SettlementBatch> findByBizSceneAndPeriodStartAndPeriodEndAndDeletedFalse(
