@@ -1,6 +1,9 @@
 package com.claw.server.domain.sharedpool;
 
 import com.claw.server.common.api.BizException;
+import com.claw.server.common.dto.ClearingRequests;
+import com.claw.server.common.enums.ClearingMode;
+import com.claw.server.common.enums.ClearingScene;
 import com.claw.server.common.enums.OwnershipStatus;
 import com.claw.server.common.enums.OwnershipType;
 import com.claw.server.common.enums.PoolEntryStatus;
@@ -8,6 +11,7 @@ import com.claw.server.common.enums.RevenueShareBasis;
 import com.claw.server.common.enums.RentalOrderStatus;
 import com.claw.server.common.enums.RentalType;
 import com.claw.server.common.enums.SettlementStatus;
+import com.claw.server.domain.clearing.ClearingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -44,6 +48,7 @@ public class SharedPoolService {
     private final AssetOwnershipRepository ownershipRepository;
     private final RevenueSettlementRepository settlementRepository;
     private final com.claw.server.domain.capacity.CapacityBookingService capacityBookingService;
+    private final ClearingService clearingService;
 
     /**
      * 资产入池：将资产放入共享池，指定站点和分成比例。
@@ -126,7 +131,7 @@ public class SharedPoolService {
     }
 
     /**
-     * 完成租赁：计算费用 + 分账 + 更新状态。
+     * 完成租赁：计算费用 + 分账 + 更新状态 + 触发资金清分（T08 R5 共享池分成）。
      */
     @Transactional
     public RentalOrder completeRental(Long rentalOrderId, BigDecimal totalFee) {
@@ -175,6 +180,20 @@ public class SharedPoolService {
         order = rentalOrderRepository.save(order);
         log.info("完成租赁订单 orderNo={} totalFee={} ownerShare={} stationShare={}",
                 order.getOrderNo(), totalFee, order.getOwnerShare(), order.getStationShare());
+
+        // 资金清分（T08 R5 共享池分成）：复用 settlement_rule 中 RENTAL_SPLIT 规则，
+        // 四方（OWNER/STATION/PLATFORM/INSURER）逐腿经 T11 WHT 代扣。
+        // 不阻断主流程：清分失败仅记录日志，租赁状态已落库，后续可凭 basisRef（orderNo）幂等重放补偿。
+        try {
+            ClearingRequests.Settle clearingReq = new ClearingRequests.Settle(
+                    ClearingScene.R5, "RENTAL_SPLIT", order.getOrderNo(), totalFee,
+                    null, "USD", ClearingMode.AT_SOURCE, "ABA_PAYWAY");
+            clearingService.settle(clearingReq);
+            log.info("R5 共享池分成清分已触发 rentalOrderId={} orderNo={}", order.getId(), order.getOrderNo());
+        } catch (Exception e) {
+            log.error("R5 共享池分成清分失败(不影响租赁完成) rentalOrderId={} : {}",
+                    order.getId(), e.getMessage());
+        }
 
         // 容量预订回佣：从厂家 owner_share 计提并按定购单位比例自动分成。
         // 异常不阻断租赁完成（回佣失败可后续补偿），故就地捕获。

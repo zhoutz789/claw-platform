@@ -64,6 +64,7 @@ class CustomerOrderClosureTest {
     @Mock private AssetOwnershipRepository ownershipRepository;
     @Mock private RevenueSettlementRepository settlementRepository;
     @Mock private CapacityBookingService capacityBookingService;
+    @Mock private com.claw.server.domain.clearing.ClearingService clearingService;
 
     @InjectMocks private CustomerOrderService orderService;
 
@@ -288,7 +289,7 @@ class CustomerOrderClosureTest {
 
         SharedPoolService realPool = new SharedPoolService(poolEntryRepository, rentalOrderRepository,
                 usageSessionRepository, splitRuleRepository, ownershipRepository, settlementRepository,
-                capacityBookingService);
+                capacityBookingService, clearingService);
 
         AssetOwnership ownership = realPool.establishOwnership(10L, 5L, new BigDecimal("100000.0000"), "PO1");
         assertEquals(OwnershipType.FULL, ownership.getOwnershipType());
