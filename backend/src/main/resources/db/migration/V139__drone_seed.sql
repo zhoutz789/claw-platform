@@ -71,10 +71,9 @@ INSERT INTO permissions (code, name, ptype, parent_code, path, sort_no) VALUES
 ON CONFLICT (code) DO NOTHING;
 
 -- 3.2) 按钮级权限码
+-- 仅写接口（远控下行）设权限点；航迹/机型为读接口（GET），按项目约定不设权限点，故无 view 码。
 INSERT INTO permissions (code, name, ptype, parent_code, sort_no) VALUES
-  ('drone:command:issue',   '下发远控指令', 'BUTTON', 'menu:drone-ops', 1),
-  ('drone:trajectory:view', '查看航迹回放', 'BUTTON', 'menu:drone-ops', 2),
-  ('drone:product:view',    '查看机型配置', 'BUTTON', 'menu:drone-ops', 3)
+  ('drone:command:issue', '下发远控指令', 'BUTTON', 'menu:drone-ops', 1)
 ON CONFLICT (code) DO NOTHING;
 
 -- 3.3) 角色模板挂载
@@ -82,28 +81,21 @@ ON CONFLICT (code) DO NOTHING;
 INSERT INTO role_template_permissions (template_code, permission_code) VALUES
   ('PLATFORM_ADMIN', 'menu:drone-ops'),
   ('PLATFORM_ADMIN', 'drone:command:issue'),
-  ('PLATFORM_ADMIN', 'drone:trajectory:view'),
-  ('PLATFORM_ADMIN', 'drone:product:view'),
-  -- 服务站：日常作业远控 + 航迹查看
-  ('STATION',        'drone:command:issue'),
-  ('STATION',        'drone:trajectory:view'),
-  -- 厂家：机型配置只读
-  ('MANUFACTURER',   'drone:product:view'),
-  -- 监管者：航迹 + 机型只读
-  ('REGULATOR',      'drone:trajectory:view'),
-  ('REGULATOR',      'drone:product:view')
+  -- 服务站：日常作业远控
+  ('STATION',        'drone:command:issue')
 ON CONFLICT (template_code, permission_code) DO NOTHING;
 
 -- 3.4) roles.grants 回写（权限真源）—— 沿用 V66/V116 模式
--- 只覆盖业务角色码；PLATFORM_ADMIN 走 ["*"] 通配，不在此列（绝不降级）；
--- CUSTOMER 是对象结构 grants，禁止纳入。roles.grants 为 TEXT，回写须 ::text。
+-- 本迁移仅给 STATION 新增 drone:command:issue，故只回写 STATION；
+-- PLATFORM_ADMIN 走 ["*"] 通配不在此列（绝不降级）；CUSTOMER 是对象结构 grants，禁止纳入。
+-- roles.grants 为 TEXT，回写须 ::text。
 UPDATE roles r
    SET grants = COALESCE(
        (SELECT to_jsonb(array_agg(tp.permission_code))::text
           FROM role_template_permissions tp
          WHERE tp.template_code = r.code),
        '[]')
- WHERE r.code IN ('MANUFACTURER', 'STATION', 'MERCHANT', 'REGULATOR');
+ WHERE r.code = 'STATION';
 
 -- ---------- 4) 前期运营限制配置层（可配置，不改码） ----------
 INSERT INTO claw.system_config (config_key, config_value, category, description, data_type, editable) VALUES

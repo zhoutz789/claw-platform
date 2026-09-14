@@ -39,16 +39,14 @@ public class DroneOpsController {
     private final DroneTrajectoryService droneTrajectoryService;
     private final DroneCommandService droneCommandService;
 
-    /** 机型产品类列表（可按场景过滤）。 */
-    @RequirePermission("drone:product:view")
+    /** 机型产品类列表（可按场景过滤）。读接口按项目约定不加权限注解。 */
     @GetMapping("/product-classes")
     public ApiResult<List<DroneProductClass>> productClasses(
             @RequestParam(required = false) String scenario) {
         return ApiResult.ok(droneProductClassService.list(scenario));
     }
 
-    /** 航迹回放：按资产 + 时间窗返回航迹点（升序）。from/to 缺省时取全时段。 */
-    @RequirePermission("drone:trajectory:view")
+    /** 航迹回放：按资产 + 时间窗返回航迹点（升序）。from/to 缺省时取全时段。读接口按约定不加权限注解。 */
     @GetMapping("/assets/{assetId}/trajectory")
     public ApiResult<List<DroneTrajectory>> trajectory(
             @PathVariable Long assetId,
