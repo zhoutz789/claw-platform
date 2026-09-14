@@ -1,0 +1,70 @@
+%% 资金路由与清分 · 关键时序（R1 扫码购分账 / R5 共享池分成 / 回退路径 / 对账差错）
+%% 参与方：用户(User) · 通道(Channel) · 支付服务(PaymentService) · 清分服务(ClearingService)
+%%         分账引擎(SplitEngine) · 账本(LedgerService) · 指令服务(InstructionService) · 批次/对账/差错
+
+sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant CH as 通道(ABA/Bakong)
+    participant PS as PaymentService
+    participant CS as ClearingService
+    participant SE as SplitEngine
+    participant LS as LedgerService
+    participant IS as ClearingInstructionService
+    participant RC as ReconciliationService
+
+    Note over U,RC: ===== R1 扫码购分账 · 主路径 A（分账 at source，平台零存量）=====
+    U->>PS: POST /orders → recharge/collect（生成 KHQR）
+    PS->>CH: AbaGateway.createKhqr(orderNo, amount)
+    CH-->>U: KHQR 收单码
+    U->>CH: 扫码支付 $100
+    CH->>PS: 回调 onCallback(orderNo)
+    PS->>LS: postEntries(RECHARGE, ...) 入账客户资金主户
+    PS->>CS: settle(basisRef=orderNo, scene=CONSIGNMENT_SCAN, total=100)
+    CS->>SE: compute(scene, 100, manufacturerId, "USD")
+    SE-->>CS: legs = [平台5, 站10, 物流5, 厂家80]（priority 排序，残差归厂家）
+    loop 每条分账腿
+        CS->>LS: postEntries(CLEARING_SETTLE, orderNo+":PLATFORM|:STATION|:LOGISTICS|:MFG", ...)
+        LS-->>CS: txnId（借贷守恒 + bizRef 幂等）
+    end
+    CS->>IS: create(AT_SOURCE, leg, orderNo)
+    CS->>CH: ClearingChannelGateway.splitAtSource(orderNo, 100, legs)
+    alt 通道支持分账（【待通道确认】）
+        CH-->>CS: institutionRefs[]
+        CS->>IS: markSent→onAck→markSettled
+    else 通道不支持分账 → 回退路径 B/C
+        CS->>IS: escalateManual / 转批次
+    end
+    Note over CS,RC: 账本权益实时，通道动作异步；失败仅指令 FAILED/MANUAL，账本无净差异
+
+    Note over U,RC: ===== R5 共享池分成 · 主路径 A（四方：所有人/站/平台/保险）=====
+    U->>CS: completeRental(rentalOrderId, totalFee)（经 SharedPoolService 触发）
+    CS->>SE: compute(RENTAL_SPLIT, totalFee, ...) → 读 revenue_split_rules / settlement_rule
+    SE-->>CS: legs = [所有人, 站, 平台, 保险]
+    loop 每条分账腿
+        CS->>LS: postEntries(CLEARING_SETTLE, rentalOrderNo+":OWNER|:STATION|:PLATFORM|:INSURANCE")
+    end
+    CS->>CH: splitAtSource(...) 【待通道确认】
+    CS->>IS: 写 clearing_instruction × 4
+
+    Note over U,RC: ===== 回退路径 B：到账即清（准实时 · 验收窗暂存）=====
+    CH->>CS: ON_ARRIVAL 事件（Outbox）→ settleOnArrival(basisRef)
+    CS->>SE: compute(scene, total, ...)
+    CS->>LS: postEntries(CLEARING_SETTLE, ...)
+    CS->>CH: splitAtSource / payoutToPayee
+
+    Note over U,RC: ===== 回退路径 C：周期批量 T+7（货款 / 平台自有分润 T+30）=====
+    CS->>CS: SettlementBatchService.collect(scene, "T+7", from, to) → COLLECTING
+    CS->>CS: approve() → APPROVED → submit() → SENDING
+    CS->>CH: 批量 payoutToPayee / 结算文件（【待通道确认】）
+    CH-->>CS: onBatchAck(refs) → SETTLED / PARTIAL / FAILED→MANUAL
+
+    Note over U,RC: ===== 日终对账 + 差错挂账（L1–L4）=====
+    RC->>RC: runDaily(date)
+    RC->>LS: netByAccountType(客户资金科目)（L2 账本 / L3 托管）
+    RC->>CH: fetchDailyNetAmount(date)（L1 通道）
+    alt 存在差异
+        RC->>CS: SuspenseService.record(diffType, ref, amount, reconRunId)
+        CS->>LS: postEntries(SUSPENSE_ADJUST, ...) 差额入 SUSPENSE 科目
+    end
+    RC-->>U: 对账报告（MATCHED / MISMATCH + 差异工单）

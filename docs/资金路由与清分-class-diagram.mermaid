@@ -1,0 +1,245 @@
+classDiagram
+    %% ================= 既有（复用，不改语义）=================
+    class LedgerService {
+        +postEntries(BizType, String bizRef, List~Entry~) TxnResult
+        +createAccount(AccountType, Long userId, Long assetId) Account
+        +getPlatformAccountId() Long
+        +getBalance(Long) BigDecimal
+        +entriesOfTxn(UUID) List~EntryView~
+        +entriesOfAccount(Long) List~EntryView~
+        +netByAccountType(AccountType, String ccy, Instant from, Instant to) BigDecimal
+        +entriesByBizTypeAndPeriod(BizType, Instant, Instant) List~EntryView~
+    }
+    class AccountService {
+        +getOrCreatePlatformAccount(AccountType, String ccy) Account
+        +getOrCreateUserAccount(Long, AccountType, String ccy) Account
+        +getOrCreateSubAccount(Long, AccountType, String ccy) Account
+        +findAccount(Long, AccountType, String ccy) Optional~Account~
+        +saveAccount(Account) Account
+    }
+    class Account {
+        +Long id
+        +Long userId
+        +AccountType accountType
+        +String currency
+        +BigDecimal balance
+        +BigDecimal frozen
+    }
+    class AccountEntry {
+        +UUID txnId
+        +Long accountId
+        +String direction
+        +BigDecimal amount
+        +String bizType
+        +String bizRef
+    }
+    class PaymentService {
+        +recharge(Long, Recharge) RechargeView
+        +collect(Long, Collect) CollectView
+        +onCallback(String orderNo) WalletTxnView
+        +withdraw(Long, Withdraw) WalletTxnView
+    }
+    class ReconciliationService {
+        +runDaily(LocalDate) ReconciliationView
+    }
+    class ReconciliationRun
+
+    %% ================= L1 通道层（分账能力待确认）=================
+    class ClearingChannelGateway {
+        <<interface>>
+        +splitAtSource(String orderNo, BigDecimal amount, List~SplitLeg~, String ccy) SplitResult
+        +payoutToPayee(String instructionNo, BigDecimal amount, String payeeAcctJson, String ccy) String
+    }
+    class ClearingChannelMock {
+        +splitAtSource(...) SplitResult
+        +payoutToPayee(...) String
+    }
+    class AbaClearingChannel {
+        <<骨架 · 真实分账待通道确认>>
+    }
+    class AbaGateway {
+        <<interface>>
+        +createKhqr(String, BigDecimal) String
+        +payout(String, BigDecimal, String) String
+        +fetchDailyNetAmount(LocalDate) BigDecimal
+    }
+
+    %% ================= L2 托管资金层（新增）=================
+    class FundsLocation {
+        +Long id
+        +String locationCode
+        +String institution
+        +String institutionAcctNo
+        +LocationType locationType
+        +String currency
+        +String coversAccountTypes
+        +String status
+    }
+    class FundsLocationRepository
+    class VirtualSubAccount {
+        +Long id
+        +String vsaNo
+        +CustodyOwnerType ownerType
+        +Long ownerId
+        +Long ownerUserId
+        +Long fundsLocationId
+        +String currency
+        +String status
+        +String kycLevel
+        +BigDecimal dailyLimit
+    }
+    class VirtualSubAccountRepository
+    class FundsLocationService {
+        +register(FundsLocation) FundsLocation
+        +findByCode(String) Optional~FundsLocation~
+        +coveredAccountTypes(Long) List~AccountType~
+    }
+    class VirtualSubAccountService {
+        +open(CustodyOwnerType, Long ownerId, Long ownerUserId, Long locationId, String ccy) VirtualSubAccount
+        +freeze(Long, String) VirtualSubAccount
+        +close(Long) VirtualSubAccount
+        +find(CustodyOwnerType, Long, String) Optional~VirtualSubAccount~
+    }
+
+    %% ================= L5 分账/清分层（新增）=================
+    class SettlementRule {
+        +Long id
+        +String bizScene
+        +String payeeType
+        +RuleBasis basis
+        +BigDecimal rate
+        +BigDecimal fixedAmount
+        +String tierJson
+        +Integer priority
+        +String settleCycle
+        +Long manufacturerId
+        +String status
+    }
+    class SettlementRuleRepository
+    class SplitLeg {
+        <<record>>
+        +String payeeType
+        +BigDecimal amount
+        +String settleCycle
+        +int priority
+        +Long ruleId
+    }
+    class SplitEngine {
+        +compute(String bizScene, BigDecimal total, Long manufacturerId, String ccy) List~SplitLeg~
+    }
+    class ClearingInstruction {
+        +Long id
+        +String instructionNo
+        +String idemKey
+        +ClearingScene scene
+        +ClearingMode mode
+        +Long payeeVsaId
+        +Long payeeAccountId
+        +BigDecimal amount
+        +String basisRef
+        +ClearingStatus status
+        +String institutionRef
+        +int retryCount
+    }
+    class ClearingInstructionRepository
+    class SettlementBatch {
+        +Long id
+        +String batchNo
+        +String bizScene
+        +String cycle
+        +Instant periodStart
+        +Instant periodEnd
+        +LocalDate dueDate
+        +BigDecimal totalAmount
+        +BatchStatus status
+    }
+    class SettlementBatchRepository
+    class SettlementBatchItem {
+        +Long id
+        +Long batchId
+        +Long clearingInstructionId
+        +BigDecimal amount
+        +String status
+    }
+    class SettlementBatchItemRepository
+    class SuspenseEntry {
+        +Long id
+        +String entryNo
+        +String diffType
+        +BigDecimal amount
+        +Long reconRunId
+        +SuspenseStatus status
+        +String resolution
+    }
+    class SuspenseEntryRepository
+
+    class ClearingService {
+        +settle(Settle) ClearingResult
+        +settleOnArrival(String basisRef, String bizScene) ClearingResult
+        +findByIdemKey(String) Optional~ClearingInstruction~
+    }
+    class ClearingInstructionService {
+        +create(ClearingScene, ClearingMode, SplitLeg, String basisRef, String ccy) ClearingInstruction
+        +markSent(Long, String)
+        +onAck(Long, String)
+        +markSettled(Long)
+        +markFailed(Long, String)
+        +retry(Long)
+        +escalateManual(Long, String)
+    }
+    class SettlementBatchService {
+        +collect(String bizScene, String cycle, Instant, Instant) SettlementBatch
+        +approve(Long, Long) SettlementBatch
+        +submit(Long) SettlementBatch
+        +onBatchAck(Long, List~String~)
+        +failBatch(Long, String)
+    }
+    class SuspenseService {
+        +record(String diffType, String channelRef, String ledgerRef, BigDecimal, String ccy, Long reconRunId) SuspenseEntry
+        +resolve(Long, Long operatorId, String resolution) SuspenseEntry
+    }
+
+    %% ================= 关系 =================
+    LedgerService ..> AccountRepository
+    LedgerService ..> AccountEntryRepository
+    LedgerService --> Account
+    LedgerService --> AccountEntry
+    AccountService --> Account
+    AccountService --> LedgerService
+
+    FundsLocationService --> FundsLocationRepository
+    FundsLocationService --> VirtualSubAccountRepository
+    VirtualSubAccountService --> VirtualSubAccountRepository
+    VirtualSubAccountService --> FundsLocationRepository
+    VirtualSubAccountService ..> AccountService : 映射账本账户
+
+    SplitEngine --> SettlementRuleRepository
+    SplitEngine ..> SplitLeg
+
+    ClearingService --> SplitEngine
+    ClearingService --> ClearingInstructionService
+    ClearingService --> VirtualSubAccountService
+    ClearingService ..> LedgerService : postEntries(唯一写账出口)
+    ClearingService ..> AccountService
+    ClearingService ..> ClearingChannelGateway
+
+    ClearingInstructionService --> ClearingInstructionRepository
+    ClearingInstructionService ..> ClearingChannelGateway
+    SettlementBatchService --> SettlementBatchRepository
+    SettlementBatchService --> SettlementBatchItemRepository
+    SettlementBatchService --> ClearingInstructionService
+    SuspenseService --> SuspenseEntryRepository
+    SuspenseService ..> LedgerService : SUSPENSE_ADJUST
+
+    SettlementBatch "1" o-- "0..*" SettlementBatchItem
+    SettlementBatchItem "0..*" --> "0..1" ClearingInstruction
+    ClearingInstruction "0..1" --> "0..1" VirtualSubAccount : payee
+    VirtualSubAccount "0..*" --> "1" FundsLocation
+
+    ReconciliationService ..> SuspenseService : 差异落工单
+    ReconciliationService --> ReconciliationRun
+    PaymentService ..> ClearingService : onCallback 后触发分账
+    PaymentService ..> AbaGateway
+    ClearingChannelMock ..|> ClearingChannelGateway
+    AbaClearingChannel ..|> ClearingChannelGateway
+    AbaClearingChannel ..> AbaGateway
