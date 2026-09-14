@@ -172,6 +172,20 @@ public class VirtualSubAccountService {
     }
 
     /**
+     * 按主键取子户（不校验 deleted，返回 Optional，供税务档案读取等只读场景，如 WhtEngine）。
+     *
+     * @param id 子户 id
+     * @return 命中子户（不存在返回 {@link Optional#empty()}）
+     */
+    @Transactional(readOnly = true)
+    public Optional<VirtualSubAccount> findById(Long id) {
+        if (id == null) {
+            return Optional.empty();
+        }
+        return virtualSubAccountRepository.findById(id);
+    }
+
+    /**
      * 按主键取子户（不存在或已逻辑删除则抛异常）。
      *
      * @param id 子户 id

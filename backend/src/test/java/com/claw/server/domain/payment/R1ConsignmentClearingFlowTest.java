@@ -10,6 +10,9 @@ import com.claw.server.common.enums.PayStatus;
 import com.claw.server.common.enums.RuleBasis;
 import com.claw.server.domain.clearing.ClearingInstruction;
 import com.claw.server.domain.clearing.ClearingInstructionRepository;
+import com.claw.server.domain.clearing.TaxWithholdingRepository;
+import com.claw.server.domain.clearing.WhtEngine;
+import com.claw.server.domain.funds.VirtualSubAccountRepository;
 import com.claw.server.domain.clearing.ClearingInstructionService;
 import com.claw.server.domain.clearing.ClearingService;
 import com.claw.server.domain.clearing.SettlementRule;
@@ -79,6 +82,12 @@ class R1ConsignmentClearingFlowTest {
     private PaymentOrderRepository paymentOrderRepository;
     @Mock
     private ClearingInstructionRepository clearingInstructionRepository;
+    @Mock
+    private WhtEngine whtEngine;
+    @Mock
+    private VirtualSubAccountRepository virtualSubAccountRepository;
+    @Mock
+    private TaxWithholdingRepository taxWithholdingRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ChannelSplitPlanner planner = new ChannelSplitPlanner();
@@ -116,7 +125,8 @@ class R1ConsignmentClearingFlowTest {
         SplitEngine splitEngine = new SplitEngine(settlementRuleRepository);
         ClearingInstructionService instructionService = new ClearingInstructionService(clearingInstructionRepository);
         ClearingService clearingService =
-                new ClearingService(splitEngine, instructionService, ledgerService, accountService);
+                new ClearingService(splitEngine, instructionService, ledgerService, accountService,
+                        whtEngine, virtualSubAccountRepository, taxWithholdingRepository);
         return new ConsignmentClearingHandler(paymentOrderRepository, clearingService, instructionService,
                 planner, resolver, gateways, objectMapper);
     }

@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -60,7 +61,7 @@ public class ClearingInstructionService {
     @Transactional
     public ClearingInstruction create(ClearingScene scene, ClearingMode mode, SplitEngine.SplitLeg leg,
                                       String basisRef, String currency) {
-        return create(scene, mode, leg, basisRef, currency, null, null);
+        return create(scene, mode, leg, basisRef, currency, null, null, null);
     }
 
     /**
@@ -79,6 +80,28 @@ public class ClearingInstructionService {
     @Transactional
     public ClearingInstruction create(ClearingScene scene, ClearingMode mode, SplitEngine.SplitLeg leg,
                                       String basisRef, String currency, Long payeeAccountId, String channel) {
+        return create(scene, mode, leg, basisRef, currency, payeeAccountId, channel, null);
+    }
+
+    /**
+     * 创建指令（含收款账户 / 通道 / 显式金额）。
+     *
+     * @param scene          清分场景
+     * @param mode           清分时机模式
+     * @param leg            分账腿
+     * @param basisRef       依据单号
+     * @param currency       币种（空则默认 USD）
+     * @param payeeAccountId 账本收款账户 id（可空）
+     * @param channel        通道标识（可空）
+     * @param amount         指令金额（可空；为空时回退 {@code leg.amount()}，即 WHT 前毛额）。
+     *                       T11 WHT 代扣场景下传<b>净额 net</b>（毛额 − 代扣税）。
+     * @return 新建或已存在的指令
+     * @throws BizException 入参缺失
+     */
+    @Transactional
+    public ClearingInstruction create(ClearingScene scene, ClearingMode mode, SplitEngine.SplitLeg leg,
+                                      String basisRef, String currency, Long payeeAccountId, String channel,
+                                      BigDecimal amount) {
         if (scene == null || mode == null || leg == null || leg.payeeType() == null) {
             throw BizException.invalidParam("error.clearing.request.invalid");
         }
@@ -91,6 +114,7 @@ public class ClearingInstructionService {
             return existing.get();
         }
 
+        BigDecimal finalAmount = amount != null ? amount : leg.amount();
         Instant now = Instant.now();
         ClearingInstruction instruction = ClearingInstruction.builder()
                 .instructionNo(generateInstructionNo(scene))
@@ -98,7 +122,7 @@ public class ClearingInstructionService {
                 .scene(scene)
                 .mode(mode)
                 .payeeAccountId(payeeAccountId)
-                .amount(leg.amount())
+                .amount(finalAmount)
                 .currency(ccy)
                 .basisRef(basisRef)
                 .ledgerBizType(BizType.CLEARING_SETTLE.name())

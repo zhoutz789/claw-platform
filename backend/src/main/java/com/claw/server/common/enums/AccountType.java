@@ -27,10 +27,16 @@ public enum AccountType {
     PAYABLE_STATION,
     /** 应付物流（V128 资金路由：物流负债侧）。 */
     PAYABLE_LOGISTICS,
+    /** 应付所有人分成（T11/T08 R5 共享池：所有人资产分成负债侧）。 */
+    PAYABLE_OWNER,
+    /** 应付保险分成（T11/T08 R5 共享池：保险方分成负债侧）。 */
+    PAYABLE_INSURER,
     /** 备付金在途 / 托管桥接（V128 资金路由；建议以 MASTER 户承载，见设计 §1.3）。 */
     CUSTODY_BRIDGE,
     /** 平台服务费 / 佣金收入（V128 资金路由：唯一公司自有资金科目）。 */
     PLATFORM_REVENUE,
     /** 差错专户（V128 资金路由：长款/短款/未匹配/金额不符/汇兑差异挂账）。 */
-    SUSPENSE
+    SUSPENSE,
+    /** 应交税费—预扣税（T11 WHT 代扣引擎：平台代扣、代缴税务的负债侧科目）。 */
+    WHT_PAYABLE
 }

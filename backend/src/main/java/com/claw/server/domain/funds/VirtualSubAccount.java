@@ -1,6 +1,8 @@
 package com.claw.server.domain.funds;
 
 import com.claw.server.common.enums.CustodyOwnerType;
+import com.claw.server.common.enums.TaxpayerStatus;
+import com.claw.server.common.enums.WhtCategory;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -58,6 +60,16 @@ public class VirtualSubAccount {
     /** 机构侧子户号 —— 待通道确认是否存在。 */
     @Column(name = "external_sub_no", length = 64)
     private String externalSubNo;
+
+    /** 纳税人状态（T11 WHT 代扣判定：REGISTERED/UNREGISTERED/INDIVIDUAL/NON_RESIDENT）。 */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "taxpayer_status", length = 20)
+    private TaxpayerStatus taxpayerStatus;
+
+    /** WHT 类别（T11 WHT 代扣判定：SERVICE/RENTAL/DIVIDEND/NONE）。 */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "wht_category", length = 20)
+    private WhtCategory whtCategory;
 
     /** 状态：ACTIVE / FROZEN / CLOSED。 */
     @Builder.Default
