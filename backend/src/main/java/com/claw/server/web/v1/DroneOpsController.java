@@ -17,8 +17,11 @@ import com.claw.server.domain.asset.DroneBatteryService;
 import com.claw.server.domain.asset.DroneCommandService;
 import com.claw.server.domain.asset.DroneProductClass;
 import com.claw.server.domain.asset.DroneProductClassService;
+import com.claw.server.domain.camera.CameraService;
+import com.claw.server.domain.camera.DroneCameraService;
 import com.claw.server.domain.capacity.CapacityPlan;
 import com.claw.server.domain.capacity.CapacityPlanRepository;
+import com.claw.server.domain.compliance.PermitGate;
 import com.claw.server.domain.iot.DroneTrajectory;
 import com.claw.server.domain.iot.DroneTrajectoryService;
 import lombok.RequiredArgsConstructor;
@@ -66,10 +69,17 @@ import java.util.stream.Collectors;
  *       <li>GET  /capacity-plans                          无人机容量产品（PARALLEL，读）</li>
  *     </ul>
  *   </li>
+ *   <li><b>切片 3 · 摄像头接线（复用 camera 子系统，不建新表）</b>
+ *     <ul>
+ *       <li>POST   /assets/{assetId}/camera/register   注册摄像头（幂等，写）</li>
+ *       <li>GET    /assets/{assetId}/camera/live       取流地址（读）</li>
+ *       <li>GET    /assets/{assetId}/camera/timeline   时间轴（读）</li>
+ *     </ul>
+ *   </li>
  * </ul>
  *
- * <p><b>权限约定</b>：只写接口（POST/DELETE）带 {@link RequirePermission}；GET 读接口一律不带
- * （与 Slice 1 回修后的项目约定一致）。权限位由 V139（切片 1）与 V141（切片 2）以三步法播种。
+ * <p><b>权限约定</b>：只写接口（POST/PUT/DELETE）带 {@link RequirePermission}；GET 读接口一律不带
+ * （与 Slice 1 回修后的项目约定一致）。权限位由 V139（切片 1）、V141（切片 2）、V143（切片 3）以三步法播种。
  *
  * <p>远控经 {@link DroneCommandService} → {@code DeviceCommandService}（HMAC 签名 + 审计落库 + 下发），
  * 复用既有 {@code device_commands}，不另造指令日志表。
@@ -85,6 +95,9 @@ public class DroneOpsController {
     private final DroneBatteryService droneBatteryService;
     private final PilotOpsService pilotOpsService;
     private final CapacityPlanRepository capacityPlanRepository;
+    private final PermitGate permitGate;
+    private final DroneCameraService droneCameraService;
+    private final CameraService cameraService;
 
     // ------------------------------------------------------------------ 切片 1
 
@@ -106,7 +119,14 @@ public class DroneOpsController {
         return ApiResult.ok(droneTrajectoryService.query(assetId, f, t));
     }
 
-    /** 远控指令下发。body: {"command":"REMOTE_START","params":{...}}。 */
+    /**
+     * 远控指令下发。body: {"command":"REMOTE_START","params":{...}}。
+     *
+     * <p><b>合规闸门</b>：下发前先过 {@link PermitGate} ——
+     * 安全指令（LAND / RETURN_HOME / HOLD / PAUSE / CANCEL_TASK）任何档位放行（空中安全优先）；
+     * 受控指令（REMOTE_START / RESUME / SET_GEOFENCE / OTA）在 STRICT 档被拒时抛
+     * 403（error.drone.permit.denied），ADVISORY 记告警放行，OFF 跳过运营限制（零容忍区仍拦）。
+     */
     @RequirePermission("drone:command:issue")
     @PostMapping("/assets/{assetId}/command")
     public ApiResult<IoTViews.CommandView> command(@PathVariable Long assetId,
@@ -118,6 +138,8 @@ public class DroneOpsController {
             throw BizException.invalidParam("error.drone.command.invalid");
         }
         Map<String, Object> params = req.params() != null ? req.params() : Map.of();
+        String province = params.get("province") instanceof String p && !p.isBlank() ? p : null;
+        permitGate.check(assetId, type, province, Instant.now());
         return ApiResult.ok(droneCommandService.issue(assetId, type, params));
     }
 
@@ -223,6 +245,33 @@ public class DroneOpsController {
         return ApiResult.ok(plans);
     }
 
+    // ------------------------------------------------------ 切片 3 · 摄像头接线
+
+    /**
+     * 注册无人机摄像头（幂等：已注册返回既有，不重复建行）。
+     * 复用摄像头子系统：挂 {@code CAMERA} 设备 + 注册 {@code camera_stream}，不建新表。
+     */
+    @RequirePermission("drone:camera:register")
+    @PostMapping("/assets/{assetId}/camera/register")
+    public ApiResult<Map<String, Object>> registerCamera(@PathVariable Long assetId,
+                                                         @RequestBody(required = false) RegisterCameraReq req) {
+        String streamUrl = req == null ? null : req.streamUrl();
+        String streamType = req == null ? null : req.streamType();
+        return ApiResult.ok(droneCameraService.register(assetId, streamUrl, streamType));
+    }
+
+    /** 取流地址（透传 {@link CameraService#live}，无人机与车辆同构）。读接口按约定不加权限注解。 */
+    @GetMapping("/assets/{assetId}/camera/live")
+    public ApiResult<Map<String, Object>> cameraLive(@PathVariable Long assetId) {
+        return ApiResult.ok(cameraService.live(droneCameraService.primaryCamera(assetId).getId()));
+    }
+
+    /** 时间轴（稀疏帧 + 事件标记，透传 {@link CameraService#timeline}）。读接口按约定不加权限注解。 */
+    @GetMapping("/assets/{assetId}/camera/timeline")
+    public ApiResult<Map<String, Object>> cameraTimeline(@PathVariable Long assetId) {
+        return ApiResult.ok(cameraService.timeline(droneCameraService.primaryCamera(assetId).getId()));
+    }
+
     // ------------------------------------------------------------------ 请求体
 
     /** 远控指令请求体。 */
@@ -240,5 +289,9 @@ public class DroneOpsController {
     /** 飞手处罚请求体。 */
     public record PenalizeReq(String penaltyType, String cause, String severity,
                               Integer points, String bizRef) {
+    }
+
+    /** 无人机摄像头注册请求体。 */
+    public record RegisterCameraReq(String streamUrl, String streamType) {
     }
 }

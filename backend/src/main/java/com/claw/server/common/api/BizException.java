@@ -28,6 +28,14 @@ public class BizException extends RuntimeException {
     public static final int UNAUTHORIZED = 40100;
     /** 权限不足（无所需权限位，HTTP 403） */
     public static final int FORBIDDEN = 40301;
+    /**
+     * 无人机合规闸门拒绝（HTTP 403）。
+     *
+     * <p>与 {@link #FORBIDDEN}（权限位不足）区分开：这是「业务/合规层拒绝」（无有效许可、
+     * 命中零容忍区等），鉴权已通过。单独给一个码并显式映射 403，避免落入
+     * {@code code >= 30000 → 409} 的通用分支把「合规拒绝」误报成「状态冲突」。
+     */
+    public static final int COMPLIANCE_DENIED = 40305;
 
     private final int code;
     private final String messageCode;
@@ -106,6 +114,9 @@ public class BizException extends RuntimeException {
             return HttpStatus.UNAUTHORIZED;
         }
         if (code == FORBIDDEN) {
+            return HttpStatus.FORBIDDEN;
+        }
+        if (code == COMPLIANCE_DENIED) {
             return HttpStatus.FORBIDDEN;
         }
         if (code >= 40400 && code < 40500) {
