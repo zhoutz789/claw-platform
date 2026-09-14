@@ -46,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
@@ -166,6 +167,16 @@ class R1ConsignmentClearingFlowTest {
                         rule("STATION", RuleBasis.RATE, "0.10", 10),
                         rule("LOGISTICS", RuleBasis.RATE, "0.05", 20),
                         rule("MANUFACTURER", RuleBasis.RESIDUAL, null, 99)));
+
+        // WHT 代扣引擎默认返回「不代扣」结果（net = gross），与 R1 扫描购测试语义一致。
+        // 生产 WhtEngine 永不返回 null；此处补齐测试桩，规避 Mock 默认返回 null 引发的 NPE。
+        // 注：WhtEngine 有两个 compute 重载，需用带类型的 matcher 消歧，定位 Long/B BigDecimal/String 版本；
+        // 且首参 payeeVsaId 在 R1 链路恒为 null（测试未建虚拟子户），必须用 nullable(...)（any(Class) 不匹配 null）。
+        when(whtEngine.compute(nullable(Long.class), nullable(BigDecimal.class), nullable(String.class)))
+                .thenAnswer(inv -> {
+                    java.math.BigDecimal gross = inv.getArgument(1);
+                    return WhtEngine.WhtResult.noWithholding(gross);
+                });
 
         handler = buildHandler(resolver(), List.of(gateway));
     }
