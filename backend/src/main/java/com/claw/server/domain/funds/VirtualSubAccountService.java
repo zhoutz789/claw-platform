@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -197,6 +198,16 @@ public class VirtualSubAccountService {
         return virtualSubAccountRepository.findById(id)
                 .filter(v -> !Boolean.TRUE.equals(v.getDeleted()))
                 .orElseThrow(() -> BizException.notFound("error.funds.subaccount.not.found", id));
+    }
+
+    /**
+     * 列出全部未删除虚拟子户（后台资金总览，按创建时间倒序）。
+     *
+     * @return 子户列表
+     */
+    @Transactional(readOnly = true)
+    public List<VirtualSubAccount> list() {
+        return virtualSubAccountRepository.findByDeletedFalseOrderByCreatedAtDesc();
     }
 
     /**

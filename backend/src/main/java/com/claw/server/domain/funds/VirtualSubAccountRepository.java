@@ -40,4 +40,7 @@ public interface VirtualSubAccountRepository extends JpaRepository<VirtualSubAcc
      */
     List<VirtualSubAccount> findByOwnerTypeAndCurrencyAndStatusAndDeletedFalseOrderByIdAsc(
             CustodyOwnerType ownerType, String currency, String status);
+
+    /** 列出全部未删除子户（后台虚拟子户总览，按创建时间倒序）。 */
+    List<VirtualSubAccount> findByDeletedFalseOrderByCreatedAtDesc();
 }

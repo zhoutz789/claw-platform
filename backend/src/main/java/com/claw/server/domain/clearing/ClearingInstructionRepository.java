@@ -22,4 +22,7 @@ public interface ClearingInstructionRepository extends JpaRepository<ClearingIns
 
     /** 批次汇总：按场景 + 状态过滤（设计 §6.2）。 */
     List<ClearingInstruction> findBySceneAndStatusOrderByCreatedAtAsc(ClearingScene scene, String status);
+
+    /** 后台指令列表：按场景过滤（设计 §6.1）。 */
+    List<ClearingInstruction> findBySceneOrderByCreatedAtAsc(ClearingScene scene);
 }
