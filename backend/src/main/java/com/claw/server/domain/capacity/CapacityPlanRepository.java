@@ -19,5 +19,8 @@ public interface CapacityPlanRepository extends JpaRepository<CapacityPlan, Long
 
     List<CapacityPlan> findByAssetIdAndStatusAndDeletedFalse(Long assetId, CapacityPlanStatus status);
 
+    /** 按资产查全部未删除计划（切片 4a 无人机收益报告：PARALLEL 回佣聚合用，不限状态）。 */
+    List<CapacityPlan> findByAssetIdAndDeletedFalse(Long assetId);
+
     List<CapacityPlan> findByPoolEntryIdAndDeletedFalse(Long poolEntryId);
 }

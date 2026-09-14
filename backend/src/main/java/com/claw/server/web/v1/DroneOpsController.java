@@ -24,6 +24,8 @@ import com.claw.server.domain.capacity.CapacityPlanRepository;
 import com.claw.server.domain.compliance.PermitGate;
 import com.claw.server.domain.iot.DroneTrajectory;
 import com.claw.server.domain.iot.DroneTrajectoryService;
+import com.claw.server.domain.report.DroneEarningsReport;
+import com.claw.server.domain.report.DroneEarningsReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
@@ -76,6 +78,12 @@ import java.util.stream.Collectors;
  *       <li>GET    /assets/{assetId}/camera/timeline   时间轴（读）</li>
  *     </ul>
  *   </li>
+ *   <li><b>切片 4a · 收益报告（只读聚合，无新迁移）</b>
+ *     <ul>
+ *       <li>GET /assets/{assetId}/earnings?from=&amp;to=   单无人机收益报告（读）</li>
+ *       <li>GET /earnings/overview?from=&amp;to=            全网收益总览（读）</li>
+ *     </ul>
+ *   </li>
  * </ul>
  *
  * <p><b>权限约定</b>：只写接口（POST/PUT/DELETE）带 {@link RequirePermission}；GET 读接口一律不带
@@ -98,6 +106,7 @@ public class DroneOpsController {
     private final PermitGate permitGate;
     private final DroneCameraService droneCameraService;
     private final CameraService cameraService;
+    private final DroneEarningsReportService droneEarningsReportService;
 
     // ------------------------------------------------------------------ 切片 1
 
@@ -270,6 +279,36 @@ public class DroneOpsController {
     @GetMapping("/assets/{assetId}/camera/timeline")
     public ApiResult<Map<String, Object>> cameraTimeline(@PathVariable Long assetId) {
         return ApiResult.ok(cameraService.timeline(droneCameraService.primaryCamera(assetId).getId()));
+    }
+
+    // ------------------------------------------------------ 切片 4a · 收益报告
+
+    /**
+     * 单无人机收益报告（只读聚合，无新迁移）。
+     *
+     * <p>金额口径与既有结算/清分 100% 一致：任务报酬取 TASK_SETTLEMENT 账本接单方 C 分录
+     * （与 {@code TaskSettlementService#assetEarnings} 同口径）；容量回佣取
+     * {@code capacity_plans(PARALLEL)} 关联的 {@code capacity_rebate_settlements}。
+     * from/to 必传（ISO-8601，如 2026-01-01T00:00:00Z），非法时 400。
+     * 读接口按约定不加权限注解。
+     */
+    @GetMapping("/assets/{assetId}/earnings")
+    public ApiResult<DroneEarningsReport> assetEarnings(
+            @PathVariable Long assetId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
+        return ApiResult.ok(droneEarningsReportService.generate(assetId, from, to));
+    }
+
+    /**
+     * 全网无人机收益总览（只读聚合）：全部 DRONE 资产在时间窗内的收益聚合 + 分资产小结。
+     * from/to 必传，非法时 400。读接口按约定不加权限注解。
+     */
+    @GetMapping("/earnings/overview")
+    public ApiResult<DroneEarningsReport.Overview> earningsOverview(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
+        return ApiResult.ok(droneEarningsReportService.overview(from, to));
     }
 
     // ------------------------------------------------------------------ 请求体
